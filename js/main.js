@@ -316,6 +316,13 @@ function verifyGlossaryColumns() {
 }
 
 /* ================= Utilities ================= */
+
+function safeDrawAllEdges() {
+  try { drawSystemEdges(); } catch (e) {
+    console.error('[edges]', e);
+    if (typeof clearSelectionVisuals === 'function') clearSelectionVisuals();
+  }
+}
 // Merkt sich das aktuell fokussierte Filter-Input und stellt Fokus + Caret nach Re-Render wieder her.
 function preserveFilterInputFocus(rerenderFn) {
   const active = document.activeElement;
@@ -2259,28 +2266,33 @@ function rectToMap(rect) {
   };
 }
 function fieldAnchor(systemName, fieldName, side = 'right') {
-  const row = getFieldEl(systemName, fieldName);
-  if (!row || !mapCanvas) return { x: 0, y: 0 };
+  // Canvas/Viewport defensiv bestimmen (je nachdem, was du wirklich im DOM hast)
+  const canvas =
+    document.getElementById('mapViewport') ||
+    document.getElementById('mapCanvas') ||
+    document.querySelector('#mapViewport, #mapCanvas');
 
-  // Neu: am Container (map-node) ausrichten, damit die Linie klar außerhalb startet/endet
-  const node = row.closest('.map-node');
-  const canvasRect = mapCanvas.getBoundingClientRect();
+  const row  = getFieldEl(systemName, fieldName);
+  if (!canvas || !row) {
+    // Fallback verhindert Crash, Linien werden in diesem Fall einfach nicht gezeichnet
+    return { x: 0, y: 0, _invalid: true };
+  }
+
+  const node = row.closest('.map-node') || row;
+  const canvasRect = canvas.getBoundingClientRect();
   const rowRect    = row.getBoundingClientRect();
-  const nodeRect   = (node ? node.getBoundingClientRect() : rowRect);
+  const nodeRect   = node.getBoundingClientRect();
 
-  const OUTSIDE = 14; // Abstand außerhalb des Knotencontainers
-
-  // y bleibt: Mitte der Zeile
+  const OUTSIDE = 14; // Abstand außerhalb des Knotens
   const yAbs = rowRect.top + rowRect.height / 2;
+  const xAbs = (side === 'right') ? (nodeRect.right + OUTSIDE)
+                                  : (nodeRect.left  - OUTSIDE);
 
-  // x neu: am Knotenrand, nicht am Zellrand
-  const xAbs = (side === 'right')
-    ? (nodeRect.right + OUTSIDE)
-    : (nodeRect.left  - OUTSIDE);
+  // mapTransformState defensiv (falls noch nicht initialisiert)
+  const mts = window.mapTransformState || { x: 0, y: 0, k: 1 };
 
-  // In die Map-Koordinaten mit aktuellem Pan/Zoom umrechnen
-  const x = (xAbs - canvasRect.left - mapTransformState.x) / mapTransformState.k;
-  const y = (yAbs - canvasRect.top  - mapTransformState.y) / mapTransformState.k;
+  const x = (xAbs - canvasRect.left - mts.x) / (mts.k || 1);
+  const y = (yAbs - canvasRect.top  - mts.y) / (mts.k || 1);
 
   return { x, y };
 }
@@ -2393,35 +2405,66 @@ function drawSelectedFieldEdges() {
   });
 }
 function drawSystemEdges() {
-  // Alle Edges neu zeichnen, wenn nichts selektiert ist
-  makeEdgeDefs();
-  clearEdgesKeepDefs();
+  // Voraussetzung: Knoten-Container und Edges-SVG vorhanden
+  const edgesSvg = document.getElementById('mapEdges');
+  const nodesDiv = document.getElementById('mapNodes');
 
-  // Für jede Feld-Beziehung (source -> target) eine Linie zeichnen
-  fields.forEach((f) => {
-    // Nur wenn es eine Quelle gibt
-    if (!f?.source?.system) return;
+  if (!edgesSvg || !nodesDiv) return; // nichts zu tun, aber kein Crash
 
-    const srcSystem = f.source.system;
-    const srcField  = f.source.field || f.name;
-    const dstSystem = f.system;
-    const dstField  = f.name;
+  // Datenquelle defensiv: es muss ein Array "fields" geben
+  if (!Array.isArray(window.fields) || window.fields.length === 0) {
+    // optional: edgesSvg leeren, aber nicht crashen
+    if (edgesSvg.firstChild) {
+      edgesSvg.querySelectorAll('path').forEach(p => p.remove());
+    }
+    return;
+  }
 
-    // Filter respektieren (wie bei Knoten)
-    if (!systemPassesFilters(srcSystem) || !systemPassesFilters(dstSystem)) return;
+  // defs sicherstellen & alte Pfade entfernen (deine vorhandenen Helfer nutzen)
+  if (typeof makeEdgeDefs === 'function') makeEdgeDefs();
+  if (typeof clearEdgesKeepDefs === 'function') clearEdgesKeepDefs();
+  else edgesSvg.querySelectorAll('path').forEach(p => p.remove());
 
-    // Nur zeichnen, wenn beide Feldzeilen im DOM sind
-    const srcEl = getFieldEl(srcSystem, srcField);
-    const dstEl = getFieldEl(dstSystem, dstField);
-    if (!srcEl || !dstEl) return;
+  // Hilfsfilter defensiv
+  const passes = (typeof systemPassesFilters === 'function')
+    ? systemPassesFilters
+    : () => true;
 
-    // Ankerpunkte: rechts am Quell-Knoten, links am Ziel-Knoten (außerhalb)
+  window.fields.forEach((f) => {
+    const srcSystem = f?.source?.system;
+    const srcField  = f?.source?.field || f?.name;
+    const dstSystem = f?.system;
+    const dstField  = f?.name;
+
+    if (!srcSystem || !dstSystem) return;
+    if (!passes(srcSystem) || !passes(dstSystem)) return;
+
+    // Prüfen, ob die Zeilen existieren
+    const srcRow = getFieldEl(srcSystem, srcField);
+    const dstRow = getFieldEl(dstSystem, dstField);
+    if (!srcRow || !dstRow) return;
+
     const p1 = fieldAnchor(srcSystem, srcField, 'right');
     const p2 = fieldAnchor(dstSystem, dstField, 'left');
+    if (p1._invalid || p2._invalid) return;
 
-    drawEdgePath(orthoPath(p1, p2), true);
+    // vorhandene Pfad-Helfer nutzen, sonst einfache Linie
+    if (typeof orthoPath === 'function' && typeof drawEdgePath === 'function') {
+      drawEdgePath(orthoPath(p1, p2), true);
+    } else {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${p1.x} ${p1.y} C ${p1.x + 60} ${p1.y}, ${p2.x - 60} ${p2.y}, ${p2.x} ${p2.y}`);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', '#9aa3af');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('opacity', '0.9');
+      edgesSvg.appendChild(path);
+    }
   });
 }
+
+// Optional: Alias für alte Aufrufe
+window.DrawSystemEdges = drawSystemEdges;
 
 function buildChipList(container, items, selectedSet, onChange) {
   container.innerHTML = '';
@@ -2600,8 +2643,7 @@ function renderDataMap() {
       ev.stopPropagation();
       node.classList.toggle('is-collapsed');
       nodeCollapsed.set(sys.name, node.classList.contains('is-collapsed'));
-      if (selectedFieldRef) drawSelectedFieldEdges(); 
-      else drawSystemEdges();
+      if (selectedFieldRef) { drawSelectedFieldEdges(); } else { safeDrawAllEdges(); }
     });
 
     node.appendChild(wrap);
@@ -2623,8 +2665,7 @@ function renderDataMap() {
     enableDrag(node, header, sys.name);
   });
 
-  if (selectedFieldRef) drawSelectedFieldEdges(); 
-  else drawSystemEdges();
+  if (selectedFieldRef) { drawSelectedFieldEdges(); } else { safeDrawAllEdges(); }
 
   requestAnimationFrame(() => fitMapToContent());
 }
