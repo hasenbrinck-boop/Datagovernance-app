@@ -23,6 +23,9 @@ const dataDomains = state.dataDomains;
 const systems = state.systems;
 const dataObjects = state.dataObjects;
 let fields = state.fields;
+if (typeof window !== 'undefined') {
+  window.fields = fields;
+}
 const fieldColumns = state.fieldColumns;
 const legalEntities = state.legalEntities;
 const leSystemMap = state.leSystemMap;
@@ -56,6 +59,30 @@ let panStart = state.panStart;
 // === Data Object Dialog / Form (können initial null sein, Guards sind unten eingebaut)
 const dataObjectDialog = document.getElementById('dataObjectDialog');
 const dataObjectForm = document.getElementById('dataObjectForm');
+
+// --- DOM-Shortcuts mit Guard ---
+const $ = (sel, root = document) => (root || document).querySelector(sel);
+const $$ = (sel, root = document) =>
+  Array.from((root || document).querySelectorAll(sel));
+const byId = (id) => document.getElementById(id);
+
+// --- Pan/Zoom State defensiv ---
+window.mapTransformState = window.mapTransformState || { x: 0, y: 0, k: 1 };
+
+// --- Referenz auf den Map-Viewport: existiert bei dir sicherer als "mapCanvas"
+function getMapViewport() {
+  return byId('mapViewport') || byId('mapCanvas') || null;
+}
+
+// --- Edge-Redraw scheduling (falls noch nicht vorhanden) ---
+let _edgeRAF = 0;
+function scheduleEdgesRedraw() {
+  if (_edgeRAF) cancelAnimationFrame(_edgeRAF);
+  _edgeRAF = requestAnimationFrame(() => {
+    _edgeRAF = 0;
+    try { drawSystemEdges(); } catch (e) { console.error('[edges]', e); }
+  });
+}
 
 // Renderfunktion für Data Objects Tabelle
 function renderDataObjects() {
@@ -193,9 +220,6 @@ function deleteDataObject(i) {
 }
 
 /* ================= DOM Helpers ================= */
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-const byId = (id) => document.getElementById(id);
 const uid = (p = 'id') => p + '-' + Math.random().toString(36).slice(2, 9);
 
 /* ================= Elements ================= */
@@ -907,20 +931,6 @@ function showAdminSubview(id) {
   if (id === 'admin-domains') renderDomainsTable();
   if (id === 'admin-legal') renderLegalEntities();
   if (id === 'admin-dataobjects') renderDataObjects();
-}
-function resetAllAppData() {
-  const keys = [
-    'gdf_fields_v1',
-    'gdf_fields_v2',
-    'gdf_systems_v1',
-    'gdf_glossary_v1',
-    'gdf_mapPositions_v1',
-    'gdf_mapFilters_v1',
-    'gdf_leSystemMap_v1',
-    'gdf_fieldColumns_v1',
-  ];
-  keys.forEach((k) => localStorage.removeItem(k));
-  alert('Lokale App-Daten zurückgesetzt. Bitte Seite neu laden.');
 }
 
 /* Sortierfunktion */
@@ -2166,6 +2176,7 @@ domainForm?.addEventListener('submit', (e) => {
 /* Ende Teil 6*/
 /* Teil 7 Zeilen 2069-2449*/
 /* ==================== Data Map: Edges & Interaktion ==================== */
+
 function makeEdgeDefs() {
   if (!mapEdgesSvg) return;
   let defs = mapEdgesSvg.querySelector('defs');
@@ -2280,27 +2291,20 @@ function rectToMap(rect) {
   };
 }
 function fieldAnchor(systemName, fieldName, side = 'right') {
-  // Canvas/Viewport defensiv bestimmen (je nachdem, was du wirklich im DOM hast)
-  const canvas =
-    document.getElementById('mapViewport') ||
-    document.getElementById('mapCanvas') ||
-    document.querySelector('#mapViewport, #mapCanvas');
+  const viewport = getMapViewport();
+  const row = getFieldEl(systemName, fieldName);
 
-  const row  = getFieldEl(systemName, fieldName);
-  if (!canvas || !row) {
-    // Fallback verhindert Crash, Linien werden in diesem Fall einfach nicht gezeichnet
-    return { x: 0, y: 0, _invalid: true };
-  }
+  if (!viewport || !row) return null;   // ← verhindert "null is not an object"
 
-  const node = row.closest('.map-node') || row;
-  const canvasRect = canvas.getBoundingClientRect();
-  const rowRect    = row.getBoundingClientRect();
-  const nodeRect   = node.getBoundingClientRect();
+  const node     = row.closest('.map-node') || row;
+  const vpRect   = viewport.getBoundingClientRect();
+  const rowRect  = row.getBoundingClientRect();
+  const nodeRect = node.getBoundingClientRect();
 
-  const OUTSIDE = 14; // Abstand außerhalb des Knotens
+  const OUTSIDE = 14;
   const yAbs = rowRect.top + rowRect.height / 2;
-  const xAbs = (side === 'right') ? (nodeRect.right + OUTSIDE)
-                                  : (nodeRect.left  - OUTSIDE);
+  const xAbs = side === 'right' ? (nodeRect.right + OUTSIDE)
+                                : (nodeRect.left  - OUTSIDE);
 
   // mapTransformState defensiv (falls noch nicht initialisiert)
   const mtsSource =
@@ -2606,7 +2610,7 @@ function renderDataMap() {
       ev.stopPropagation();
       node.classList.toggle('is-collapsed');
       nodeCollapsed.set(sys.name, node.classList.contains('is-collapsed'));
-      if (selectedFieldRef) { drawSelectedFieldEdges(); } else { safeDrawAllEdges(); }
+      if (selectedFieldRef) { drawSelectedFieldEdges(); } else { drawSystemEdges(); }
     });
 
     node.appendChild(wrap);
@@ -2628,7 +2632,7 @@ function renderDataMap() {
     enableDrag(node, header, sys.name);
   });
 
-  if (selectedFieldRef) { drawSelectedFieldEdges(); } else { safeDrawAllEdges(); }
+  if (selectedFieldRef) { drawSelectedFieldEdges(); } else { drawSystemEdges(); }
 
   requestAnimationFrame(() => fitMapToContent());
 }
@@ -3548,6 +3552,12 @@ function drawSystemEdges() {
     drawEdgePath(orthoPath(start, end), true);
   });
 }
+
+// Falls irgendwo DrawSystemEdges() aufgerufen wird:
+window.DrawSystemEdges = drawSystemEdges;
+
+// falls irgendwo noch DrawSystemEdges() aufgerufen wird:
+window.DrawSystemEdges = drawSystemEdges;
 
 // Alias, damit alte Aufrufe mit großem D weiter funktionieren:
 if (typeof window !== 'undefined') window.DrawSystemEdges = drawSystemEdges;
