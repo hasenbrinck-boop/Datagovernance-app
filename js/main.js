@@ -40,6 +40,9 @@ let editGlossaryIndex = state.editGlossaryIndex;
 let glossaryTypeFilter = state.glossaryTypeFilter;
 const nodeCollapsed = state.nodeCollapsed;
 const mapTransformState = state.mapTransformState;
+if (typeof window !== 'undefined') {
+  window.mapTransformState = mapTransformState;
+}
 let mapFilters = state.mapFilters;
 let mapPositions = state.mapPositions;
 let selectedFieldRef = state.selectedFieldRef;
@@ -2199,40 +2202,51 @@ function hexWithAlpha(hex, a) {
 }
 function computeNodePositions(nodeEntries = []) {
   const positions = new Map();
-  const padding = 40;
+  const paddingY = 32;
   const baseX = 40;
-  const occupied = [];
+  const baseY = 40;
+  const columnGap = 48;
+
+  const fallbackHeight =
+    typeof window !== 'undefined' && window.innerHeight
+      ? window.innerHeight
+      : 800;
+  const canvasHeight = mapCanvas?.clientHeight || mapCanvas?.offsetHeight || fallbackHeight;
+
+  const maxColumnHeight = Math.max(canvasHeight - baseY * 2, 520);
+
+  let measuredWidth = 0;
+  nodeEntries.forEach(({ node }) => {
+    if (!measuredWidth) {
+      measuredWidth = node.offsetWidth || 0;
+    }
+  });
+  const baseWidth = measuredWidth || 360;
+  const columnWidth = baseWidth + columnGap;
 
   nodeEntries.forEach(({ sys, node }) => {
-    const existing = mapPositions[sys.name];
-    if (existing) {
-      const x = Number(existing.x) || 0;
-      const y = Number(existing.y) || 0;
-      positions.set(sys.name, { x, y });
-      occupied.push({
-        x,
-        y,
-        width: node.offsetWidth || 0,
-        height: node.offsetHeight || 0,
-      });
+    const stored = mapPositions[sys.name];
+    const sx = Number(stored?.x);
+    const sy = Number(stored?.y);
+    if (Number.isFinite(sx) && Number.isFinite(sy)) {
+      positions.set(sys.name, { x: sx, y: sy });
     }
   });
 
-  let currentY = occupied.length
-    ? occupied.reduce(
-        (max, item) => Math.max(max, item.y + item.height + padding),
-        baseX
-      )
-    : baseX;
+  let colX = baseX;
+  let colY = baseY;
 
   nodeEntries.forEach(({ sys, node }) => {
     if (positions.has(sys.name)) return;
-    const height = node.offsetHeight || 0;
-    const x = baseX;
-    const y = currentY;
-    positions.set(sys.name, { x, y });
-    occupied.push({ x, y, width: node.offsetWidth || 0, height });
-    currentY += height + padding;
+    const nodeHeight = node.offsetHeight || 220;
+
+    if (colY > baseY && colY + nodeHeight > baseY + maxColumnHeight) {
+      colX += columnWidth;
+      colY = baseY;
+    }
+
+    positions.set(sys.name, { x: colX, y: colY });
+    colY += nodeHeight + paddingY;
   });
 
   return positions;
@@ -2289,10 +2303,16 @@ function fieldAnchor(systemName, fieldName, side = 'right') {
                                   : (nodeRect.left  - OUTSIDE);
 
   // mapTransformState defensiv (falls noch nicht initialisiert)
-  const mts = window.mapTransformState || { x: 0, y: 0, k: 1 };
+  const mtsSource =
+    (mapTransformState && typeof mapTransformState === 'object'
+      ? mapTransformState
+      : null) ||
+    (typeof window !== 'undefined' ? window.mapTransformState : null) ||
+    { x: 0, y: 0, k: 1 };
+  const scale = mtsSource.k || 1;
 
-  const x = (xAbs - canvasRect.left - mts.x) / (mts.k || 1);
-  const y = (yAbs - canvasRect.top  - mts.y) / (mts.k || 1);
+  const x = (xAbs - canvasRect.left - mtsSource.x) / scale;
+  const y = (yAbs - canvasRect.top  - mtsSource.y) / scale;
 
   return { x, y };
 }
