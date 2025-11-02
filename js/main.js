@@ -908,20 +908,6 @@ function showAdminSubview(id) {
   if (id === 'admin-legal') renderLegalEntities();
   if (id === 'admin-dataobjects') renderDataObjects();
 }
-function resetAllAppData() {
-  const keys = [
-    'gdf_fields_v1',
-    'gdf_fields_v2',
-    'gdf_systems_v1',
-    'gdf_glossary_v1',
-    'gdf_mapPositions_v1',
-    'gdf_mapFilters_v1',
-    'gdf_leSystemMap_v1',
-    'gdf_fieldColumns_v1',
-  ];
-  keys.forEach((k) => localStorage.removeItem(k));
-  alert('Lokale App-Daten zurückgesetzt. Bitte Seite neu laden.');
-}
 
 /* Sortierfunktion */
 
@@ -2166,6 +2152,7 @@ domainForm?.addEventListener('submit', (e) => {
 /* Ende Teil 6*/
 /* Teil 7 Zeilen 2069-2449*/
 /* ==================== Data Map: Edges & Interaktion ==================== */
+
 function makeEdgeDefs() {
   if (!mapEdgesSvg) return;
   let defs = mapEdgesSvg.querySelector('defs');
@@ -3594,3 +3581,24 @@ if (typeof window !== 'undefined') window.DrawSystemEdges = drawSystemEdges;
     drawSystemEdges();
   }
 })();
+function resetAllAppData() {
+  const keys = [
+    'gdf_fields_v1',
+    'gdf_fields_v2',
+    'gdf_systems_v1',
+    'gdf_glossary_v1',
+    'gdf_mapPositions_v1',
+    'gdf_mapFilters_v1',
+    'gdf_leSystemMap_v1',
+    'gdf_fieldColumns_v1',
+  ];
+  keys.forEach((k) => localStorage.removeItem(k));
+  alert('Lokale App-Daten zurückgesetzt. Bitte Seite neu laden.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const topBtn   = document.getElementById('resetAppBtnTop');
+  const footBtn  = document.getElementById('resetAppBtnFoot');
+  if (topBtn)  topBtn.addEventListener('click', resetAllAppData);
+  if (footBtn) footBtn.addEventListener('click', resetAllAppData);
+});
