@@ -2294,11 +2294,11 @@ function fieldAnchor(systemName, fieldName, side = 'right') {
   const viewport = getMapViewport();
   const row = getFieldEl(systemName, fieldName);
 
-  if (!viewport || !row) return null;   // ← verhindert "null is not an object"
+  if (!viewport || !row) return null; // ← verhindert "null is not an object"
 
-  const node     = row.closest('.map-node') || row;
-  const vpRect   = viewport.getBoundingClientRect();
-  const rowRect  = row.getBoundingClientRect();
+  const node = row.closest('.map-node') || row;
+  const vpRect = viewport.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
   const nodeRect = node.getBoundingClientRect();
 
   const OUTSIDE = 14;
@@ -2315,8 +2315,8 @@ function fieldAnchor(systemName, fieldName, side = 'right') {
     { x: 0, y: 0, k: 1 };
   const scale = mtsSource.k || 1;
 
-  const x = (xAbs - canvasRect.left - mtsSource.x) / scale;
-  const y = (yAbs - canvasRect.top  - mtsSource.y) / scale;
+  const x = (xAbs - vpRect.left - mtsSource.x) / scale;
+  const y = (yAbs - vpRect.top - mtsSource.y) / scale;
 
   return { x, y };
 }
@@ -2414,7 +2414,9 @@ function drawSelectedFieldEdges() {
     const p2 = fieldAnchor(tgt.system, tgt.name, 'left');
     const tgtEl = getFieldEl(tgt.system, tgt.name);
     tgtEl?.classList.add('is-highlight');
-    drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
+    if (p1 && p2) {
+      drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
+    }
   });
   incoming.forEach((src) => {
     const p1 = fieldAnchor(
@@ -2425,7 +2427,9 @@ function drawSelectedFieldEdges() {
     const p2 = fieldAnchor(system, field, 'left');
     const srcRow = getFieldEl(src.source.system, src.source.field || src.name);
     srcRow?.classList.add('is-highlight');
-    drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
+    if (p1 && p2) {
+      drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
+    }
   });
 }
 
