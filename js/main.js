@@ -23,6 +23,9 @@ const dataDomains = state.dataDomains;
 const systems = state.systems;
 const dataObjects = state.dataObjects;
 let fields = state.fields;
+if (typeof window !== 'undefined') {
+  window.fields = fields;
+}
 const fieldColumns = state.fieldColumns;
 const legalEntities = state.legalEntities;
 const leSystemMap = state.leSystemMap;
@@ -58,8 +61,10 @@ const dataObjectDialog = document.getElementById('dataObjectDialog');
 const dataObjectForm = document.getElementById('dataObjectForm');
 
 // --- DOM-Shortcuts mit Guard ---
-function $(sel) { return document.querySelector(sel); }
-function byId(id) { return document.getElementById(id); }
+const $ = (sel, root = document) => (root || document).querySelector(sel);
+const $$ = (sel, root = document) =>
+  Array.from((root || document).querySelectorAll(sel));
+const byId = (id) => document.getElementById(id);
 
 // --- Pan/Zoom State defensiv ---
 window.mapTransformState = window.mapTransformState || { x: 0, y: 0, k: 1 };
@@ -215,9 +220,6 @@ function deleteDataObject(i) {
 }
 
 /* ================= DOM Helpers ================= */
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-const byId = (id) => document.getElementById(id);
 const uid = (p = 'id') => p + '-' + Math.random().toString(36).slice(2, 9);
 
 /* ================= Elements ================= */
@@ -3516,7 +3518,7 @@ function drawSystemEdges() {
   if (typeof clearEdgesKeepDefs === 'function') clearEdgesKeepDefs();
   else edgesSvg.querySelectorAll('path').forEach(p => p.remove());
 
-  const data = Array.isArray(window.fields) ? window.fields : [];
+  const data = Array.isArray(fields) ? fields : [];
   if (!data.length) return;
 
   const passes = (typeof systemPassesFilters === 'function') ? systemPassesFilters : () => true;
