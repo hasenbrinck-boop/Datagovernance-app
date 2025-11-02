@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Global Data Fields</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- ===== Topbar: Hauptnavigation (schwebend, abgerundet) ===== -->
+<header class="topbar" role="banner">
+  <div class="topbar-inner floating rounded">
+    <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+    <nav class="topnav" aria-label="Primary">
+      <button id="systemsNavItem" class="topnav-item" type="button">Systems</button>
+      <button id="dataMapNavItem" class="topnav-item" type="button">Data Map</button>
+      <button id="glossaryNavItem" class="topnav-item" type="button">Glossary</button>
+      <button id="adminNavItem" class="topnav-item" type="button">Admin</button>
+    </nav>
+  
+  </div>
+</header>
+
+        <!-- ===== Sidebar ===== -->
+        <aside class="sidebar">
+          <div class="sidebar-inner">
+            <!-- Head zeigt nur den Blocktitel -->
+            <div class="sidebar-head">
+              <div class="sidebar-title">Navigation</div>
+            </div>
+            <ul id="systemList" class="sidebar-list"></ul>
+            <!-- Glossary Submenu (nur im Glossary-Mode sichtbar) -->
+<ul id="glossarySubnav" class="sidebar-list" style="display:none">
+  <li><button class="gls-filter" data-type="ALL">All Definitions</button></li>
+  <li><button class="gls-filter" data-type="Field">Field</button></li>
+  <li><button class="gls-filter" data-type="Term">Term</button></li>
+  <li><button class="gls-filter" data-type="KPI">KPI</button></li>
+  <li><button class="gls-filter" data-type="Process">Process</button></li>
+  <li><button class="gls-filter" data-type="System">System</button></li>
+</ul>
+          </div> <!-- /sidebar-inner -->
+        </aside>
+        <!-- Top-Level-Navigation direkt unter den Systemen -->
+
+    <!-- ===== Main ===== -->
+    <main class="main">
+
+      <!-- Top Tabs for Systems view -->
+      <div id="topTabs" class="top-tabs">
+        <button class="tab is-active" data-tab="global">Global Data Fields</button>
+        <button class="tab" data-tab="local">Local Data Fields</button>
+      </div>
+
+<!-- GLOBAL -->
+<section id="global" class="panel is-active">
+<div class="section-head">
+  <h2 class="section-title">Global Data Fields</h2>
+  <div class="section-actions">
+    <button id="btnGlobalFilter" class="icon-btn" type="button" title="Filter">
+      <!-- dein SVG -->
+      <span>Filter</span>
+    </button>
+    <button id="btnGlobalNew" class="icon-btn" type="button" title="New">
+      <!-- dein SVG -->
+      <span>New</span>
+    </button>
+    <button id="btnGlobalExport" class="icon-btn" type="button" title="Export">
+      <!-- dein SVG -->
+      <span>Export</span>
+    </button>
+  </div>
+</div>
+
+<div class="panel-body">
+  <table class="table">
+    <thead></thead>
+    <tbody id="fieldsBody"></tbody>
+  </table>
+</div>
+</section>
+
+<!-- LOCAL (initial versteckt; JS blendet ein) -->
+<section id="local" class="panel" style="display:none">
+<div class="section-head">
+  <h2 class="section-title">Local Data Fields</h2>
+  <div class="section-actions">
+    <button id="btnLocalFilter" class="icon-btn" type="button" title="Filter">
+      <!-- dein SVG -->
+      <span>Filter</span>
+    </button>
+    <button id="btnLocalNew" class="icon-btn" type="button" title="New">
+      <!-- dein SVG -->
+      <span>New</span>
+    </button>
+    <button id="btnLocalExport" class="icon-btn" type="button" title="Export">
+      <!-- dein SVG -->
+      <span>Export</span>
+    </button>
+  </div>
+</div>
+
+<div id="localTables" class="local-tables"></div>
+</section>      
+
+  <!-- Hier rendert JS die Tabellen -->
+  <div id="localTables" class="local-tables"></div>
+</section>
+  
+<!-- Glossary -->
+<section id="glossaryView" class="panel" style="display:none">
+  <div class="panel-head">
+    <h3 class="panel-title">Global Glossary</h3>
+    <button id="addGlossaryBtn" class="btn-new"><span class="plus"></span> New</button>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <!-- wird dynamisch befüllt -->
+        <tr id="glossaryHeadRow"></tr>
+      </thead>
+      <tbody id="glossaryTable"></tbody>
+    </table>
+  </div>
+</section>
+
+      <!-- Admin Tabs (neu sortiert, Data Domains zuerst) -->
+      <div id="adminTabs" class="admin-tabs" style="display:none">
+        <button class="tab is-active" data-admin-tab="admin-domains">Data Domains</button>
+        <button class="tab" data-admin-tab="admin-systems">Systems</button>
+        <button class="tab" data-admin-tab="admin-dataObjects">Data Objects</button>
+        <button class="tab" data-admin-tab="admin-columns">Field Information</button>
+        <button class="tab" data-admin-tab="admin-legal">Legal Entities</button>
+      </div>
+
+      <!-- Admin: Systems -->
+      <section id="admin-systems" class="panel admin-view" style="display:none">
+        <div class="panel-head">
+          <h3 class="panel-title">Systems</h3>
+          <button id="addSystemBtn" class="btn-new"><span class="plus"></span> New</button>
+        </div>
+        <div class="panel-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Owner</th><th>Version</th><th>Scope</th><th>Data Domain</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="systemsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Admin: Data Objects -->
+        <div id="admin-dataObjects" class="admin-view" style="display:none">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Data Objects</div>
+            <button class="btn-new" onclick="addDataObject()">
+              <span class="plus"></span> New
+            </button>
+          </div>
+          <div class="panel-body">
+            <table id="dataObjectsTable" class="table"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin: Field Information (Columns) -->
+      <section id="admin-columns" class="panel admin-view" style="display:none">
+        <div class="panel-head">
+          <h3 class="panel-title">Field Information (Columns)</h3>
+          <button id="addColumnBtn" class="btn-new"><span class="plus"></span> New</button>
+        </div>
+        <div class="panel-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Visible</th><th>Order</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="columnsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Admin: Data Domains -->
+      <section id="admin-domains" class="panel admin-view" style="display:none">
+        <div class="panel-head">
+          <h3 class="panel-title">Data Domains</h3>
+          <button id="addDomainBtn" class="btn-new"><span class="plus"></span> New</button>
+        </div>
+        <div class="panel-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Domain</th><th>Manager</th><th>Active</th><th>Color</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="domainsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+<!-- Admin: Legal Entities -->
+<section id="admin-legal" class="panel admin-view" style="display:none">
+  <div class="panel-head">
+    <h3 class="panel-title">Legal Entities</h3>
+    <button id="addLegalBtn" class="btn-new"><span class="plus"></span> New</button>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>LE-Number</th><th>LE Name</th><th>Country</th><th>Systems</th><th>Actions</th>
+        </tr>
+      </thead>      
+      <tbody id="legalTable"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Reset Button (nur lokal, um alles zu löschen) -->
+<div style="margin-top:20px; text-align:right;">
+  <button onclick="resetAllAppData()" class="btn btn--ghost btn--sm">
+    Reset App Data
+  </button>
+</div>
+
+      <!-- Data Map -->
+      <section id="mapView" class="panel" style="display:none">
+        <div class="panel-head">
+          <h3 class="panel-title">Data Map</h3>
+          <div class="data-map-toolbar">
+            <button id="openFilterPanel" class="btn-ghost">Set Filters</button>
+            <button id="mapFitBtn" class="btn-ghost">Fit to view</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="mapCanvas">
+            <div id="mapViewport">
+              <svg id="mapEdges"></svg>
+              <div id="mapNodes"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===== Filter Overlay ===== -->
+<div id="filterOverlay"
+class="overlay"
+data-filter-sheet
+aria-hidden="true">
+    <div class="overlay-backdrop">
+      <div class="overlay-card">
+        <div class="overlay-head">
+          <h3 class="panel-title">Set Filters</h3>
+          <button id="filterCloseBtn" class="btn-ghost">Close</button>
+        </div>
+        <div class="overlay-body">
+          <div class="filters-grid">
+            <div class="filter-block">
+              <h4>Systems</h4>
+              <div id="chipSystems" class="chips"></div>
+            </div>
+            <div class="filter-block">
+              <h4>Data Domains</h4>
+              <div id="chipDomains" class="chips"></div>
+            </div>
+          </div>
+          <div class="filter-row">
+            <label for="mapSearch" style="color:var(--text-dim)">Search</label>
+            <input id="mapSearch" type="text" placeholder="Search field name…" />
+            <label class="chip"><input id="scopeGlobal" type="checkbox" checked /><span>Global</span></label>
+            <label class="chip"><input id="scopeLocal" type="checkbox" checked /><span>Local</span></label>
+          </div>
+        </div>
+        <div class="overlay-foot">
+          <button id="filterClear" class="btn-clear">Clear all</button>
+          <button id="filterDone" class="btn-primary">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Dialogs ===== -->
+
+<!-- Data Object Dialog (NEU) -->
+<dialog id="dataObjectDialog">
+  <div class="dialog-card">
+    <div class="dialog-head">
+      <div class="panel-title">New / Edit Data Object</div>
+    </div>
+    <form id="dataObjectForm">
+      <div class="dialog-body">
+        <div class="dialog-grid">
+          <label for="dbo-id">ID</label>
+          <input id="dbo-id" name="id" type="number" min="1" required />
+
+          <label for="dbo-name">Name</label>
+          <input id="dbo-name" name="name" type="text" required />
+
+          <label for="dbo-domain">Data Domain</label>
+          <select id="dbo-domain" name="domain" required>
+            <!-- Optionen werden von script.js befüllt -->
+          </select>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn-cancel" type="button">Cancel</button>
+        <button class="btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Field Dialog -->
+<dialog id="fieldDialog">
+  <div class="dialog-card">
+    <div class="dialog-head">
+      <div class="panel-title">New / Edit Field</div>
+    </div>
+
+    <form id="fieldForm">
+      <div class="dialog-body">
+        <div class="dialog-grid">
+          <label for="fld-name">Field Name</label>
+          <input id="fld-name" name="name" type="text" required />
+
+          <label for="fld-system">System</label>
+          <select id="fld-system" name="system" required></select>
+
+          <label for="fld-mandatory">Mandatory</label>
+          <input id="fld-mandatory" name="mandatory" type="checkbox" />
+
+          <label for="fld-mapping">Mapping</label>
+          <input id="fld-mapping" name="mapping" type="text" />
+
+          <label for="fld-foundation">Data Object</label>
+          <select id="fld-foundation" name="foundationObject"></select>
+
+          <label for="fld-glossary">Glossary Term</label>
+          <select id="fld-glossary" name="glossaryId"></select>
+
+          <!-- Legal Entity -->
+          <label for="fld-legal-entity">Legal Entity</label>
+          <select id="fld-legal-entity" name="legalEntityNumber">
+            <option value="">(none)</option>
+            <!-- Optionen kommen dynamisch aus JS -->
+          </select>
+
+          <label for="fld-source-system">Source System</label>
+          <select id="fld-source-system" name="sourceSystem">
+            <!-- Optionen werden per JS befüllt -->
+          </select>
+          
+          <label for="fld-source-field">Source Field</label>
+          <select id="fld-source-field" name="sourceField" disabled>
+            <option value="">Select a system first</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="dialog-foot">
+        <button class="btn-cancel" type="button">Cancel</button>
+        <button class="btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Definition Overlay (eigenständig, nicht verschachtelt) -->
+<dialog id="definitionDialog" class="modal">
+  <form method="dialog" id="definitionForm">
+    <h3 id="def-title">Definition</h3>
+    <div class="def-content">
+      <div><strong>Term:</strong> <span id="def-term">—</span></div>
+      <div><strong>Definition:</strong><br><div id="def-definition">—</div></div>
+      <div><strong>Owner:</strong> <span id="def-owner">—</span></div>
+      <div><strong>Additional info:</strong><br><div id="def-info">—</div></div>
+    </div>
+    <div class="dialog-actions">
+      <button class="btn-cancel" type="button">Close</button>
+      <button type="button" id="def-open-glossary" class="btn-primary">Open in Glossary</button>
+    </div>
+  </form>
+</dialog>
+
+  <!-- System Dialog -->
+  <dialog id="systemDialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div class="panel-title">New / Edit System</div>
+        <button class="btn-cancel" type="button">Cancel</button>
+      </div>
+      <form id="systemForm">
+        <div class="dialog-body">
+          <div class="dialog-grid">
+            <label for="sys-name">Name</label>
+            <input id="sys-name" name="name" type="text" required />
+
+            <label for="sys-owner">Owner</label>
+            <input id="sys-owner" name="owner" type="text" />
+
+            <label for="sys-version">Version</label>
+            <input id="sys-version" name="version" type="text" />
+
+            <label for="sys-scope">Global/Local</label>
+            <select id="sys-scope" name="scope">
+              <option value="both">both</option>
+              <option value="global">global</option>
+              <option value="local">local</option>
+            </select>
+
+            <label for="sys-domain">Data Domain</label>
+            <select id="sys-domain" name="dataDomain"></select>
+          </div>
+        </div>
+        <div class="dialog-foot">
+          <button class="btn-cancel" type="button">Cancel</button>
+          <button class="btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+<!-- Dialog: Legal Entity (vereinheitlicht mit anderen Dialogen) -->
+<dialog id="legalDialog">
+  <div class="dialog-card">
+    <div class="dialog-head">
+      <div class="panel-title">New / Edit Legal Entity</div>
+    </div>
+    <form id="legalForm">
+      <div class="dialog-body">
+        <div class="dialog-grid">
+          <label for="le-number">LE Number</label>
+          <input id="le-number" name="number" type="text" required />
+
+          <label for="le-name">LE Name</label>
+          <input id="le-name" name="name" type="text" required />
+
+          <label for="le-country">Country</label>
+          <input id="le-country" name="country" type="text" required />
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn-cancel" type="button">Cancel</button>
+        <button class="btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Glossary Dialog -->
+<dialog id="glossaryDialog">
+  <div class="dialog-card">
+    <div class="dialog-head">
+      <div class="panel-title">New / Edit Glossary Term</div>
+    </div>
+    <form id="glossaryForm">
+      <div class="dialog-body">
+        <div class="dialog-grid">
+          <label for="gls-term">Term</label>
+          <input id="gls-term" name="term" type="text" required />
+          
+          <label for="gls-type">Type</label>
+          <select id="gls-type" name="type">
+            <option value="Field">Field</option>
+            <option value="Term">Term</option>
+            <option value="KPI">KPI</option>
+            <option value="Process">Process</option>
+            <option value="System">System</option>
+          </select>
+
+          <label for="gls-definition">Definition</label>
+          <input id="gls-definition" name="definition" type="text" />
+
+          <label for="gls-info">Additional Information</label>
+          <input id="gls-info" name="info" type="text" />
+
+          <label for="gls-owner">Responsible Process Owner</label>
+          <input id="gls-owner" name="owner" type="text" />
+
+          <label for="gls-fieldRef">Linked Data Field</label>
+          <select id="gls-fieldRef" name="fieldRef">
+            <!-- Optionen werden durch script.js befüllt -->
+          </select>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn-cancel" type="button">Cancel</button>
+        <button class="btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Dialog: Assign Systems to Legal Entity -->
+<dialog id="leSystemsDialog">
+  <div class="dialog-card">
+    <div class="dialog-head">
+      <div class="panel-title">Assign Systems to Legal Entity</div>
+    </div>
+    <form id="leSystemsForm">
+      <div class="dialog-body">
+        <div class="dialog-grid" style="grid-template-columns: 1fr;">
+          <label>Legal Entity</label>
+          <div id="leSystemsLegend" style="padding-top:10px; color:var(--text-dim)"></div>
+
+          <label>Selectable Systems (scope: local / both)</label>
+          <div id="leSystemsList" class="chips"></div>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn-cancel" type="button">Cancel</button>
+        <button id="leSystemsSave" class="btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+  <!-- Column Dialog -->
+  <dialog id="columnDialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div class="panel-title">New / Edit Column</div>
+      </div>
+      <form id="columnForm">
+        <div class="dialog-body">
+          <div class="dialog-grid">
+            <label for="col-name">Name</label>
+            <input id="col-name" name="name" type="text" required />
+
+            <label for="col-visible">Visible</label>
+            <input id="col-visible" name="visible" type="checkbox" />
+
+            <label for="col-order">Order</label>
+            <input id="col-order" name="order" type="number" min="1" />
+          </div>
+        </div>
+        <div class="dialog-foot">
+          <button class="btn-cancel" type="button">Cancel</button>
+          <button class="btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Domain Dialog -->
+  <dialog id="domainDialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div class="panel-title">New / Edit Data Domain</div>
+      </div>
+      <form id="domainForm">
+        <div class="dialog-body">
+          <div class="dialog-grid">
+            <label for="dom-name">Name</label>
+            <input id="dom-name" name="name" type="text" required />
+
+            <label for="dom-manager">Manager</label>
+            <input id="dom-manager" name="manager" type="text" />
+
+            <label for="dom-active">Active</label>
+            <input id="dom-active" name="active" type="checkbox" checked />
+
+            <label for="dom-color">Color</label>
+            <input id="dom-color" name="color" type="color" value="#6a6a6a" />
+          </div>
+        </div>
+        <div class="dialog-foot">
+          <button class="btn-cancel" type="button">Cancel</button>
+          <button class="btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <div id="appError" class="app-error" style="display: none;"></div>
+
+  <!-- Script -->
+  <script src="script.js" defer></script>
+</body>
+</html>
