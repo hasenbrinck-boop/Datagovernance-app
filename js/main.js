@@ -1,62 +1,58 @@
-/*Teil 1 Zeilen 1-308*/
-// script.js
-console.log('[script.js] Datei geladen');
+import { state } from './state.js';
+import { ICON_EDIT, ICON_TRASH, GLOSSARY_TYPES } from './constants.js';
+import {
+  saveLeSystems,
+  loadLeSystems,
+  saveSystems,
+  loadSystems,
+  saveColumns,
+  loadColumns,
+  saveFields,
+  loadFields,
+  savePositions,
+  loadPositions,
+  saveFilters,
+  loadFilters,
+  saveGlossary,
+  loadGlossary,
+} from './storage.js';
+
+console.log('[main.js] Modul geladen');
+
+const dataDomains = state.dataDomains;
+const systems      = state.systems;
+const dataObjects  = state.dataObjects;
+let fields         = state.fields;
+const fieldColumns = state.fieldColumns;
+const legalEntities= state.legalEntities;
+const leSystemMap  = state.leSystemMap;
+const glossaryTerms= state.glossaryTerms;
+
+let currentSystem             = state.currentSystem;
+let editDataObjectIndex       = state.editDataObjectIndex;
+let editFieldIndex            = state.editFieldIndex;
+let editSystemIndex           = state.editSystemIndex;
+let editFoundationIndex       = state.editFoundationIndex;
+let editColumnIndex           = state.editColumnIndex;
+let editDomainIndex           = state.editDomainIndex;
+let editLegalIndex            = state.editLegalIndex;
+let editGlossaryIndex         = state.editGlossaryIndex;
+let glossaryTypeFilter        = state.glossaryTypeFilter;
+const nodeCollapsed           = state.nodeCollapsed;
+const mapTransformState       = state.mapTransformState;
+let mapFilters                = state.mapFilters;
+let mapPositions              = state.mapPositions;
+let selectedFieldRef          = state.selectedFieldRef;
+let editingLeIndexForSystems  = state.editingLeIndexForSystems;
+let globalSort                = state.globalSort;
+let showGlobalFilters         = state.showGlobalFilters;
+let showLocalFilters          = state.showLocalFilters;
+let isPanning                 = state.isPanning;
+let panStart                  = state.panStart;
 
 // === Data Object Dialog / Form (können initial null sein, Guards sind unten eingebaut)
 const dataObjectDialog = document.getElementById('dataObjectDialog');
 const dataObjectForm   = document.getElementById('dataObjectForm');
-let editDataObjectIndex = null;
-
-/* ================= Persistence Keys ================= */
-const STORAGE_KEY_COLUMNS   = 'gdf_fieldColumns_v1';
-const STORAGE_KEY_MAP_POS   = 'gdf_mapPositions_v1';
-const STORAGE_KEY_MAP_FILTERS = 'gdf_mapFilters_v1';
-const STORAGE_KEY_LE_SYS    = 'gdf_leSystemMap_v1';
-const STORAGE_KEY_GLOSSARY  = 'gdf_glossary_v1';
-const STORAGE_KEY_SYSTEMS = 'gdf_systems_v1';
-const STORAGE_KEY_FIELDS = 'gdf_fields_v2';
-const GLOSSARY_TYPES = ['Field','Term','KPI','Process','System'];
-
-/* Storage shim: localStorage oder In-Memory */
-const storage = (() => {
-  try {
-    const t = '__gdf_test__';
-    window.localStorage.setItem(t, '1');
-    window.localStorage.removeItem(t);
-    return window.localStorage;
-  } catch {
-    const mem = {};
-    return {
-      getItem: (k) => (k in mem ? mem[k] : null),
-      setItem: (k, v) => { mem[k] = String(v); },
-      removeItem: (k) => { delete mem[k]; },
-    };
-  }
-})();
-
-/* ================= Sample Data ================= */
-let dataDomains = [
-  { name: 'HR',      manager: 'Michael Hasenbrinck', active: true,  color: '#4c6f62' },
-  { name: 'Finance', manager: 'Ellen Lunz',   active: true,  color: '#6b5e4c' },
-];
-
-let systems = [
-  { id: 'sys-ec',  name: 'Employee Central',   owner: 'HR',      version: '1.0', scope: 'both',  dataDomain: 'HR' },
-  { id: 'sys-4p',  name: '4Plan',              owner: 'Finance', version: '1.0', scope: 'global', dataDomain: 'HR' },
-  { id: 'sys-sem', name: 'SAP SEM',owner: 'HR',      version: '1.0', scope: 'global', dataDomain: 'HR' },
-  { id: 'sys-smr', name: 'Smart Recruiters',owner: 'HR',      version: '1.0', scope: 'both', dataDomain: 'HR' },
-  { id: 'sys-p01', name: 'P01',owner: 'Finance',      version: '1.0', scope: 'global', dataDomain: 'Finance' },
-];
-
-// =========================
-// Data Objects (ersetzt Foundation Objects)
-// =========================
-let dataObjects = [
-  { id: 114, name: 'Position Data',  domain: 'HR' },
-  { id: 130, name: 'Applicant Data', domain: 'HR' },
-  { id: 135, name: 'Employee Data',  domain: 'HR' },
-  { id: 159, name: 'Job Data',       domain: 'HR' },
-];
 
 // Renderfunktion für Data Objects Tabelle
 function renderDataObjects() {
@@ -114,6 +110,7 @@ function openDataObjectDialog(index = null) {
   }
 
   editDataObjectIndex = index;
+  state.editDataObjectIndex = editDataObjectIndex;
   dataObjectForm.reset();
 
   // Data Domain-Options dynamisch aus aktiven Domains befüllen
@@ -171,58 +168,6 @@ function deleteDataObject(i) {
   renderFieldsTable();
   renderDataObjects();
 }
-
-let fields = [
-  { id: 'f1', name: 'Global ID', system: 'Employee Central', type: 'String', length: 10, mandatory: true,  local: false, mapping: '',  glossaryRef: 'gls-001', foundationObjectId: '135' },
-  { id: 'f2', name: 'Org-Code',  system: 'Employee Central', type: 'String', length: 12, mandatory: false, local: false,  mapping: '', foundationObjectId: '114' },
-  { id: 'f3', name: 'Position ID',  system: 'Employee Central', type: 'String', length: 8,  mandatory: true,  local: false, mapping: '',  foundationObjectId: '114' },
-  { id: 'f4', name: 'Position ID',  system: '4Plan',            type: 'Number', length: 9,  mandatory: true,  local: false, mapping: '', foundationObjectId: '114', source: { system: 'Employee Central', field: 'PositionID' } },
-  { id: 'f5', name: 'Global ID',  system: '4Plan',            type: 'String', length: 10, mandatory: true,  local: false, mapping: '',     foundationObjectId: '135',     source: { system: 'Employee Central', field: 'EmployeeID' } },
-  { id: 'f6', name: 'Location',  system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '114' },
-  { id: 'f7', name: 'Status',  system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '135' },
-  { id: 'f8', name: 'Status',  system: '4Plan', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '135' },
-  { id: 'f9', name: 'Last Name',  system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '135' },
-  { id: 'f10', name: 'First Name',  system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '135' },
-  { id: 'f11', name: 'First Name',  system: '4Plan', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '135' },
-  { id: 'f12', name: 'Last Name',  system: '4Plan', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '135' },
-  { id: 'f13', name: 'Number of active Employees',  system: 'SAP SEM', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '' },
-  { id: 'f14', name: 'All Leavers',  system: 'SAP SEM', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '' },
-  { id: 'f15', name: 'Master Cost Center',  system: 'P01', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '135' },
-  { id: 'f16', name: 'Job Code',  system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '',   foundationObjectId: '159' },
-];
-
-let fieldColumns = [
-  { name: 'Field Name',      visible: true, order: 1 },
-  { name: 'System',          visible: true, order: 2 },
-  { name: 'Mandatory',       visible: true, order: 3 },
-  { name: 'Mapping',         visible: true, order: 4 },
-  { name: 'Data Object', visible: true, order: 5 },
-  // NEU:
-  { name: 'Definition',      visible: true, order: 6 },
-];
-
-// ===== Legal Entities =====
-let legalEntities = [
-  { id: 1, number: '4004', name: 'LEONI B', country: 'Germany' },
-  { id: 2, number: '2001', name: 'LEONI INC', country: 'US' },
-  { id: 3, number: '6004', name: 'LEONI Egypt', country: 'Egypt' },
-  { id: 4, number: '6006', name: 'LEONI Tunisia', country: 'Tunisia' },
-  { id: 5, number: '7010', name: 'LEONI Shanghai', country: 'China' },
-];
-// Relation: LE-Number -> Array<System IDs>
-let leSystemMap = {
-  // z. B. "4004": ["sys-wfa"]
-};
-
-// ===== Glossary =====
-let glossaryTerms = [
-  { id: 'gls-001', term: 'Global ID', definition: 'Unique ID of Employee at LEONI', info: 'Created in IDM', owner: 'HR Analytics',      fieldRef: '' ,type: 'Term'},
-  { id: 'gls-002', term: 'Org-Code',         definition: 'Shows the organizational allocation of a position', info: 'As shown in Org-Man',            owner: 'Org Dev', fieldRef: '', type: 'Term' },
-  { id: 'gls-003', term: 'Position ID',         definition: 'Unique Position ID within LEONI', info: 'Starts with X_',            owner: 'HR Analytics', fieldRef: '', type: 'Term'},
-  { id: 'gls-004', term: 'Status',         definition: 'Shows if the employee is active or passive', info: '',            owner: 'HR Analytics', fieldRef: '' , type: 'Term'},
-  { id: 'gls-005', term: 'Working Hours',         definition: 'Contractual working hours of the employee', info: '',            owner: 'HR Analytics', fieldRef: '', type: 'Term' },
-  { id: 'gls-006', term: 'Time to recruit',         definition: 'Time from final approval of PR until contract signed', info: '',            owner: 'HR Analytics', fieldRef: '', type: 'KPI' },
-];
 
 /* ================= DOM Helpers ================= */
 const $  = (sel, root = document) => root.querySelector(sel);
@@ -318,8 +263,6 @@ const GLOSSARY_COLUMNS = [
 ];
 
 /* Fallback-Utils (nur einfügen, wenn bei dir nicht vorhanden) */
-const ICON_EDIT  = '<svg class="icon-16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>';
-const ICON_TRASH = '<svg class="icon-16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
 /* ===== Header dynamisch rendern (einmal pro Ansicht) ===== */
@@ -342,122 +285,6 @@ function verifyGlossaryColumns(){
   }
 }
 
-/* ================= State ================= */
-let currentSystem = 'All Systems';
-let editFieldIndex = null, editSystemIndex = null, editFoundationIndex = null, editColumnIndex = null, editDomainIndex = null;
-let editLegalIndex = null;
-let editGlossaryIndex = null;
-let glossaryTypeFilter = 'ALL'; // 'ALL' | einer der GLOSSARY_TYPES
-let nodeCollapsed = new Map();
-let mapTransformState = { x: 20, y: 20, k: 1 };
-let mapFilters = {
-  systems: [],
-  domains: [],
-  scope: { global: true, local: true },
-  search: '',
-};
-let mapPositions = {};
-let selectedFieldRef = null; // { system, field }
-let editingLeIndexForSystems = null;
-
-/* ================= Persistence ================= */
-function saveLeSystems() { try { storage.setItem(STORAGE_KEY_LE_SYS, JSON.stringify(leSystemMap)); } catch {} }
-function loadLeSystems() { try { const raw = storage.getItem(STORAGE_KEY_LE_SYS); if (raw) leSystemMap = JSON.parse(raw) || {}; } catch {} }
-
-function saveSystems() {
-  try { storage.setItem(STORAGE_KEY_SYSTEMS, JSON.stringify(systems)); } catch {}
-}
-function loadSystems() {
-  try {
-    const raw = storage.getItem(STORAGE_KEY_SYSTEMS);
-    if (!raw) return;                 // keine gespeicherten Systeme -> Seeds behalten
-    const fromStore = JSON.parse(raw) || [];
-    if (Array.isArray(fromStore) && fromStore.length > 0) {
-      systems = fromStore;            // nur überschreiben, wenn etwas drin ist
-    }
-  } catch {}
-}
-
-function saveColumns() { try { storage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(fieldColumns)); } catch {} }
-function loadColumns() { try { const raw = storage.getItem(STORAGE_KEY_COLUMNS); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p)) fieldColumns = p; } } catch {} }
-
-// === Neu: Persistenz für Fields ===
-function saveFields() {
-  try {
-    storage.setItem(STORAGE_KEY_FIELDS, JSON.stringify(fields));
-  } catch (e) {
-    console.error('saveFields() failed:', e);
-  }
-}
-
-function loadFields() {
-  try {
-    // Zuerst neuer Key
-    let raw = storage.getItem(STORAGE_KEY_FIELDS);
-
-    // Fallback: alter Key vorhanden? -> einmalig migrieren und alten löschen
-    if (!raw) {
-      const legacy = storage.getItem('gdf_fields_v1');
-      if (legacy) {
-        storage.setItem(STORAGE_KEY_FIELDS, legacy);
-        storage.removeItem('gdf_fields_v1');
-        raw = legacy;
-      }
-    }
-
-    if (raw) fields = JSON.parse(raw) || [];
-
-    // Migration: glossaryRef -> glossaryId
-    fields.forEach(f => {
-      if (f.glossaryRef && !f.glossaryId) f.glossaryId = f.glossaryRef;
-    });
-  } catch (e) {
-    console.error('loadFields() failed:', e);
-  }
-}
-
-function savePositions() { try { storage.setItem(STORAGE_KEY_MAP_POS, JSON.stringify(mapPositions)); } catch {} }
-function loadPositions() { try { const raw = storage.getItem(STORAGE_KEY_MAP_POS); if (raw) mapPositions = JSON.parse(raw) || {}; } catch {} }
-
-function saveFilters() { try { storage.setItem(STORAGE_KEY_MAP_FILTERS, JSON.stringify(mapFilters)); } catch {} }
-function loadFilters() {
-  try {
-    const raw = storage.getItem(STORAGE_KEY_MAP_FILTERS);
-    if (raw) {
-      const p = JSON.parse(raw);
-      if (p && typeof p === 'object') {
-        mapFilters = {
-          systems: p.systems || [],
-          domains: p.domains || [],
-          scope: p.scope || { global: true, local: true },
-          search: p.search || '',
-        };
-      }
-    }
-  } catch {}
-  if (mapFilters.scope && mapFilters.scope.global === false && mapFilters.scope.local === false) {
-    mapFilters.scope = { global: true, local: true };
-    saveFilters();
-  }
-}
-
-function saveGlossary() { try { storage.setItem(STORAGE_KEY_GLOSSARY, JSON.stringify(glossaryTerms)); } catch {} }
-function loadGlossary() {
-  try {
-    const raw = storage.getItem(STORAGE_KEY_GLOSSARY);
-    if (!raw) return; // Seeds behalten
-    const fromStore = JSON.parse(raw) || [];
-    glossaryTerms.forEach(g => {
-      if (!g.type) g.type = 'Term';
-    });
-    // Wenn Store leer ist, Seeds NICHT überschreiben
-    if (Array.isArray(fromStore) && fromStore.length > 0) {
-      glossaryTerms = fromStore;
-    }
-  } catch (e) {
-    console.error('loadGlossary() failed:', e);
-  }
-}
 /* ================= Utilities ================= */
 // Merkt sich das aktuell fokussierte Filter-Input und stellt Fokus + Caret nach Re-Render wieder her.
 function preserveFilterInputFocus(rerenderFn) {
@@ -603,7 +430,6 @@ function cellValue(name, f) {
 /* Ende Teil 2*/
 /* Teil 3 Zeilen 604-921*/
 /* ===== Sort/Filter State ===== */
-let globalSort = { key: 'system', dir: 'asc' };        // für Global-Tabelle
 const localSortByLe = Object.create(null);             // je LE-Tabelle: { [leNumber]: {key,dir} }
 const columnFilters = Object.create(null);             // globale Spaltenfilter: { [ColumnName]: query }
 
@@ -869,6 +695,7 @@ function installGlossarySubnavHandlers() {
 
       // Filter übernehmen
       glossaryTypeFilter = btn.dataset.type || 'ALL';
+      state.glossaryTypeFilter = glossaryTypeFilter;
       renderGlossary();
     });
   });
@@ -923,12 +750,12 @@ function showOnly(mode) {
 /* ================= Mode switching ================= */
 
 // Sichtbarkeits-Flags (müssen VOR initializeApp() definiert sein!)
-let showGlobalFilters = false;
-let showLocalFilters  = false;
 
 function setModeSystems(name) {
   currentSystem = name;
+  state.currentSystem = currentSystem;
   selectedFieldRef = null;
+  state.selectedFieldRef = selectedFieldRef;
   document.body.setAttribute('data-mode', 'systems');
   showOnly('systems');
 
@@ -1040,8 +867,10 @@ function renderFieldsTable() {
           const key = mapColToSortKey(col);
           if (globalSort.key === key) {
             globalSort.dir = (globalSort.dir === 'asc') ? 'desc' : 'asc';
+            state.globalSort = globalSort;
           } else {
             globalSort = { key, dir: 'asc' };
+            state.globalSort = globalSort;
           }
           // Header erneut schreiben (Pfeile) und Body neu
           renderFieldsTable();
@@ -1488,6 +1317,7 @@ function renderSystemsTable() {
       // Cleanup Felder & Quellen
       fields = fields.filter((f) => f.system !== name);
       fields = fields.map((f) => f.source?.system === name ? { ...f, source: undefined } : f);
+      state.fields = fields;
 
       // Cleanup LE-Zuordnung
       Object.keys(leSystemMap).forEach((leNum) => {
@@ -1616,6 +1446,7 @@ function renderLegalEntities() {
 
 function openLegalDialog(index = null) {
   editLegalIndex = index;
+  state.editLegalIndex = editLegalIndex;
   legalForm?.reset();
   if (!legalForm) return;
   if (index !== null) {
@@ -1659,6 +1490,7 @@ function buildSystemChipList(container, sysList, selectedSet) {
 }
 function openLeSystemsDialog(index) {
   editingLeIndexForSystems = index;
+  state.editingLeIndexForSystems = editingLeIndexForSystems;
   const le = legalEntities[index];
   const allowed = eligibleLocalOrBothSystems();
   const selected = new Set(leSystemMap[le.number] || []);
@@ -1749,6 +1581,7 @@ function populateGlossaryFieldRefOptions(selected = '') {
 }
 function openGlossaryDialog(index = null) {
   editGlossaryIndex = index;
+  state.editGlossaryIndex = editGlossaryIndex;
   glossaryForm?.reset();
   populateGlossaryFieldRefOptions('');
   if (!glossaryForm) return;
@@ -1814,6 +1647,7 @@ function updateSourceFieldSelect() {
 
 function openFieldDialog(index = null, opts = {}) {
   editFieldIndex = index;
+  state.editFieldIndex = editFieldIndex;
   fieldForm?.reset();
 
   // Reaktives Nachladen der LE-Optionen bei System-/Local-Änderung
@@ -1964,6 +1798,7 @@ fieldForm?.addEventListener('submit', (e) => {
 
 function openSystemDialog(index = null) {
   editSystemIndex = index;
+  state.editSystemIndex = editSystemIndex;
   systemForm?.reset();
   if (!systemForm) return;
 
@@ -1993,7 +1828,11 @@ systemForm?.addEventListener('submit', (e) => {
     if (oldName !== data.name) {
       fields = fields.map((f) => f.system === oldName ? { ...f, system: data.name } : f);
       fields = fields.map((f) => f.source?.system === oldName ? { ...f, source: { ...f.source, system: data.name } } : f);
-      if (currentSystem === oldName) currentSystem = data.name;
+      state.fields = fields;
+      if (currentSystem === oldName) {
+        currentSystem = data.name;
+        state.currentSystem = currentSystem;
+      }
     }
     // id bleibt erhalten
   } else {
@@ -2010,6 +1849,7 @@ systemForm?.addEventListener('submit', (e) => {
 
 function openColumnDialog(index = null) {
   editColumnIndex = index;
+  state.editColumnIndex = editColumnIndex;
   columnForm?.reset();
   if (!columnForm) return;
   if (index !== null) {
@@ -2035,6 +1875,7 @@ columnForm?.addEventListener('submit', (e) => {
 
 function openDomainDialog(index = null) {
   editDomainIndex = index;
+  state.editDomainIndex = editDomainIndex;
   domainForm?.reset();
   if (!domainForm) return;
   if (index !== null) {
@@ -2331,10 +2172,12 @@ function renderDataMap() {
         ev.stopPropagation();
         if (selectedFieldRef && selectedFieldRef.system === sys.name && selectedFieldRef.field === f.name) {
           selectedFieldRef = null;
+          state.selectedFieldRef = selectedFieldRef;
           drawSystemEdges();
           $$('.map-field.is-highlight')?.forEach((el) => el.classList.remove('is-highlight'));
         } else {
           selectedFieldRef = { system: sys.name, field: f.name };
+          state.selectedFieldRef = selectedFieldRef;
           drawSelectedFieldEdges();
         }
       });
@@ -2396,7 +2239,6 @@ function applyMapTransform() {
   if (!mapViewport) return;
   mapViewport.style.transform = `translate(${mapTransformState.x}px, ${mapTransformState.y}px) scale(${mapTransformState.k})`;
 }
-let isPanning = false, panStart = { x: 0, y: 0 };
 
 /* Fit-Helper */
 function fitMapToContent() {
@@ -2474,7 +2316,9 @@ document.querySelectorAll('dialog').forEach(dlg => {
     // Systems (Hauptansicht)
     systemsNavItem?.addEventListener('click', () => {
       currentSystem = 'All Systems';
+      state.currentSystem = currentSystem;
       selectedFieldRef = null;
+      state.selectedFieldRef = selectedFieldRef;
       document.body.setAttribute('data-mode', 'systems');
       showOnly('systems');
       showGlossarySubnav(false);
@@ -2590,6 +2434,7 @@ glossaryNavItem?.addEventListener('click', () => {
     filterDone?.addEventListener('click', closeFilterOverlay);
     filterClear?.addEventListener('click', () => {
       mapFilters = { systems: [], domains: [], scope: { global: true, local: true }, search: '' };
+      state.mapFilters = mapFilters;
       saveFilters();
       buildChipList(chipSystems, systems.map((s) => s.name), new Set(), (set) => { mapFilters.systems = [...set]; saveFilters(); renderDataMap(); });
       buildChipList(chipDomains, getDomainNames(), new Set(), (set) => { mapFilters.domains = [...set]; saveFilters(); renderDataMap(); });
@@ -2605,6 +2450,7 @@ glossaryNavItem?.addEventListener('click', () => {
 // === Section-Action Buttons ===
 document.getElementById('btnGlobalFilter')?.addEventListener('click', () => {
   showGlobalFilters = !showGlobalFilters;
+  state.showGlobalFilters = showGlobalFilters;
   // Header neu aufbauen (zeigt/versteckt Filterzeile) + tbody aktualisieren
   renderFieldsTable();
 });
@@ -2620,6 +2466,7 @@ document.getElementById('btnGlobalExport')?.addEventListener('click', () => {
 
 document.getElementById('btnLocalFilter')?.addEventListener('click', () => {
   showLocalFilters = !showLocalFilters;
+  state.showLocalFilters = showLocalFilters;
   renderLocalFieldsTables();
 });
 
@@ -2640,12 +2487,15 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
     mapCanvas?.addEventListener('mousedown', (e) => {
       if (e.target === mapCanvas || e.target === mapViewport || e.target === mapEdgesSvg) {
         selectedFieldRef = null;
+        state.selectedFieldRef = selectedFieldRef;
         drawSystemEdges();
         $$('.map-field.is-highlight')?.forEach((el) => el.classList.remove('is-highlight'));
       }
       if (e.button !== 0) return;
       isPanning = true;
+      state.isPanning = isPanning;
       panStart = { x: e.clientX - mapTransformState.x, y: e.clientY - mapTransformState.y };
+      state.panStart = panStart;
     });
     window.addEventListener('mousemove', (e) => {
       if (!isPanning) return;
@@ -2654,7 +2504,7 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
       applyMapTransform();
       if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
     });
-    window.addEventListener('mouseup', () => { isPanning = false; });
+    window.addEventListener('mouseup', () => { isPanning = false; state.isPanning = isPanning; });
     mapCanvas?.addEventListener('wheel', (e) => {
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.1 : 0.9, prev = mapTransformState.k, next = Math.min(3, Math.max(0.4, prev * factor));
@@ -2764,6 +2614,7 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
     //  Initiale Ansicht
     // =============================
     currentSystem = 'All Systems';
+    state.currentSystem = currentSystem;
     document.body.setAttribute('data-mode', 'systems');
     showOnly('systems');
     setModeSystems('All Systems');
