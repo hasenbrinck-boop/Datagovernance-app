@@ -2404,64 +2404,6 @@ function drawSelectedFieldEdges() {
     drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
   });
 }
-function drawSystemEdges() {
-  // Voraussetzung: Knoten-Container und Edges-SVG vorhanden
-  const edgesSvg = document.getElementById('mapEdges');
-  const nodesDiv = document.getElementById('mapNodes');
-
-  if (!edgesSvg || !nodesDiv) return; // nichts zu tun, aber kein Crash
-
-  // Datenquelle defensiv: es muss ein Array "fields" geben
-  if (!Array.isArray(window.fields) || window.fields.length === 0) {
-    // optional: edgesSvg leeren, aber nicht crashen
-    if (edgesSvg.firstChild) {
-      edgesSvg.querySelectorAll('path').forEach(p => p.remove());
-    }
-    return;
-  }
-
-  // defs sicherstellen & alte Pfade entfernen (deine vorhandenen Helfer nutzen)
-  if (typeof makeEdgeDefs === 'function') makeEdgeDefs();
-  if (typeof clearEdgesKeepDefs === 'function') clearEdgesKeepDefs();
-  else edgesSvg.querySelectorAll('path').forEach(p => p.remove());
-
-  // Hilfsfilter defensiv
-  const passes = (typeof systemPassesFilters === 'function')
-    ? systemPassesFilters
-    : () => true;
-
-  window.fields.forEach((f) => {
-    const srcSystem = f?.source?.system;
-    const srcField  = f?.source?.field || f?.name;
-    const dstSystem = f?.system;
-    const dstField  = f?.name;
-
-    if (!srcSystem || !dstSystem) return;
-    if (!passes(srcSystem) || !passes(dstSystem)) return;
-
-    // Prüfen, ob die Zeilen existieren
-    const srcRow = getFieldEl(srcSystem, srcField);
-    const dstRow = getFieldEl(dstSystem, dstField);
-    if (!srcRow || !dstRow) return;
-
-    const p1 = fieldAnchor(srcSystem, srcField, 'right');
-    const p2 = fieldAnchor(dstSystem, dstField, 'left');
-    if (p1._invalid || p2._invalid) return;
-
-    // vorhandene Pfad-Helfer nutzen, sonst einfache Linie
-    if (typeof orthoPath === 'function' && typeof drawEdgePath === 'function') {
-      drawEdgePath(orthoPath(p1, p2), true);
-    } else {
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M ${p1.x} ${p1.y} C ${p1.x + 60} ${p1.y}, ${p2.x - 60} ${p2.y}, ${p2.x} ${p2.y}`);
-      path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', '#9aa3af');
-      path.setAttribute('stroke-width', '2');
-      path.setAttribute('opacity', '0.9');
-      edgesSvg.appendChild(path);
-    }
-  });
-}
 
 // Optional: Alias für alte Aufrufe
 window.DrawSystemEdges = drawSystemEdges;
