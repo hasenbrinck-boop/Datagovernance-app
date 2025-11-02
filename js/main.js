@@ -2274,6 +2274,36 @@ function getFieldEl(systemName, fieldName) {
     )}"][data-field="${CSS.escape(fieldName)}"]`
   );
 }
+
+function normalizeFieldKey(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+}
+
+function resolveFieldRef(systemName, rawName, fallbackName = null) {
+  const candidates = fields.filter((f) => f.system === systemName);
+  const tryResolve = (name) => {
+    if (!name) return null;
+    const direct = candidates.find((f) => f.name === name);
+    if (direct) return direct.name;
+    const normalized = normalizeFieldKey(name);
+    if (!normalized) return null;
+    const fuzzy = candidates.find(
+      (f) => normalizeFieldKey(f.name) === normalized
+    );
+    return fuzzy ? fuzzy.name : null;
+  };
+
+  return (
+    tryResolve(rawName) ||
+    tryResolve(fallbackName) ||
+    rawName ||
+    fallbackName ||
+    null
+  );
+}
 function rectToMap(rect) {
   if (!mapCanvas) return { left: 0, right: 0, top: 0, bottom: 0 };
   const canvasRect = mapCanvas.getBoundingClientRect();
@@ -2399,33 +2429,45 @@ function drawSelectedFieldEdges() {
   clearSelectionVisuals();
   if (!selectedFieldRef) return;
   const { system, field } = selectedFieldRef;
-  const srcEl = getFieldEl(system, field);
+  const selectedFieldName = resolveFieldRef(system, field) || field;
+  const selectedKey = normalizeFieldKey(selectedFieldName);
+  const srcEl =
+    getFieldEl(system, selectedFieldName) || getFieldEl(system, field);
   if (srcEl) srcEl.classList.add('is-highlight');
 
-  const outgoing = fields.filter(
-    (f) => f.source?.system === system && (f.source.field || f.name) === field
-  );
+  const outgoing = fields.filter((f) => {
+    if (!f.source?.system || f.source.system !== system) return false;
+    const refName =
+      resolveFieldRef(f.source.system, f.source.field, f.name) ||
+      f.source.field ||
+      f.name;
+    return normalizeFieldKey(refName) === selectedKey;
+  });
   const incoming = fields.filter(
-    (f) => f.system === system && f.name === field && f.source?.system
+    (f) =>
+      f.system === system &&
+      normalizeFieldKey(f.name) === selectedKey &&
+      f.source?.system
   );
 
   outgoing.forEach((tgt) => {
-    const p1 = fieldAnchor(system, field, 'right');
-    const p2 = fieldAnchor(tgt.system, tgt.name, 'left');
-    const tgtEl = getFieldEl(tgt.system, tgt.name);
+    const targetName = resolveFieldRef(tgt.system, tgt.name) || tgt.name;
+    const p1 = fieldAnchor(system, selectedFieldName, 'right');
+    const p2 = fieldAnchor(tgt.system, targetName, 'left');
+    const tgtEl = getFieldEl(tgt.system, targetName);
     tgtEl?.classList.add('is-highlight');
     if (p1 && p2) {
       drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
     }
   });
   incoming.forEach((src) => {
-    const p1 = fieldAnchor(
-      src.source.system,
-      src.source.field || src.name,
-      'right'
-    );
-    const p2 = fieldAnchor(system, field, 'left');
-    const srcRow = getFieldEl(src.source.system, src.source.field || src.name);
+    const sourceName =
+      resolveFieldRef(src.source.system, src.source.field, src.name) ||
+      src.source.field ||
+      src.name;
+    const p1 = fieldAnchor(src.source.system, sourceName, 'right');
+    const p2 = fieldAnchor(system, selectedFieldName, 'left');
+    const srcRow = getFieldEl(src.source.system, sourceName);
     srcRow?.classList.add('is-highlight');
     if (p1 && p2) {
       drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
@@ -3540,16 +3582,25 @@ function drawSystemEdges() {
 
     if (!visibleSystems.has(field.system) || !visibleSystems.has(source.system)) return;
 
-    const srcFieldName = source.field || field.name;
+    const dstFieldName = resolveFieldRef(field.system, field.name);
+    const srcFieldName = resolveFieldRef(
+      source.system,
+      source.field,
+      field.name
+    );
+
+    if (!srcFieldName || !dstFieldName) return;
+
     const srcEl = getFieldEl(source.system, srcFieldName);
-    const dstEl = getFieldEl(field.system, field.name);
+    const dstEl = getFieldEl(field.system, dstFieldName);
     if (!srcEl || !dstEl) return;
 
-    const key = `${source.system}::${srcFieldName}→${field.system}::${field.name}`;
+    const key = `${source.system}::${srcFieldName}→${field.system}::${dstFieldName}`;
     if (drawn.has(key)) return;
 
     const start = fieldAnchor(source.system, srcFieldName, 'right');
-    const end = fieldAnchor(field.system, field.name, 'left');
+    const end = fieldAnchor(field.system, dstFieldName, 'left');
+    if (!start || !end) return;
     if (start._invalid || end._invalid) return;
 
     drawn.add(key);
