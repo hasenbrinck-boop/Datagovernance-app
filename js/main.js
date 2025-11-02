@@ -3561,3 +3561,21 @@ window.DrawSystemEdges = drawSystemEdges;
 
 // Alias, damit alte Aufrufe mit großem D weiter funktionieren:
 if (typeof window !== 'undefined') window.DrawSystemEdges = drawSystemEdges;
+
+function resetAllAppData() {
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+    alert('Alle gespeicherten App-Daten wurden gelöscht.');
+    location.reload();
+  } catch (e) {
+    console.error('Reset fehlgeschlagen:', e);
+  }
+}
+// === Reset Button verbinden ===
+document.addEventListener('DOMContentLoaded', () => {
+  const btnReset = document.getElementById('resetAllAppData');
+  if (btnReset) {
+    btnReset.addEventListener('click', resetAllAppData);
+  }
+});
