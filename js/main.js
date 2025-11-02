@@ -1940,18 +1940,36 @@ function hexWithAlpha(hex, a) {
     return `rgba(${r},${g},${b},${a})`;
   } catch { return 'rgba(0,0,0,.06)'; }
 }
-function computeNodePositions() {
+function computeNodePositions(nodeEntries = []) {
   const positions = new Map();
-  const n = systems.length;
-  const cols = Math.ceil(Math.sqrt(n));
-  const colW = 440, rowH = 320;
-  systems.forEach((s, i) => {
-    if (mapPositions[s.name]) positions.set(s.name, { ...mapPositions[s.name] });
-    else {
-      const c = i % cols, r = Math.floor(i / cols);
-      positions.set(s.name, { x: c * colW, y: r * rowH });
+  const padding = 40;
+  const baseX = 40;
+  const occupied = [];
+
+  nodeEntries.forEach(({ sys, node }) => {
+    const existing = mapPositions[sys.name];
+    if (existing) {
+      const x = Number(existing.x) || 0;
+      const y = Number(existing.y) || 0;
+      positions.set(sys.name, { x, y });
+      occupied.push({ x, y, width: node.offsetWidth || 0, height: node.offsetHeight || 0 });
     }
   });
+
+  let currentY = occupied.length
+    ? occupied.reduce((max, item) => Math.max(max, item.y + item.height + padding), baseX)
+    : baseX;
+
+  nodeEntries.forEach(({ sys, node }) => {
+    if (positions.has(sys.name)) return;
+    const height = node.offsetHeight || 0;
+    const x = baseX;
+    const y = currentY;
+    positions.set(sys.name, { x, y });
+    occupied.push({ x, y, width: node.offsetWidth || 0, height });
+    currentY += height + padding;
+  });
+
   return positions;
 }
 function getNodeEl(name) {
@@ -2108,7 +2126,7 @@ function renderDataMap() {
   if (!mapNodesLayer) return;
   mapNodesLayer.innerHTML = '';
 
-  const pos = computeNodePositions();
+  const nodeEntries = [];
 
   systems.forEach((sys) => {
     if (!systemPassesFilters(sys.name)) return;
@@ -2183,14 +2201,23 @@ function renderDataMap() {
       if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
     });
 
-    enableDrag(node, header, sys.name);
-
-    const p = pos.get(sys.name) || { x: 0, y: 0 };
-    node.style.left = `${p.x}px`;
-    node.style.top  = `${p.y}px`;
-
     node.appendChild(wrap);
     mapNodesLayer.appendChild(node);
+    nodeEntries.push({ sys, node, header });
+  });
+
+  const pos = computeNodePositions(nodeEntries);
+
+  nodeEntries.forEach(({ sys, node, header }) => {
+    const stored = mapPositions[sys.name];
+    const fallback = stored
+      ? { x: Number(stored.x) || 40, y: Number(stored.y) || 40 }
+      : { x: 40, y: 40 };
+    const p = pos.get(sys.name) || fallback;
+    node.style.left = `${p.x}px`;
+    node.style.top  = `${p.y}px`;
+    mapPositions[sys.name] = { x: p.x, y: p.y };
+    enableDrag(node, header, sys.name);
   });
 
   if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
@@ -2199,8 +2226,48 @@ function renderDataMap() {
 }
 
 /* Drag mit Persistenz */
+function rectsOverlap(a, b, gap = 0) {
+  return !(
+    a.x + a.width <= b.x - gap ||
+    a.x >= b.x + b.width + gap ||
+    a.y + a.height <= b.y - gap ||
+    a.y >= b.y + b.height + gap
+  );
+}
+
+function isNodePositionFree(node, candidate, name) {
+  const nodes = mapNodesLayer?.querySelectorAll('.map-node');
+  if (!nodes) return true;
+  const current = {
+    x: candidate.x,
+    y: candidate.y,
+    width: node.offsetWidth || 0,
+    height: node.offsetHeight || 0,
+  };
+  const gap = 16;
+  for (const other of nodes) {
+    if (other === node) continue;
+    const otherName = other.dataset.system;
+    if (!otherName || otherName === name) continue;
+    const stored = mapPositions[otherName];
+    const ox = stored ? Number(stored.x) || 0 : parseFloat(other.style.left) || 0;
+    const oy = stored ? Number(stored.y) || 0 : parseFloat(other.style.top) || 0;
+    const rect = {
+      x: ox,
+      y: oy,
+      width: other.offsetWidth || 0,
+      height: other.offsetHeight || 0,
+    };
+    if (rectsOverlap(current, rect, gap)) return false;
+  }
+  return true;
+}
+
 function enableDrag(node, handle, name) {
-  let dragging = false, start = { x: 0, y: 0 }, startPos = { x: 0, y: 0 };
+  let dragging = false,
+    start = { x: 0, y: 0 },
+    startPos = { x: 0, y: 0 },
+    lastValid = null;
   handle.style.cursor = 'grab';
   handle.addEventListener('mousedown', (e) => {
     const isInteractive = e.target.closest('button, a, [role="button"], .map-node-toggle, .chev');
@@ -2210,18 +2277,28 @@ function enableDrag(node, handle, name) {
     start = { x: e.clientX, y: e.clientY };
     const rect = node.getBoundingClientRect(), parentRect = mapCanvas.getBoundingClientRect();
     startPos = { x: rect.left - parentRect.left - mapTransformState.x, y: rect.top - parentRect.top - mapTransformState.y };
+    lastValid = {
+      x: parseFloat(node.style.left) || 0,
+      y: parseFloat(node.style.top) || 0,
+    };
   });
   window.addEventListener('mousemove', (e) => {
     if (!dragging) return;
     const dx = (e.clientX - start.x) / mapTransformState.k, dy = (e.clientY - start.y) / mapTransformState.k;
     const nx = startPos.x + dx, ny = startPos.y + dy;
+    if (!isNodePositionFree(node, { x: nx, y: ny }, name)) return;
     node.style.left = `${nx}px`;
     node.style.top  = `${ny}px`;
+    lastValid = { x: nx, y: ny };
     mapPositions[name] = { x: nx, y: ny };
     if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
   });
   window.addEventListener('mouseup', () => {
-    if (dragging) savePositions();
+    if (dragging) {
+      if (lastValid) mapPositions[name] = { ...lastValid };
+      savePositions();
+      if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
+    }
     dragging = false;
     handle.style.cursor = 'grab';
   });
