@@ -254,6 +254,11 @@
     contain: paint;
     transform: translateZ(0);
   }
+  .main-footer{
+    margin-top:auto;
+    display:flex;
+    justify-content:flex-end;
+  }
   .main > * { min-width: 0 }
   .muted { opacity:.75; font-size:.9em }
   
