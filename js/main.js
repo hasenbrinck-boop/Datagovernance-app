@@ -57,6 +57,28 @@ let panStart = state.panStart;
 const dataObjectDialog = document.getElementById('dataObjectDialog');
 const dataObjectForm = document.getElementById('dataObjectForm');
 
+// --- DOM-Shortcuts mit Guard ---
+function $(sel) { return document.querySelector(sel); }
+function byId(id) { return document.getElementById(id); }
+
+// --- Pan/Zoom State defensiv ---
+window.mapTransformState = window.mapTransformState || { x: 0, y: 0, k: 1 };
+
+// --- Referenz auf den Map-Viewport: existiert bei dir sicherer als "mapCanvas"
+function getMapViewport() {
+  return byId('mapViewport') || byId('mapCanvas') || null;
+}
+
+// --- Edge-Redraw scheduling (falls noch nicht vorhanden) ---
+let _edgeRAF = 0;
+function scheduleEdgesRedraw() {
+  if (_edgeRAF) cancelAnimationFrame(_edgeRAF);
+  _edgeRAF = requestAnimationFrame(() => {
+    _edgeRAF = 0;
+    try { drawSystemEdges(); } catch (e) { console.error('[edges]', e); }
+  });
+}
+
 // Renderfunktion für Data Objects Tabelle
 function renderDataObjects() {
   const table = document.getElementById('dataObjectsTable');
@@ -2267,39 +2289,25 @@ function rectToMap(rect) {
   };
 }
 function fieldAnchor(systemName, fieldName, side = 'right') {
-  // Canvas/Viewport defensiv bestimmen (je nachdem, was du wirklich im DOM hast)
-  const canvas =
-    document.getElementById('mapViewport') ||
-    document.getElementById('mapCanvas') ||
-    document.querySelector('#mapViewport, #mapCanvas');
+  const viewport = getMapViewport();
+  const row = getFieldEl(systemName, fieldName);
 
-  const row  = getFieldEl(systemName, fieldName);
-  if (!canvas || !row) {
-    // Fallback verhindert Crash, Linien werden in diesem Fall einfach nicht gezeichnet
-    return { x: 0, y: 0, _invalid: true };
-  }
+  if (!viewport || !row) return null;   // ← verhindert "null is not an object"
 
-  const node = row.closest('.map-node') || row;
-  const canvasRect = canvas.getBoundingClientRect();
-  const rowRect    = row.getBoundingClientRect();
-  const nodeRect   = node.getBoundingClientRect();
+  const node     = row.closest('.map-node') || row;
+  const vpRect   = viewport.getBoundingClientRect();
+  const rowRect  = row.getBoundingClientRect();
+  const nodeRect = node.getBoundingClientRect();
 
-  const OUTSIDE = 14; // Abstand außerhalb des Knotens
+  const OUTSIDE = 14;
   const yAbs = rowRect.top + rowRect.height / 2;
-  const xAbs = (side === 'right') ? (nodeRect.right + OUTSIDE)
-                                  : (nodeRect.left  - OUTSIDE);
+  const xAbs = side === 'right' ? (nodeRect.right + OUTSIDE)
+                                : (nodeRect.left  - OUTSIDE);
 
-  // mapTransformState defensiv (falls noch nicht initialisiert)
-  const mtsSource =
-    (mapTransformState && typeof mapTransformState === 'object'
-      ? mapTransformState
-      : null) ||
-    (typeof window !== 'undefined' ? window.mapTransformState : null) ||
-    { x: 0, y: 0, k: 1 };
-  const scale = mtsSource.k || 1;
+  const { x: tx = 0, y: ty = 0, k = 1 } = window.mapTransformState || { x:0, y:0, k:1 };
 
-  const x = (xAbs - canvasRect.left - mtsSource.x) / scale;
-  const y = (yAbs - canvasRect.top  - mtsSource.y) / scale;
+  const x = (xAbs - vpRect.left - tx) / (k || 1);
+  const y = (yAbs - vpRect.top  - ty) / (k || 1);
 
   return { x, y };
 }
@@ -2592,7 +2600,7 @@ function renderDataMap() {
       ev.stopPropagation();
       node.classList.toggle('is-collapsed');
       nodeCollapsed.set(sys.name, node.classList.contains('is-collapsed'));
-      if (selectedFieldRef) { drawSelectedFieldEdges(); } else { safeDrawAllEdges(); }
+      if (selectedFieldRef) { drawSelectedFieldEdges(); } else { drawSystemEdges(); }
     });
 
     node.appendChild(wrap);
@@ -2614,7 +2622,7 @@ function renderDataMap() {
     enableDrag(node, header, sys.name);
   });
 
-  if (selectedFieldRef) { drawSelectedFieldEdges(); } else { safeDrawAllEdges(); }
+  if (selectedFieldRef) { drawSelectedFieldEdges(); } else { drawSystemEdges(); }
 
   requestAnimationFrame(() => fitMapToContent());
 }
@@ -3499,67 +3507,56 @@ document.addEventListener('DOMContentLoaded', () => {
 // =========================
 
 function drawSystemEdges() {
-  // Gemeinsamer Wrapper der beiden Tabellen (passen wir unten an)
-  const wrapper =
-    document.querySelector('.data-map') ||   // bevorzugt
-    document.querySelector('.dataMapWrapper') ||
-    document.querySelector('.map-container') ||
-    document.body;
+  const edgesSvg = byId('mapEdges');
+  const nodesDiv = byId('mapNodes');
+  const viewport = getMapViewport();
+  if (!edgesSvg || !nodesDiv || !viewport) return; // ← verhindert "null…"
 
-  // SVG-Layer bereitstellen
-  let svg = document.getElementById('edgeLayer');
-  if (!svg) {
-    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('id', 'edgeLayer');
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', '100%');
-    svg.style.position = 'absolute';
-    svg.style.inset = '0';
-    svg.style.pointerEvents = 'none';
-    svg.style.overflow = 'visible';
-    wrapper.appendChild(svg);
-  }
+  if (typeof makeEdgeDefs === 'function') makeEdgeDefs();
+  if (typeof clearEdgesKeepDefs === 'function') clearEdgesKeepDefs();
+  else edgesSvg.querySelectorAll('path').forEach(p => p.remove());
 
-  // Alte Pfade entfernen
-  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const data = Array.isArray(window.fields) ? window.fields : [];
+  if (!data.length) return;
 
-  const wrapperRect = wrapper.getBoundingClientRect();
-  const OUTSIDE_OFFSET = 12; // Start/Ende bewusst außerhalb der Tabellen
+  const passes = (typeof systemPassesFilters === 'function') ? systemPassesFilters : () => true;
 
-  // Kantenliste: Anpassen, falls euer Name abweicht
-  const edges = Array.isArray(window.fieldLinks) ? window.fieldLinks : [];
+  data.forEach((f) => {
+    const srcSystem = f?.source?.system;
+    const srcField  = f?.source?.field || f?.name;
+    const dstSystem = f?.system;
+    const dstField  = f?.name;
 
-  // Hilfsfunktion: Feldzelle per ID finden
-  const findCell = (id) =>
-    document.querySelector(`[data-field-id="${id}"]`);
+    if (!srcSystem || !dstSystem) return;
+    if (!passes(srcSystem) || !passes(dstSystem)) return;
 
-  edges.forEach(({ from, to }) => {
-    const src = findCell(from);
-    const dst = findCell(to);
-    if (!src || !dst) return;
+    // existieren die Zeilen im DOM?
+    if (!getFieldEl(srcSystem, srcField) || !getFieldEl(dstSystem, dstField)) return;
 
-    const a = src.getBoundingClientRect();
-    const b = dst.getBoundingClientRect();
+    const p1 = fieldAnchor(srcSystem, srcField, 'right');
+    const p2 = fieldAnchor(dstSystem,  dstField,  'left');
+    if (!p1 || !p2) return;
 
-    // y-Mitte relativ zum Wrapper
-    const y1 = (a.top + a.height / 2) - wrapperRect.top;
-    const y2 = (b.top + b.height / 2) - wrapperRect.top;
-
-    // x rechts von Quelle (außerhalb) / links vom Ziel (außerhalb)
-    const x1 = (a.right - wrapperRect.left) + OUTSIDE_OFFSET;
-    const x2 = (b.left - wrapperRect.left)  - OUTSIDE_OFFSET;
-
-    // schöne S-Kurve
-    const dx = Math.max(40, Math.abs(x2 - x1) * 0.25);
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', '#9aa3af');
-    path.setAttribute('stroke-width', '2');
-    path.setAttribute('opacity', '0.9');
-    svg.appendChild(path);
+    if (typeof orthoPath === 'function' && typeof drawEdgePath === 'function') {
+      drawEdgePath(orthoPath(p1, p2), true);
+    } else {
+      const dx = Math.max(40, Math.abs(p2.x - p1.x) * 0.25);
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${p1.x} ${p1.y} C ${p1.x + dx} ${p1.y}, ${p2.x - dx} ${p2.y}, ${p2.x} ${p2.y}`);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', '#9aa3af');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('opacity', '0.9');
+      edgesSvg.appendChild(path);
+    }
   });
 }
+
+// Falls irgendwo DrawSystemEdges() aufgerufen wird:
+window.DrawSystemEdges = drawSystemEdges;
+
+// falls irgendwo noch DrawSystemEdges() aufgerufen wird:
+window.DrawSystemEdges = drawSystemEdges;
 
 // Alias, damit alte Aufrufe mit großem D weiter funktionieren:
 if (typeof window !== 'undefined') window.DrawSystemEdges = drawSystemEdges;
