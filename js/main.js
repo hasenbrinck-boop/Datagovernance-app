@@ -20,39 +20,39 @@ import {
 console.log('[main.js] Modul geladen');
 
 const dataDomains = state.dataDomains;
-const systems      = state.systems;
-const dataObjects  = state.dataObjects;
-let fields         = state.fields;
+const systems = state.systems;
+const dataObjects = state.dataObjects;
+let fields = state.fields;
 const fieldColumns = state.fieldColumns;
-const legalEntities= state.legalEntities;
-const leSystemMap  = state.leSystemMap;
-const glossaryTerms= state.glossaryTerms;
+const legalEntities = state.legalEntities;
+const leSystemMap = state.leSystemMap;
+const glossaryTerms = state.glossaryTerms;
 
-let currentSystem             = state.currentSystem;
-let editDataObjectIndex       = state.editDataObjectIndex;
-let editFieldIndex            = state.editFieldIndex;
-let editSystemIndex           = state.editSystemIndex;
-let editFoundationIndex       = state.editFoundationIndex;
-let editColumnIndex           = state.editColumnIndex;
-let editDomainIndex           = state.editDomainIndex;
-let editLegalIndex            = state.editLegalIndex;
-let editGlossaryIndex         = state.editGlossaryIndex;
-let glossaryTypeFilter        = state.glossaryTypeFilter;
-const nodeCollapsed           = state.nodeCollapsed;
-const mapTransformState       = state.mapTransformState;
-let mapFilters                = state.mapFilters;
-let mapPositions              = state.mapPositions;
-let selectedFieldRef          = state.selectedFieldRef;
-let editingLeIndexForSystems  = state.editingLeIndexForSystems;
-let globalSort                = state.globalSort;
-let showGlobalFilters         = state.showGlobalFilters;
-let showLocalFilters          = state.showLocalFilters;
-let isPanning                 = state.isPanning;
-let panStart                  = state.panStart;
+let currentSystem = state.currentSystem;
+let editDataObjectIndex = state.editDataObjectIndex;
+let editFieldIndex = state.editFieldIndex;
+let editSystemIndex = state.editSystemIndex;
+let editFoundationIndex = state.editFoundationIndex;
+let editColumnIndex = state.editColumnIndex;
+let editDomainIndex = state.editDomainIndex;
+let editLegalIndex = state.editLegalIndex;
+let editGlossaryIndex = state.editGlossaryIndex;
+let glossaryTypeFilter = state.glossaryTypeFilter;
+const nodeCollapsed = state.nodeCollapsed;
+const mapTransformState = state.mapTransformState;
+let mapFilters = state.mapFilters;
+let mapPositions = state.mapPositions;
+let selectedFieldRef = state.selectedFieldRef;
+let editingLeIndexForSystems = state.editingLeIndexForSystems;
+let globalSort = state.globalSort;
+let showGlobalFilters = state.showGlobalFilters;
+let showLocalFilters = state.showLocalFilters;
+let isPanning = state.isPanning;
+let panStart = state.panStart;
 
 // === Data Object Dialog / Form (können initial null sein, Guards sind unten eingebaut)
 const dataObjectDialog = document.getElementById('dataObjectDialog');
-const dataObjectForm   = document.getElementById('dataObjectForm');
+const dataObjectForm = document.getElementById('dataObjectForm');
 
 // Renderfunktion für Data Objects Tabelle
 function renderDataObjects() {
@@ -69,7 +69,9 @@ function renderDataObjects() {
       </tr>
     </thead>
     <tbody>
-      ${dataObjects.map((obj, i) => `
+      ${dataObjects
+        .map(
+          (obj, i) => `
         <tr>
           <td>${obj.id}</td>
           <td>${obj.name}</td>
@@ -83,7 +85,9 @@ function renderDataObjects() {
             </button>
           </td>
         </tr>
-      `).join('')}
+      `
+        )
+        .join('')}
     </tbody>
   `;
 
@@ -105,7 +109,9 @@ function renderDataObjects() {
 /* ===== Data Object: Dialog öffnen/speichern ===== */
 function openDataObjectDialog(index = null) {
   if (!dataObjectDialog || !dataObjectForm) {
-    showErrorBanner('Data Object dialog not found in DOM. Bitte das <dialog id="dataObjectDialog"> in index.html einfügen.');
+    showErrorBanner(
+      'Data Object dialog not found in DOM. Bitte das <dialog id="dataObjectDialog"> in index.html einfügen.'
+    );
     return;
   }
 
@@ -116,8 +122,11 @@ function openDataObjectDialog(index = null) {
   // Data Domain-Options dynamisch aus aktiven Domains befüllen
   const domainSelect = dataObjectForm.elements.domain;
   if (domainSelect) {
-    const options = getDomainNames().map((n) => `<option value="${n}">${n}</option>`).join('');
-    domainSelect.innerHTML = options || `<option value="">(no active domains)</option>`;
+    const options = getDomainNames()
+      .map((n) => `<option value="${n}">${n}</option>`)
+      .join('');
+    domainSelect.innerHTML =
+      options || `<option value="">(no active domains)</option>`;
   }
 
   if (index !== null) {
@@ -126,7 +135,8 @@ function openDataObjectDialog(index = null) {
     dataObjectForm.elements.name.value = obj.name;
     dataObjectForm.elements.domain.value = obj.domain || '';
   } else {
-    const nextId = Math.max(0, ...dataObjects.map((o) => Number(o.id) || 0)) + 1;
+    const nextId =
+      Math.max(0, ...dataObjects.map((o) => Number(o.id) || 0)) + 1;
     dataObjectForm.elements.id.value = nextId;
   }
 
@@ -141,24 +151,34 @@ dataObjectForm?.addEventListener('submit', (e) => {
     name: String(fd.get('name') || '').trim(),
     domain: String(fd.get('domain') || '').trim(),
   };
-  if (!rec.name)   { alert('Name is required.'); return; }
-  if (!rec.domain) { alert('Please pick a Data Domain.'); return; }
+  if (!rec.name) {
+    alert('Name is required.');
+    return;
+  }
+  if (!rec.domain) {
+    alert('Please pick a Data Domain.');
+    return;
+  }
 
   if (editDataObjectIndex !== null) {
     dataObjects[editDataObjectIndex] = rec;
   } else {
     dataObjects.push(rec);
   }
-  refreshFoundationSelect();   // hält das Foundation-Select synchron
-  renderFieldsTable();         // aktualisiert Felderliste
-  renderDataObjects();         // aktualisiert DO-Tabelle
+  refreshFoundationSelect(); // hält das Foundation-Select synchron
+  renderFieldsTable(); // aktualisiert Felderliste
+  renderDataObjects(); // aktualisiert DO-Tabelle
   closeDialog(dataObjectDialog);
 });
 
 /* Alte CRUD-Funktionen, jetzt auf Dialog geführt */
-function addDataObject() { openDataObjectDialog(null); }
+function addDataObject() {
+  openDataObjectDialog(null);
+}
 window.addDataObject = addDataObject; // optional global
-function editDataObject(i) { openDataObjectDialog(i); }
+function editDataObject(i) {
+  openDataObjectDialog(i);
+}
 function deleteDataObject(i) {
   const obj = dataObjects[i];
   if (!obj) return;
@@ -170,118 +190,128 @@ function deleteDataObject(i) {
 }
 
 /* ================= DOM Helpers ================= */
-const $  = (sel, root = document) => root.querySelector(sel);
+const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const byId = (id) => document.getElementById(id);
-const uid  = (p = 'id') => p + '-' + Math.random().toString(36).slice(2, 9);
+const uid = (p = 'id') => p + '-' + Math.random().toString(36).slice(2, 9);
 
 /* ================= Elements ================= */
-const systemListEl      = byId('systemList');
-const foundationSelect  = byId('fld-foundation');
-const fieldsBody        = byId('fieldsBody');
-const localFieldsBody   = byId('localFieldsBody');
-const systemsTable      = byId('systemsTable');
-const columnsTable      = byId('columnsTable');
-const domainsTable      = byId('domainsTable');
-const legalTable        = byId('legalTable');
+const systemListEl = byId('systemList');
+const foundationSelect = byId('fld-foundation');
+const fieldsBody = byId('fieldsBody');
+const localFieldsBody = byId('localFieldsBody');
+const systemsTable = byId('systemsTable');
+const columnsTable = byId('columnsTable');
+const domainsTable = byId('domainsTable');
+const legalTable = byId('legalTable');
 
 /* Field dialog elements */
-const fieldDialog          = byId('fieldDialog');
-const fieldForm            = byId('fieldForm');
-const systemSelect         = byId('fld-system');
-const sourceSystemSelect   = byId('fld-source-system');
-const sourceFieldSelect    = byId('fld-source-field');
+const fieldDialog = byId('fieldDialog');
+const fieldForm = byId('fieldForm');
+const systemSelect = byId('fld-system');
+const sourceSystemSelect = byId('fld-source-system');
+const sourceFieldSelect = byId('fld-source-field');
 const glossarySelect = byId('fld-glossary'); // NEU
 
 /* Felder für Auswahl der LEs bei lokalen Feldern */
-const legalEntitySelect   = byId('fld-legal-entity');
-const legalEntityHint     = byId('fld-legal-entity-hint');
+const legalEntitySelect = byId('fld-legal-entity');
+const legalEntityHint = byId('fld-legal-entity-hint');
 // Hinweiszeile unter "Legal Entity" entfernen, damit nichts mehr verschiebt
 legalEntityHint?.remove();
 
 /* Systems dialog */
-const systemDialog       = byId('systemDialog');
-const systemForm         = byId('systemForm');
+const systemDialog = byId('systemDialog');
+const systemForm = byId('systemForm');
 const systemDomainSelect = byId('sys-domain');
 
 /* Column dialog */
 const columnDialog = byId('columnDialog');
-const columnForm   = byId('columnForm');
+const columnForm = byId('columnForm');
 
 /* Domain dialog */
 const domainDialog = byId('domainDialog');
-const domainForm   = byId('domainForm');
+const domainForm = byId('domainForm');
 
 /* Legal dialogs */
-const legalDialog       = byId('legalDialog');
-const legalForm         = byId('legalForm');
-const addLegalBtn       = byId('addLegalBtn');
-const leSystemsDialog   = byId('leSystemsDialog');
-const leSystemsForm     = byId('leSystemsForm');
-const leSystemsLegend   = byId('leSystemsLegend');
-const leSystemsList     = byId('leSystemsList');
+const legalDialog = byId('legalDialog');
+const legalForm = byId('legalForm');
+const addLegalBtn = byId('addLegalBtn');
+const leSystemsDialog = byId('leSystemsDialog');
+const leSystemsForm = byId('leSystemsForm');
+const leSystemsLegend = byId('leSystemsLegend');
+const leSystemsList = byId('leSystemsList');
 
 /* Glossary */
-const glossaryTable    = byId('glossaryTable');
-const glossaryDialog   = byId('glossaryDialog');
-const glossaryForm     = byId('glossaryForm');
-const addGlossaryBtn   = byId('addGlossaryBtn');
+const glossaryTable = byId('glossaryTable');
+const glossaryDialog = byId('glossaryDialog');
+const glossaryForm = byId('glossaryForm');
+const addGlossaryBtn = byId('addGlossaryBtn');
 const glossaryFieldRef = byId('gls-fieldRef');
 
 /* Top tabs & map */
-const topTabs   = byId('topTabs');
+const topTabs = byId('topTabs');
 const adminTabs = byId('adminTabs');
 
 /* Data Map */
-const mapCanvas    = byId('mapCanvas');
-const mapViewport  = byId('mapViewport');
-const mapEdgesSvg  = byId('mapEdges');
-const mapNodesLayer= byId('mapNodes');
-const mapFitBtn    = byId('mapFitBtn');
+const mapCanvas = byId('mapCanvas');
+const mapViewport = byId('mapViewport');
+const mapEdgesSvg = byId('mapEdges');
+const mapNodesLayer = byId('mapNodes');
+const mapFitBtn = byId('mapFitBtn');
 
 /* Filter Overlay */
-const filterOverlay     = byId('filterOverlay');
-const openFilterPanelBtn= byId('openFilterPanel');
-const filterCloseBtn    = byId('filterCloseBtn');
-const filterDone        = byId('filterDone');
-const filterClear       = byId('filterClear');
-const chipSystems       = byId('chipSystems');
-const chipDomains       = byId('chipDomains');
-const scopeGlobal       = byId('scopeGlobal');
-const scopeLocal        = byId('scopeLocal');
-const mapSearch         = byId('mapSearch');
+const filterOverlay = byId('filterOverlay');
+const openFilterPanelBtn = byId('openFilterPanel');
+const filterCloseBtn = byId('filterCloseBtn');
+const filterDone = byId('filterDone');
+const filterClear = byId('filterClear');
+const chipSystems = byId('chipSystems');
+const chipDomains = byId('chipDomains');
+const scopeGlobal = byId('scopeGlobal');
+const scopeLocal = byId('scopeLocal');
+const mapSearch = byId('mapSearch');
 /*Ende Teil 1*/
 /*Teil 2 Zeilen 309-603*/
 /* ===== Glossary: Spalten-Definition (einzige Stelle, die du später änderst) ===== */
 const GLOSSARY_COLUMNS = [
-  { key: 'term',       label: 'Term' },
-  { key: 'type',       label: 'Type' },
+  { key: 'term', label: 'Term' },
+  { key: 'type', label: 'Type' },
   { key: 'definition', label: 'Definition' },
-  { key: 'info',       label: 'Additional Information' },
-  { key: 'owner',      label: 'Responsible Process Owner' },
-  { key: 'fieldRef',   label: 'Linked Data Field' },
+  { key: 'info', label: 'Additional Information' },
+  { key: 'owner', label: 'Responsible Process Owner' },
+  { key: 'fieldRef', label: 'Linked Data Field' },
 ];
 
 /* Fallback-Utils (nur einfügen, wenn bei dir nicht vorhanden) */
-function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+function esc(s) {
+  return String(s ?? '').replace(
+    /[&<>"']/g,
+    (m) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[
+        m
+      ])
+  );
+}
 
 /* ===== Header dynamisch rendern (einmal pro Ansicht) ===== */
-function renderGlossaryHead(){
+function renderGlossaryHead() {
   const headRow = document.getElementById('glossaryHeadRow');
   if (!headRow) return;
   headRow.innerHTML = [
-    ...GLOSSARY_COLUMNS.map(c => `<th>${esc(c.label)}</th>`),
-    '<th>Actions</th>'
+    ...GLOSSARY_COLUMNS.map((c) => `<th>${esc(c.label)}</th>`),
+    '<th>Actions</th>',
   ].join('');
 }
 
 /* ===== Sicherheitscheck (Konsole warnt bei Missmatch) ===== */
-function verifyGlossaryColumns(){
+function verifyGlossaryColumns() {
   const headCols = document.querySelectorAll('#glossaryView thead th').length;
   const firstRow = document.querySelector('#glossaryTable tr');
   const bodyCols = firstRow ? firstRow.children.length : 0;
-  if (bodyCols && headCols !== bodyCols){
-    console.warn(`Glossary column mismatch: header=${headCols}, row=${bodyCols}`);
+  if (bodyCols && headCols !== bodyCols) {
+    console.warn(
+      `Glossary column mismatch: header=${headCols}, row=${bodyCols}`
+    );
   }
 }
 
@@ -289,31 +319,41 @@ function verifyGlossaryColumns(){
 // Merkt sich das aktuell fokussierte Filter-Input und stellt Fokus + Caret nach Re-Render wieder her.
 function preserveFilterInputFocus(rerenderFn) {
   const active = document.activeElement;
-  const isFilter = active && active.tagName === 'INPUT' && active.type === 'search' && active.dataset && active.dataset.col;
+  const isFilter =
+    active &&
+    active.tagName === 'INPUT' &&
+    active.type === 'search' &&
+    active.dataset &&
+    active.dataset.col;
   const colKey = isFilter ? active.dataset.col : null;
-  let start = null, end = null;
+  let start = null,
+    end = null;
   if (isFilter && typeof active.selectionStart === 'number') {
     start = active.selectionStart;
-    end   = active.selectionEnd;
+    end = active.selectionEnd;
   }
   // Re-Render ausführen
   rerenderFn();
 
   // Fokus wiederherstellen (Global-Tab)
   if (colKey) {
-    const newInp = document.querySelector(`thead input[type="search"][data-col="${colKey}"]`);
+    const newInp = document.querySelector(
+      `thead input[type="search"][data-col="${colKey}"]`
+    );
     if (newInp) {
       newInp.focus({ preventScroll: true });
       const len = newInp.value.length;
-      const s = (start != null) ? start : len;
-      const e = (end   != null) ? end   : len;
-      try { newInp.setSelectionRange(s, e); } catch {}
+      const s = start != null ? start : len;
+      const e = end != null ? end : len;
+      try {
+        newInp.setSelectionRange(s, e);
+      } catch {}
     }
   }
 }
 
 function systemByName(name) {
-  return systems.find(s => s.name === name) || null;
+  return systems.find((s) => s.name === name) || null;
 }
 function systemIdByName(name) {
   const s = systemByName(name);
@@ -322,11 +362,11 @@ function systemIdByName(name) {
 
 function getDataObjectById(id) {
   if (id == null || id === '') return null;
-  return dataObjects.find(o => String(o.id) === String(id)) || null;
+  return dataObjects.find((o) => String(o.id) === String(id)) || null;
 }
 function getDataObjectByName(name) {
   if (!name) return null;
-  return dataObjects.find(o => o.name === name) || null;
+  return dataObjects.find((o) => o.name === name) || null;
 }
 function foundationLabelForField(f) {
   const obj = getDataObjectById(f.foundationObjectId);
@@ -341,31 +381,35 @@ function eligibleForLE(systemName, isLocal) {
 }
 function leLabel(num) {
   if (!num) return '—';
-  const le = legalEntities.find(x => x.number === num);
+  const le = legalEntities.find((x) => x.number === num);
   return le ? `${le.number} — ${le.name}` : num;
 }
 function leName(num) {
   if (!num) return 'Unassigned';
-  const le = legalEntities.find(x => x.number === num);
+  const le = legalEntities.find((x) => x.number === num);
   return le ? le.name : 'Unassigned';
 }
 function assignedLEsForSystem(systemName) {
   // LEs, die diesem System (über die system.id) zugeordnet sind
   const sid = systemIdByName(systemName);
   if (!sid) return [];
-  return legalEntities.filter(le => (leSystemMap[le.number] || []).includes(sid));
+  return legalEntities.filter((le) =>
+    (leSystemMap[le.number] || []).includes(sid)
+  );
 }
 function populateLESelectForSystem(systemName, isLocal, selectedNumber = '') {
   if (!legalEntitySelect) return;
   const allowed = eligibleForLE(systemName, isLocal);
   const list = allowed ? assignedLEsForSystem(systemName) : [];
   const opts = ['<option value="">(none)</option>'].concat(
-    list.map(le => `<option value="${le.number}">${le.number} — ${le.name}</option>`)
+    list.map(
+      (le) => `<option value="${le.number}">${le.number} — ${le.name}</option>`
+    )
   );
   legalEntitySelect.innerHTML = opts.join('');
   legalEntitySelect.disabled = !allowed || list.length === 0;
 
-  if (selectedNumber && list.some(le => le.number === selectedNumber)) {
+  if (selectedNumber && list.some((le) => le.number === selectedNumber)) {
     legalEntitySelect.value = selectedNumber;
   } else {
     legalEntitySelect.value = '';
@@ -374,15 +418,18 @@ function populateLESelectForSystem(systemName, isLocal, selectedNumber = '') {
 
 function refreshFoundationSelect() {
   if (!foundationSelect) return;
-  foundationSelect.innerHTML =
-    dataObjects.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+  foundationSelect.innerHTML = dataObjects
+    .map((o) => `<option value="${o.id}">${o.name}</option>`)
+    .join('');
 }
 
 const isValidSystemName = (n) => systems.some((s) => s.name === n);
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
 const getFieldsBySystem = (n) => fields.filter((f) => f.system === n);
-const getDomainNames = () => dataDomains.filter((d) => d.active !== false).map((d) => d.name);
-const getSystemsByDomain = (d) => systems.filter((s) => (s.dataDomain || '') === d);
+const getDomainNames = () =>
+  dataDomains.filter((d) => d.active !== false).map((d) => d.name);
+const getSystemsByDomain = (d) =>
+  systems.filter((s) => (s.dataDomain || '') === d);
 const domainByName = (n) => dataDomains.find((d) => d.name === n);
 
 function normalizeColumns() {
@@ -396,22 +443,32 @@ function normalizeColumns() {
     }
   });
   let max = Math.max(...fieldColumns.map((c) => c.order ?? 0), 8);
-  fieldColumns.forEach((c) => { if (c.order == null) c.order = ++max; });
+  fieldColumns.forEach((c) => {
+    if (c.order == null) c.order = ++max;
+  });
 }
-function visibleColumns() { normalizeColumns(); return fieldColumns.filter((c) => c.visible).sort(byOrder); }
+function visibleColumns() {
+  normalizeColumns();
+  return fieldColumns.filter((c) => c.visible).sort(byOrder);
+}
 
 function getGlossaryById(id) {
   if (!id) return null;
-  return glossaryTerms.find(g => g.id === id) || null;
+  return glossaryTerms.find((g) => g.id === id) || null;
 }
 
 function cellValue(name, f) {
   switch (name) {
-    case 'Field Name': return f.name ?? '-';
-    case 'Legal Entity': return leLabel(f.legalEntityNumber || '');
-    case 'System': return f.system ?? '-';
-    case 'Mandatory': return f.mandatory ? 'Yes' : 'No';
-    case 'Mapping': return f.mapping || '-';
+    case 'Field Name':
+      return f.name ?? '-';
+    case 'Legal Entity':
+      return leLabel(f.legalEntityNumber || '');
+    case 'System':
+      return f.system ?? '-';
+    case 'Mandatory':
+      return f.mandatory ? 'Yes' : 'No';
+    case 'Mapping':
+      return f.mapping || '-';
 
     // NEU: „Data Object“ (und Altname weiterhin unterstützt)
     case 'Data Object':
@@ -424,14 +481,15 @@ function cellValue(name, f) {
       if (!def) return '(no definition)';
       return def;
     }
-    default: return f[name] ?? '-';
+    default:
+      return f[name] ?? '-';
   }
 }
 /* Ende Teil 2*/
 /* Teil 3 Zeilen 604-921*/
 /* ===== Sort/Filter State ===== */
-const localSortByLe = Object.create(null);             // je LE-Tabelle: { [leNumber]: {key,dir} }
-const columnFilters = Object.create(null);             // globale Spaltenfilter: { [ColumnName]: query }
+const localSortByLe = Object.create(null); // je LE-Tabelle: { [leNumber]: {key,dir} }
+const columnFilters = Object.create(null); // globale Spaltenfilter: { [ColumnName]: query }
 
 /* Data-Object-Name für Sortierung */
 function dataObjectNameForField(f) {
@@ -442,27 +500,35 @@ function dataObjectNameForField(f) {
 /* Column-Name → Sort-Key */
 function mapColToSortKey(colName) {
   switch (colName) {
-    case 'Field Name':    return 'name';
-    case 'System':        return 'system';
+    case 'Field Name':
+      return 'name';
+    case 'System':
+      return 'system';
     case 'Data Object':
     case 'Foundation Data':
-                          return 'dataObject';
-    case 'Mandatory':     return 'mandatory';
-    default:              return colName; // Fallback: Cell-Text
+      return 'dataObject';
+    case 'Mandatory':
+      return 'mandatory';
+    default:
+      return colName; // Fallback: Cell-Text
   }
 }
 
 /* Wert für Sortierung je Schlüssel */
 function valueForSort(key, f) {
   switch (key) {
-    case 'name':        return (f.name || '').toLowerCase();
-    case 'system':      return (f.system || '').toLowerCase();
-    case 'dataObject':  return (dataObjectNameForField(f) || '').toLowerCase();
-    case 'mandatory':   return f.mandatory ? '1' : '0';
+    case 'name':
+      return (f.name || '').toLowerCase();
+    case 'system':
+      return (f.system || '').toLowerCase();
+    case 'dataObject':
+      return (dataObjectNameForField(f) || '').toLowerCase();
+    case 'mandatory':
+      return f.mandatory ? '1' : '0';
     default: {
       // Fallback: nimm den Zellwert der angezeigten Spalte (falls vorhanden)
       const displayName = key; // bei Fallback entspricht key dem Spaltentitel
-      const v = cellValue ? cellValue(displayName, f) : (f[displayName] ?? '');
+      const v = cellValue ? cellValue(displayName, f) : f[displayName] ?? '';
       return String(v ?? '').toLowerCase();
     }
   }
@@ -471,9 +537,13 @@ function valueForSort(key, f) {
 /* Standardsortierung: System → Data Object → Feldname */
 function sortFieldsDefault(list) {
   return [...list].sort((a, b) => {
-    const s = valueForSort('system', a).localeCompare(valueForSort('system', b));
+    const s = valueForSort('system', a).localeCompare(
+      valueForSort('system', b)
+    );
     if (s) return s;
-    const d = valueForSort('dataObject', a).localeCompare(valueForSort('dataObject', b));
+    const d = valueForSort('dataObject', a).localeCompare(
+      valueForSort('dataObject', b)
+    );
     if (d) return d;
     return valueForSort('name', a).localeCompare(valueForSort('name', b));
   });
@@ -486,7 +556,10 @@ function sortFieldsCustom(list, sortSpec) {
   return [...list].sort((a, b) => {
     const va = valueForSort(key, a);
     const vb = valueForSort(key, b);
-    let cmp = va.localeCompare(vb, undefined, { numeric: true, sensitivity: 'base' });
+    let cmp = va.localeCompare(vb, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
     if (dir === 'desc') cmp = -cmp;
     return cmp;
   });
@@ -494,10 +567,12 @@ function sortFieldsCustom(list, sortSpec) {
 
 /* Spaltenfilter anwenden */
 function applyColumnFilters(list, cols) {
-  const active = Object.entries(columnFilters).filter(([_, q]) => (q ?? '').trim() !== '');
+  const active = Object.entries(columnFilters).filter(
+    ([_, q]) => (q ?? '').trim() !== ''
+  );
   if (!active.length) return list;
-  const colSet = new Set(cols.map(c => c.name));
-  return list.filter(f =>
+  const colSet = new Set(cols.map((c) => c.name));
+  return list.filter((f) =>
     active.every(([col, q]) => {
       if (!colSet.has(col)) return true; // unbekannte Spalte ignorieren
       const val = String(cellValue(col, f) ?? '').toLowerCase();
@@ -516,7 +591,7 @@ function sortIndicator(colName, sortSpec) {
 /* ===== Field ⇄ Glossary Helpers ===== */
 function fieldGlossaryTerm(field) {
   if (!field?.glossaryId) return null;
-  return glossaryTerms.find(g => g.id === field.glossaryId) || null;
+  return glossaryTerms.find((g) => g.id === field.glossaryId) || null;
 }
 function fieldDefinitionText(field) {
   const t = fieldGlossaryTerm(field);
@@ -534,15 +609,19 @@ function fieldDefinitionLabel(field) {
  * - Leere Eingabe = Zuordnung entfernen
  */
 function pickGlossaryForField(fieldIndex) {
-  if (fieldIndex == null || fieldIndex < 0 || fieldIndex >= fields.length) return;
+  if (fieldIndex == null || fieldIndex < 0 || fieldIndex >= fields.length)
+    return;
 
   // 1) optional filtern
-  const q = (prompt('Glossary suchen (leer lassen für alle):') || '').trim().toLowerCase();
+  const q = (prompt('Glossary suchen (leer lassen für alle):') || '')
+    .trim()
+    .toLowerCase();
   let list = glossaryTerms;
   if (q) {
-    list = glossaryTerms.filter(g =>
-      (g.term || '').toLowerCase().includes(q) ||
-      (g.definition || '').toLowerCase().includes(q)
+    list = glossaryTerms.filter(
+      (g) =>
+        (g.term || '').toLowerCase().includes(q) ||
+        (g.definition || '').toLowerCase().includes(q)
     );
   }
 
@@ -554,42 +633,46 @@ function pickGlossaryForField(fieldIndex) {
   // 2) Liste bauen (deckeln)
   const max = 20;
   const page = list.slice(0, max);
-  const menu = page.map((g, i) => {
-    const def = (g.definition || '').replace(/\s+/g, ' ').slice(0, 80);
-    return `${i + 1}. ${g.term} — ${def}${g.definition && g.definition.length > 80 ? '…' : ''}`;
-  }).join('\n');
+  const menu = page
+    .map((g, i) => {
+      const def = (g.definition || '').replace(/\s+/g, ' ').slice(0, 80);
+      return `${i + 1}. ${g.term} — ${def}${
+        g.definition && g.definition.length > 80 ? '…' : ''
+      }`;
+    })
+    .join('\n');
 
   const hint = `\n\nNummer eingeben (1–${page.length}).\nLeer lassen = Zuordnung entfernen.`;
   const ans = prompt(`Glossary zuordnen:\n\n${menu}${hint}`) || '';
 
-// Entfernen?
-if (!ans.trim()) {
-  delete fields[fieldIndex].glossaryId;
-  saveFields();              // <— neu
+  // Entfernen?
+  if (!ans.trim()) {
+    delete fields[fieldIndex].glossaryId;
+    saveFields(); // <— neu
+    renderFieldsTable();
+    if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+    return;
+  }
+
+  const n = parseInt(ans, 10);
+  if (isNaN(n) || n < 1 || n > page.length) {
+    alert('Ungültige Eingabe.');
+    return;
+  }
+
+  const picked = page[n - 1];
+  fields[fieldIndex].glossaryId = picked.id;
+  saveFields(); // <— neu
   renderFieldsTable();
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
-  return;
-}
-
-const n = parseInt(ans, 10);
-if (isNaN(n) || n < 1 || n > page.length) {
-  alert('Ungültige Eingabe.');
-  return;
-}
-
-const picked = page[n - 1];
-fields[fieldIndex].glossaryId = picked.id;
-saveFields();                // <— neu
-renderFieldsTable();
-if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
 }
 /* ================= Sidebar ================= */
 function renderSystemsSidebar() {
   // IDs hier frisch auflösen, damit keine Scope-Probleme mit lokalen Variablen entstehen
-  const systemsNavItem  = byId('systemsNavItem');
-  const dataMapNavItem  = byId('dataMapNavItem');
+  const systemsNavItem = byId('systemsNavItem');
+  const dataMapNavItem = byId('dataMapNavItem');
   const glossaryNavItem = byId('glossaryNavItem');
-  const adminNavItem    = byId('adminNavItem');
+  const adminNavItem = byId('adminNavItem');
 
   // Nav-Buttons (oben) aktiv setzen
   const mode = document.body.getAttribute('data-mode');
@@ -638,14 +721,18 @@ function renderSystemsSidebar() {
       cluster.classList.toggle('is-open');
       head.querySelector('span:last-child').textContent =
         cluster.classList.contains('is-open') ? '▾' : '▸';
-      body.style.display = cluster.classList.contains('is-open') ? 'block' : 'none';
+      body.style.display = cluster.classList.contains('is-open')
+        ? 'block'
+        : 'none';
     });
     cluster.appendChild(head);
     cluster.appendChild(body);
     systemListEl.appendChild(cluster);
   });
 
-  const unassigned = systems.filter((s) => !s.dataDomain || !names.includes(s.dataDomain));
+  const unassigned = systems.filter(
+    (s) => !s.dataDomain || !names.includes(s.dataDomain)
+  );
   if (unassigned.length) {
     const cluster = document.createElement('div');
     cluster.className = 'domain-cluster is-open';
@@ -669,7 +756,9 @@ function renderSystemsSidebar() {
       cluster.classList.toggle('is-open');
       head.querySelector('span:last-child').textContent =
         cluster.classList.contains('is-open') ? '▾' : '▸';
-      body.style.display = cluster.classList.contains('is-open') ? 'block' : 'none';
+      body.style.display = cluster.classList.contains('is-open')
+        ? 'block'
+        : 'none';
     });
     cluster.appendChild(head);
     cluster.appendChild(body);
@@ -681,16 +770,18 @@ function showGlossarySubnav(show) {
   const sub = document.getElementById('glossarySubnav');
   const sys = document.getElementById('systemList');
   if (sub) sub.style.display = show ? 'block' : 'none';
-  if (sys) sys.style.display = show ? 'none'  : sys.style.display; // bei Glossary: Systems-Liste ausblenden
+  if (sys) sys.style.display = show ? 'none' : sys.style.display; // bei Glossary: Systems-Liste ausblenden
 }
 
 function installGlossarySubnavHandlers() {
   const sub = document.getElementById('glossarySubnav');
   if (!sub) return;
-  sub.querySelectorAll('.gls-filter').forEach(btn => {
+  sub.querySelectorAll('.gls-filter').forEach((btn) => {
     btn.addEventListener('click', () => {
       // Active-Style setzen
-      sub.querySelectorAll('.gls-filter').forEach(b => b.classList.remove('is-active'));
+      sub
+        .querySelectorAll('.gls-filter')
+        .forEach((b) => b.classList.remove('is-active'));
       btn.classList.add('is-active');
 
       // Filter übernehmen
@@ -702,11 +793,11 @@ function installGlossarySubnavHandlers() {
 }
 
 function getFilteredGlossaryItems() {
-  const list = glossaryTerms.filter(g => {
+  const list = glossaryTerms.filter((g) => {
     if (!glossaryTypeFilter || glossaryTypeFilter === 'ALL') return true;
     return (g.type || 'Term') === glossaryTypeFilter;
   });
-  return list.sort((a,b) => {
+  return list.sort((a, b) => {
     const t = (a.type || 'Term').localeCompare(b.type || 'Term');
     if (t !== 0) return t;
     return (a.term || '').localeCompare(b.term || '');
@@ -722,28 +813,34 @@ function renderGlossary() {
 /* ================= Ansichtsumschaltung (mit Guards) ================= */
 function showOnly(mode) {
   // 'systems' | 'admin' | 'map' | 'glossary'
-  const showSystems  = mode === 'systems';
-  const showAdmin    = mode === 'admin';
-  const showMap      = mode === 'map';
+  const showSystems = mode === 'systems';
+  const showAdmin = mode === 'admin';
+  const showMap = mode === 'map';
   const showGlossary = mode === 'glossary';
 
-  const topTabsEl  = byId('topTabs');
-  const globalEl   = byId('global');
-  const localEl    = byId('local');
-  const adminTabsEl= byId('adminTabs');
-  const mapViewEl  = byId('mapView');
+  const topTabsEl = byId('topTabs');
+  const globalEl = byId('global');
+  const localEl = byId('local');
+  const adminTabsEl = byId('adminTabs');
+  const mapViewEl = byId('mapView');
   const glossaryEl = byId('glossaryView');
 
-  if (topTabsEl)   topTabsEl.style.display = showSystems ? 'flex'  : 'none';
-  if (globalEl)    globalEl.style.display  = showSystems ? 'block' : 'none';
-  if (localEl)     localEl.style.display   = showSystems ? 'block' : 'none';
-  if (adminTabsEl) adminTabsEl.style.display = showAdmin ? 'flex'   : 'none';
-  if (mapViewEl)   mapViewEl.style.display = showMap ? 'block'     : 'none';
-  if (glossaryEl)  glossaryEl.style.display= showGlossary ? 'block' : 'none';
+  if (topTabsEl) topTabsEl.style.display = showSystems ? 'flex' : 'none';
+  if (globalEl) globalEl.style.display = showSystems ? 'block' : 'none';
+  if (localEl) localEl.style.display = showSystems ? 'block' : 'none';
+  if (adminTabsEl) adminTabsEl.style.display = showAdmin ? 'flex' : 'none';
+  if (mapViewEl) mapViewEl.style.display = showMap ? 'block' : 'none';
+  if (glossaryEl) glossaryEl.style.display = showGlossary ? 'block' : 'none';
 
-  $$('.admin-view').forEach((v) => { v.style.display = showAdmin ? 'block' : 'none'; });
+  $$('.admin-view').forEach((v) => {
+    v.style.display = showAdmin ? 'block' : 'none';
+  });
 
-  try { renderSystemsSidebar(); } catch (e) { console.error(e); }
+  try {
+    renderSystemsSidebar();
+  } catch (e) {
+    console.error(e);
+  }
 }
 /* Ende Teil 3*/
 /* Teil 4 Zeilen 922-1462*/
@@ -761,20 +858,24 @@ function setModeSystems(name) {
   showOnly('systems');
 
   const sys = systems.find((s) => s.name === name);
-  let showGlobal = true, showLocal = true;
+  let showGlobal = true,
+    showLocal = true;
   if (sys) {
     if (sys.scope === 'global') showLocal = false;
-    if (sys.scope === 'local')  showGlobal = false;
+    if (sys.scope === 'local') showGlobal = false;
   }
   const tabGlobal = $('#topTabs .tab[data-tab="global"]');
-  const tabLocal  = $('#topTabs .tab[data-tab="local"]');
+  const tabLocal = $('#topTabs .tab[data-tab="local"]');
   if (tabGlobal) tabGlobal.style.display = showGlobal ? 'inline-flex' : 'none';
-  if (tabLocal)  tabLocal.style.display  = showLocal  ? 'inline-flex' : 'none';
+  if (tabLocal) tabLocal.style.display = showLocal ? 'inline-flex' : 'none';
 
-  let target = showGlobal ? 'global' : (showLocal ? 'local' : 'global');
+  let target = showGlobal ? 'global' : showLocal ? 'local' : 'global';
   $$('#topTabs .tab').forEach((t) => t.classList.remove('is-active'));
   const btn = $(`#topTabs .tab[data-tab="${target}"]`);
-  if (btn) { btn.classList.add('is-active'); showMainView(target); }
+  if (btn) {
+    btn.classList.add('is-active');
+    showMainView(target);
+  }
 
   renderSystemsSidebar();
   renderFieldsTable();
@@ -783,7 +884,7 @@ function showMainView(id) {
   const g = byId('global');
   const l = byId('local');
   if (g) g.style.display = id === 'global' ? 'block' : 'none';
-  if (l) l.style.display = id === 'local'  ? 'block' : 'none';
+  if (l) l.style.display = id === 'local' ? 'block' : 'none';
 }
 
 /* ================= Admin Tabs ================= */
@@ -791,20 +892,24 @@ function showAdminSubview(id) {
   $$('.admin-view').forEach((v) => (v.style.display = 'none'));
   const view = byId(id);
   if (view) view.style.display = 'block';
-  if (id === 'admin-systems')  renderSystemsTable();
-  if (id === 'admin-columns')  renderColumnsTable();
-  if (id === 'admin-domains')  renderDomainsTable();
-  if (id === 'admin-legal')    renderLegalEntities();
+  if (id === 'admin-systems') renderSystemsTable();
+  if (id === 'admin-columns') renderColumnsTable();
+  if (id === 'admin-domains') renderDomainsTable();
+  if (id === 'admin-legal') renderLegalEntities();
   if (id === 'admin-dataobjects') renderDataObjects();
 }
 function resetAllAppData() {
   const keys = [
-    'gdf_fields_v1','gdf_fields_v2',
-    'gdf_systems_v1','gdf_glossary_v1',
-    'gdf_mapPositions_v1','gdf_mapFilters_v1',
-    'gdf_leSystemMap_v1','gdf_fieldColumns_v1'
+    'gdf_fields_v1',
+    'gdf_fields_v2',
+    'gdf_systems_v1',
+    'gdf_glossary_v1',
+    'gdf_mapPositions_v1',
+    'gdf_mapFilters_v1',
+    'gdf_leSystemMap_v1',
+    'gdf_fieldColumns_v1',
   ];
-  keys.forEach(k => localStorage.removeItem(k));
+  keys.forEach((k) => localStorage.removeItem(k));
   alert('Lokale App-Daten zurückgesetzt. Bitte Seite neu laden.');
 }
 
@@ -831,53 +936,64 @@ function renderFieldsTable() {
   const activeTab =
     document.querySelector('#topTabs .tab.is-active')?.dataset.tab || 'global';
 
-    const thead = document.querySelector('#global thead');
-    if (thead) {
-      // Zeile 1: Sortierbare Header
-      const row1 = document.createElement('tr');
-      row1.innerHTML = cols.map((c) =>
-        `<th data-col="${c.name}" class="is-sortable">${c.name}${sortIndicator(c.name, globalSort)}</th>`
-      ).join('') + `<th>Actions</th>`;
-    
-      thead.innerHTML = '';
-      thead.appendChild(row1);
-    
-      // Nur wenn eingeschaltet: Filterzeile einbauen
-      if (showGlobalFilters) {
-        const row2 = document.createElement('tr');
-        row2.innerHTML = cols.map((c) => {
-          const v = columnFilters[c.name] ?? '';
-          return `<th><input data-col="${c.name}" type="search" placeholder="Filter…" value="${esc(v)}" /></th>`;
-        }).join('') + `<th></th>`;
-        thead.appendChild(row2);
-    
-        // Filter-Handler
-        row2.querySelectorAll('input[type="search"]').forEach(inp => {
-          inp.addEventListener('input', () => {
-            columnFilters[inp.dataset.col] = inp.value || '';
-            // Nur tbody neu malen -> flüssiges Tippen
-            preserveFilterInputFocus(() => updateGlobalTableBodyOnly());
-          });
-        });
-      }
-    
-      // Sortier-Handler
-      row1.querySelectorAll('th.is-sortable').forEach(th => {
-        th.addEventListener('click', () => {
-          const col = th.dataset.col;
-          const key = mapColToSortKey(col);
-          if (globalSort.key === key) {
-            globalSort.dir = (globalSort.dir === 'asc') ? 'desc' : 'asc';
-            state.globalSort = globalSort;
-          } else {
-            globalSort = { key, dir: 'asc' };
-            state.globalSort = globalSort;
-          }
-          // Header erneut schreiben (Pfeile) und Body neu
-          renderFieldsTable();
+  const thead = document.querySelector('#global thead');
+  if (thead) {
+    // Zeile 1: Sortierbare Header
+    const row1 = document.createElement('tr');
+    row1.innerHTML =
+      cols
+        .map(
+          (c) =>
+            `<th data-col="${c.name}" class="is-sortable">${
+              c.name
+            }${sortIndicator(c.name, globalSort)}</th>`
+        )
+        .join('') + `<th>Actions</th>`;
+
+    thead.innerHTML = '';
+    thead.appendChild(row1);
+
+    // Nur wenn eingeschaltet: Filterzeile einbauen
+    if (showGlobalFilters) {
+      const row2 = document.createElement('tr');
+      row2.innerHTML =
+        cols
+          .map((c) => {
+            const v = columnFilters[c.name] ?? '';
+            return `<th><input data-col="${
+              c.name
+            }" type="search" placeholder="Filter…" value="${esc(v)}" /></th>`;
+          })
+          .join('') + `<th></th>`;
+      thead.appendChild(row2);
+
+      // Filter-Handler
+      row2.querySelectorAll('input[type="search"]').forEach((inp) => {
+        inp.addEventListener('input', () => {
+          columnFilters[inp.dataset.col] = inp.value || '';
+          // Nur tbody neu malen -> flüssiges Tippen
+          preserveFilterInputFocus(() => updateGlobalTableBodyOnly());
         });
       });
     }
+
+    // Sortier-Handler
+    row1.querySelectorAll('th.is-sortable').forEach((th) => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        const key = mapColToSortKey(col);
+        if (globalSort.key === key) {
+          globalSort.dir = globalSort.dir === 'asc' ? 'desc' : 'asc';
+          state.globalSort = globalSort;
+        } else {
+          globalSort = { key, dir: 'asc' };
+          state.globalSort = globalSort;
+        }
+        // Header erneut schreiben (Pfeile) und Body neu
+        renderFieldsTable();
+      });
+    });
+  }
 
   // LOCAL-Tab: auf die neue Mehrtabellen-Logik umleiten
   if (activeTab === 'local') {
@@ -895,20 +1011,23 @@ function renderFieldsTable() {
 
   let visible = fields
     .filter((f) => isValidSystemName(f.system))
-    .filter((f) => currentSystem === 'All Systems' || f.system === currentSystem)
+    .filter(
+      (f) => currentSystem === 'All Systems' || f.system === currentSystem
+    )
     .filter((f) => {
       const sys = systems.find((s) => s.name === f.system);
       return !f.local && (sys?.scope || 'both') !== 'local';
     });
-// nach Spaltenfiltern + Sortierung
-visible = applyColumnFilters(visible, cols);
-visible = sortFieldsCustom(visible, globalSort) || sortFieldsDefault(visible);
+  // nach Spaltenfiltern + Sortierung
+  visible = applyColumnFilters(visible, cols);
+  visible = sortFieldsCustom(visible, globalSort) || sortFieldsDefault(visible);
 
   // Map sichtbarer Eintrag -> globaler Index im fields-Array
   const indexMap = new Map();
   visible.forEach((v) => {
     const gi = fields.findIndex(
-      (f) => f.name === v.name && f.system === v.system && f.mapping === v.mapping
+      (f) =>
+        f.name === v.name && f.system === v.system && f.mapping === v.mapping
     );
     indexMap.set(v, gi);
   });
@@ -973,7 +1092,9 @@ function updateGlobalTableBodyOnly() {
   // Gleiche Logik wie in renderFieldsTable(), aber ohne thead anzufassen
   let visible = fields
     .filter((f) => isValidSystemName(f.system))
-    .filter((f) => currentSystem === 'All Systems' || f.system === currentSystem)
+    .filter(
+      (f) => currentSystem === 'All Systems' || f.system === currentSystem
+    )
     .filter((f) => {
       const sys = systems.find((s) => s.name === f.system);
       return !f.local && (sys?.scope || 'both') !== 'local';
@@ -987,7 +1108,10 @@ function updateGlobalTableBodyOnly() {
   const indexMap = new Map();
   visible.forEach((v) => {
     const gi = fields.findIndex(
-      (f) => f.name === v.name && f.system === v.system && (f.mapping || '') === (v.mapping || '')
+      (f) =>
+        f.name === v.name &&
+        f.system === v.system &&
+        (f.mapping || '') === (v.mapping || '')
     );
     indexMap.set(v, gi);
   });
@@ -999,9 +1123,10 @@ function updateGlobalTableBodyOnly() {
     cols.forEach((c) => {
       const td = document.createElement('td');
       td.dataset.col = c.name;
-      td.textContent = (c.name === 'Definition')
-        ? cellValue('Definition', f)
-        : cellValue(c.name, f);
+      td.textContent =
+        c.name === 'Definition'
+          ? cellValue('Definition', f)
+          : cellValue(c.name, f);
       tr.appendChild(td);
     });
 
@@ -1066,17 +1191,19 @@ function renderLocalFieldsTables() {
   // Hilfsfunktion
   const getLENameByNumber = (num) => {
     if (!num) return 'Unassigned';
-    const le = legalEntities.find(x => x.number === num);
+    const le = legalEntities.find((x) => x.number === num);
     return le ? le.name : 'Unassigned';
   };
 
   // Lokale Felder filtern
   const localCandidates = fields
     .filter((f) => isValidSystemName(f.system))
-    .filter((f) => currentSystem === 'All Systems' || f.system === currentSystem)
+    .filter(
+      (f) => currentSystem === 'All Systems' || f.system === currentSystem
+    )
     .filter((f) => {
       const sys = systems.find((s) => s.name === f.system);
-      return f.local === true || (sys?.scope === 'local');
+      return f.local === true || sys?.scope === 'local';
     });
 
   // Gruppierung: LE-Nummer -> Array von Feldern
@@ -1089,16 +1216,20 @@ function renderLocalFieldsTables() {
 
   // Sortierung: zuerst echte LEs (nach Name), dann Unassigned
   const keys = Array.from(groups.keys());
-  const namedKeys = keys.filter(k => k !== '');
-  namedKeys.sort((a, b) => getLENameByNumber(a).localeCompare(getLENameByNumber(b)));
-  const orderedKeys = [...namedKeys, ...([''].filter(k => groups.has(k)))];
+  const namedKeys = keys.filter((k) => k !== '');
+  namedKeys.sort((a, b) =>
+    getLENameByNumber(a).localeCompare(getLENameByNumber(b))
+  );
+  const orderedKeys = [...namedKeys, ...[''].filter((k) => groups.has(k))];
 
   // Für jede Gruppe: Überschrift + Add-Button + Tabelle
   orderedKeys.forEach((leNumber) => {
     // Filter + Sort je LE-Tabelle
     let recs = groups.get(leNumber) || [];
     recs = applyColumnFilters(recs, cols);
-    recs = sortFieldsCustom(recs, localSortByLe[leNumber]) || sortFieldsDefault(recs);
+    recs =
+      sortFieldsCustom(recs, localSortByLe[leNumber]) ||
+      sortFieldsDefault(recs);
 
     // Headerzeile
     const headerRow = document.createElement('div');
@@ -1125,49 +1256,60 @@ function renderLocalFieldsTables() {
     host.appendChild(headerRow);
 
     // Tabelle
-const table = document.createElement('table');
-table.className = 'table local-fields-table';
-table.dataset.leNumber = leNumber;  // merken für individuelle Sortierung
+    const table = document.createElement('table');
+    table.className = 'table local-fields-table';
+    table.dataset.leNumber = leNumber; // merken für individuelle Sortierung
 
-const thead = document.createElement('thead');
+    const thead = document.createElement('thead');
 
-// Zeile 1: Sortierbare Header
-const row1 = document.createElement('tr');
-row1.innerHTML = cols.map((c) =>
-  `<th data-col="${c.name}" class="is-sortable">${c.name}${sortIndicator(c.name, localSortByLe[leNumber])}</th>`
-).join('') + `<th>Actions</th>`;
+    // Zeile 1: Sortierbare Header
+    const row1 = document.createElement('tr');
+    row1.innerHTML =
+      cols
+        .map(
+          (c) =>
+            `<th data-col="${c.name}" class="is-sortable">${
+              c.name
+            }${sortIndicator(c.name, localSortByLe[leNumber])}</th>`
+        )
+        .join('') + `<th>Actions</th>`;
 
-thead.appendChild(row1);
+    thead.appendChild(row1);
 
-if (showLocalFilters) {
-  const row2 = document.createElement('tr');
-  row2.innerHTML = cols.map((c) => {
-    const v = columnFilters[c.name] ?? '';
-    return `<th><input data-col="${c.name}" type="search" placeholder="Filter…" value="${esc(v)}" /></th>`;
-  }).join('') + `<th></th>`;
-  thead.appendChild(row2);
+    if (showLocalFilters) {
+      const row2 = document.createElement('tr');
+      row2.innerHTML =
+        cols
+          .map((c) => {
+            const v = columnFilters[c.name] ?? '';
+            return `<th><input data-col="${
+              c.name
+            }" type="search" placeholder="Filter…" value="${esc(v)}" /></th>`;
+          })
+          .join('') + `<th></th>`;
+      thead.appendChild(row2);
 
-  // Filter-Handler (teilen sich columnFilters)
-  row2.querySelectorAll('input[type="search"]').forEach(inp => {
-    inp.addEventListener('input', () => {
-      columnFilters[inp.dataset.col] = inp.value || '';
-      // Für jetzt: gesamten Local-Bereich neu aufbauen (einfach und robust)
-      preserveFilterInputFocus(() => renderLocalFieldsTables());
+      // Filter-Handler (teilen sich columnFilters)
+      row2.querySelectorAll('input[type="search"]').forEach((inp) => {
+        inp.addEventListener('input', () => {
+          columnFilters[inp.dataset.col] = inp.value || '';
+          // Für jetzt: gesamten Local-Bereich neu aufbauen (einfach und robust)
+          preserveFilterInputFocus(() => renderLocalFieldsTables());
+        });
+      });
+    }
+
+    // Sortier-Handler (je LE-Tabelle eigene Sortierung)
+    row1.querySelectorAll('th.is-sortable').forEach((th) => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        const key = mapColToSortKey(col);
+        const cur = (localSortByLe[leNumber] ||= { key: 'system', dir: 'asc' });
+        if (cur.key === key) cur.dir = cur.dir === 'asc' ? 'desc' : 'asc';
+        else localSortByLe[leNumber] = { key, dir: 'asc' };
+        renderLocalFieldsTables();
+      });
     });
-  });
-}
-
-// Sortier-Handler (je LE-Tabelle eigene Sortierung)
-row1.querySelectorAll('th.is-sortable').forEach(th => {
-  th.addEventListener('click', () => {
-    const col = th.dataset.col;
-    const key = mapColToSortKey(col);
-    const cur = (localSortByLe[leNumber] ||= { key: 'system', dir: 'asc' });
-    if (cur.key === key) cur.dir = (cur.dir === 'asc') ? 'desc' : 'asc';
-    else localSortByLe[leNumber] = { key, dir: 'asc' };
-    renderLocalFieldsTables();
-  });
-});
 
     const tbody = document.createElement('tbody');
 
@@ -1195,7 +1337,7 @@ row1.querySelectorAll('th.is-sortable').forEach(th => {
           td.textContent = cellValue('Definition', f);
         } else {
           const val = cellValue(c.name, f);
-          td.textContent = (typeof val === 'string') ? val : String(val ?? '-');
+          td.textContent = typeof val === 'string' ? val : String(val ?? '-');
         }
         tr.appendChild(td);
       });
@@ -1245,7 +1387,8 @@ row1.querySelectorAll('th.is-sortable').forEach(th => {
           fields.splice(gi, 1);
           saveFields?.();
           renderLocalFieldsTables();
-          if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+          if (document.body.getAttribute('data-mode') === 'map')
+            renderDataMap();
         }
       });
     });
@@ -1276,7 +1419,8 @@ row1.querySelectorAll('th.is-sortable').forEach(th => {
     table.className = 'table local-fields-table';
     const thead = document.createElement('thead');
     const trHead = document.createElement('tr');
-    const headHtml = cols.map((c) => `<th>${c.name}</th>`).join('') + `<th>Actions</th>`;
+    const headHtml =
+      cols.map((c) => `<th>${c.name}</th>`).join('') + `<th>Actions</th>`;
     trHead.innerHTML = headHtml;
     thead.appendChild(trHead);
     table.appendChild(thead);
@@ -1298,14 +1442,20 @@ function renderSystemsTable() {
   systems.forEach((s, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${s.name}</td><td>${s.owner || '-'}</td><td>${s.version || '-'}</td><td>${s.scope || 'both'}</td><td>${s.dataDomain || '-'}</td>
+      <td>${s.name}</td><td>${s.owner || '-'}</td><td>${
+      s.version || '-'
+    }</td><td>${s.scope || 'both'}</td><td>${s.dataDomain || '-'}</td>
       <td class="table-actions">
         <button data-index="${i}" class="systemEdit" title="Edit"><svg class="icon-16" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="currentColor"/></svg></button>
         <button data-index="${i}" class="systemDelete" title="Delete"><svg class="icon-16" viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7Zm5-4h2l1 1h4v2H5V4h4l1-1Z" fill="currentColor"/></svg></button>
       </td>`;
     systemsTable.appendChild(tr);
   });
-  $$('.systemEdit').forEach((btn) => btn.addEventListener('click', () => openSystemDialog(parseInt(btn.dataset.index, 10))));
+  $$('.systemEdit').forEach((btn) =>
+    btn.addEventListener('click', () =>
+      openSystemDialog(parseInt(btn.dataset.index, 10))
+    )
+  );
   $$('.systemDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
       const i = parseInt(btn.dataset.index, 10);
@@ -1317,12 +1467,16 @@ function renderSystemsTable() {
 
       // Cleanup Felder & Quellen
       fields = fields.filter((f) => f.system !== name);
-      fields = fields.map((f) => f.source?.system === name ? { ...f, source: undefined } : f);
+      fields = fields.map((f) =>
+        f.source?.system === name ? { ...f, source: undefined } : f
+      );
       state.fields = fields;
 
       // Cleanup LE-Zuordnung
       Object.keys(leSystemMap).forEach((leNum) => {
-        leSystemMap[leNum] = (leSystemMap[leNum] || []).filter((id) => id !== deletedId);
+        leSystemMap[leNum] = (leSystemMap[leNum] || []).filter(
+          (id) => id !== deletedId
+        );
         if (!leSystemMap[leNum].length) delete leSystemMap[leNum];
       });
       saveLeSystems();
@@ -1332,7 +1486,8 @@ function renderSystemsTable() {
       renderSystemsTable();
       renderFieldsTable();
       if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
-      if (document.body.getAttribute('data-mode') === 'admin') renderLegalEntities();
+      if (document.body.getAttribute('data-mode') === 'admin')
+        renderLegalEntities();
     });
   });
 }
@@ -1343,14 +1498,20 @@ function renderColumnsTable() {
   fieldColumns.sort(byOrder).forEach((col, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${col.name}</td><td>${col.visible ? 'Yes' : 'No'}</td><td>${col.order}</td>
+      <td>${col.name}</td><td>${col.visible ? 'Yes' : 'No'}</td><td>${
+      col.order
+    }</td>
       <td class="table-actions">
         <button data-index="${i}" class="columnEdit" title="Edit"><svg class="icon-16" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="currentColor"/></svg></button>
         <button data-index="${i}" class="columnDelete" title="Delete"><svg class="icon-16" viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7Zm5-4h2l1 1h4v2H5V4h4l1-1Z" fill="currentColor"/></svg></button>
       </td>`;
     columnsTable.appendChild(tr);
   });
-  $$('.columnEdit').forEach((btn) => btn.addEventListener('click', () => openColumnDialog(parseInt(btn.dataset.index, 10))));
+  $$('.columnEdit').forEach((btn) =>
+    btn.addEventListener('click', () =>
+      openColumnDialog(parseInt(btn.dataset.index, 10))
+    )
+  );
   $$('.columnDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
       const i = parseInt(btn.dataset.index, 10);
@@ -1367,17 +1528,25 @@ function renderDomainsTable() {
   if (!domainsTable) return;
   domainsTable.innerHTML = '';
   dataDomains.forEach((d, i) => {
-    const colorBox = `<span style="display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid #ddd;background:${d.color || '#6a6a6a'}"></span>`;
+    const colorBox = `<span style="display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid #ddd;background:${
+      d.color || '#6a6a6a'
+    }"></span>`;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${d.name}</td><td>${d.manager || '-'}</td><td>${d.active ? 'Yes' : 'No'}</td><td>${colorBox}</td>
+      <td>${d.name}</td><td>${d.manager || '-'}</td><td>${
+      d.active ? 'Yes' : 'No'
+    }</td><td>${colorBox}</td>
       <td class="table-actions">
         <button data-index="${i}" class="domainEdit" title="Edit"><svg class="icon-16" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="currentColor"/></svg></button>
         <button data-index="${i}" class="domainDelete" title="Delete"><svg class="icon-16" viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7Zm5-4h2l1 1h4v2H5V4h4l1-1Z" fill="currentColor"/></svg></button>
       </td>`;
     domainsTable.appendChild(tr);
   });
-  $$('.domainEdit').forEach((btn) => btn.addEventListener('click', () => openDomainDialog(parseInt(btn.dataset.index, 10))));
+  $$('.domainEdit').forEach((btn) =>
+    btn.addEventListener('click', () =>
+      openDomainDialog(parseInt(btn.dataset.index, 10))
+    )
+  );
   $$('.domainDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
       const i = parseInt(btn.dataset.index, 10);
@@ -1391,7 +1560,9 @@ function renderDomainsTable() {
       if (systemDomainSelect) {
         systemDomainSelect.innerHTML =
           `<option value="">(unassigned)</option>` +
-          getDomainNames().map((n) => `<option value="${n}">${n}</option>`).join('');
+          getDomainNames()
+            .map((n) => `<option value="${n}">${n}</option>`)
+            .join('');
       }
     });
   });
@@ -1424,10 +1595,12 @@ function renderLegalEntities() {
     legalTable.appendChild(tr);
   });
 
-  $$('.leEdit').forEach((btn) => btn.addEventListener('click', () => {
-    const i = parseInt(btn.dataset.index, 10);
-    openLegalDialog(i);
-  }));
+  $$('.leEdit').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.dataset.index, 10);
+      openLegalDialog(i);
+    })
+  );
   $$('.leDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
       const i = parseInt(btn.dataset.index, 10);
@@ -1439,10 +1612,12 @@ function renderLegalEntities() {
       renderLegalEntities();
     });
   });
-  $$('.leManage').forEach((btn) => btn.addEventListener('click', () => {
-    const i = parseInt(btn.dataset.index, 10);
-    openLeSystemsDialog(i);
-  }));
+  $$('.leManage').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.dataset.index, 10);
+      openLeSystemsDialog(i);
+    })
+  );
 }
 
 function openLegalDialog(index = null) {
@@ -1452,8 +1627,8 @@ function openLegalDialog(index = null) {
   if (!legalForm) return;
   if (index !== null) {
     const le = legalEntities[index];
-    legalForm.elements.number.value  = le.number;
-    legalForm.elements.name.value    = le.name;
+    legalForm.elements.number.value = le.number;
+    legalForm.elements.name.value = le.name;
     legalForm.elements.country.value = le.country;
   }
   openDialog(legalDialog);
@@ -1462,7 +1637,10 @@ legalForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(legalForm).entries());
   if (editLegalIndex !== null) {
-    legalEntities[editLegalIndex] = { ...legalEntities[editLegalIndex], ...data };
+    legalEntities[editLegalIndex] = {
+      ...legalEntities[editLegalIndex],
+      ...data,
+    };
   } else {
     const newId = Math.max(0, ...legalEntities.map((l) => l.id || 0)) + 1;
     legalEntities.push({ id: newId, ...data });
@@ -1481,7 +1659,9 @@ function buildSystemChipList(container, sysList, selectedSet) {
     const label = document.createElement('label');
     label.className = 'chip';
     label.innerHTML = `
-      <input type="checkbox" id="${id}" ${selectedSet.has(s.id) ? 'checked' : ''} />
+      <input type="checkbox" id="${id}" ${
+      selectedSet.has(s.id) ? 'checked' : ''
+    } />
       <span>${s.name}</span>
     `;
     const input = label.querySelector('input');
@@ -1495,15 +1675,21 @@ function openLeSystemsDialog(index) {
   const le = legalEntities[index];
   const allowed = eligibleLocalOrBothSystems();
   const selected = new Set(leSystemMap[le.number] || []);
-  if (leSystemsLegend) leSystemsLegend.textContent = `${le.number} • ${le.name} • ${le.country}`;
+  if (leSystemsLegend)
+    leSystemsLegend.textContent = `${le.number} • ${le.name} • ${le.country}`;
   if (leSystemsList) buildSystemChipList(leSystemsList, allowed, selected);
   openDialog(leSystemsDialog);
 }
 leSystemsForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  if (editingLeIndexForSystems == null) { closeDialog(leSystemsDialog); return; }
+  if (editingLeIndexForSystems == null) {
+    closeDialog(leSystemsDialog);
+    return;
+  }
   const le = legalEntities[editingLeIndexForSystems];
-  const picked = Array.from(leSystemsList.querySelectorAll('input[type="checkbox"]:checked')).map((inp) => inp.dataset.sysId);
+  const picked = Array.from(
+    leSystemsList.querySelectorAll('input[type="checkbox"]:checked')
+  ).map((inp) => inp.dataset.sysId);
   if (picked.length) leSystemMap[le.number] = picked;
   else delete leSystemMap[le.number];
   saveLeSystems();
@@ -1517,14 +1703,16 @@ function renderGlossaryTable() {
   glossaryTable.innerHTML = '';
 
   // 1) Filtern nach Typ (wenn nicht ALL)
-  const list = glossaryTerms.filter(g => {
+  const list = glossaryTerms.filter((g) => {
     if (!glossaryTypeFilter || glossaryTypeFilter === 'ALL') return true;
     return (g.type || 'Term') === glossaryTypeFilter;
   });
 
   // 2) Sortieren NUR nach "Term" (A→Z, case-insensitiv)
   list.sort((a, b) =>
-    (a.term || '').localeCompare(b.term || '', undefined, { sensitivity: 'base' })
+    (a.term || '').localeCompare(b.term || '', undefined, {
+      sensitivity: 'base',
+    })
   );
 
   // 3) Rendern
@@ -1560,7 +1748,7 @@ function renderGlossaryTable() {
       const i = parseInt(btn.dataset.index, 10);
       const name = list[i]?.term || 'term';
       if (confirm(`Delete glossary term "${name}"?`)) {
-        const globalIdx = glossaryTerms.findIndex(x => x.id === list[i].id);
+        const globalIdx = glossaryTerms.findIndex((x) => x.id === list[i].id);
         if (globalIdx > -1) glossaryTerms.splice(globalIdx, 1);
         saveGlossary();
         renderGlossaryTable();
@@ -1587,14 +1775,14 @@ function openGlossaryDialog(index = null) {
   populateGlossaryFieldRefOptions('');
   if (!glossaryForm) return;
   if (index !== null) {
-// ... innerhalb von if (index !== null) { ... }
-const g = glossaryTerms[index];
-glossaryForm.elements.term.value        = g.term || '';
-glossaryForm.elements.definition.value  = g.definition || '';
-glossaryForm.elements.info.value        = g.info || '';
-glossaryForm.elements.owner.value       = g.owner || '';
-populateGlossaryFieldRefOptions(g.fieldRef || '');
-glossaryForm.elements.type.value        = g.type || 'Term'; // <— NEU
+    // ... innerhalb von if (index !== null) { ... }
+    const g = glossaryTerms[index];
+    glossaryForm.elements.term.value = g.term || '';
+    glossaryForm.elements.definition.value = g.definition || '';
+    glossaryForm.elements.info.value = g.info || '';
+    glossaryForm.elements.owner.value = g.owner || '';
+    populateGlossaryFieldRefOptions(g.fieldRef || '');
+    glossaryForm.elements.type.value = g.type || 'Term'; // <— NEU
     populateGlossaryFieldRefOptions(g.fieldRef || '');
   }
   openDialog(glossaryDialog);
@@ -1603,13 +1791,16 @@ glossaryForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(glossaryForm).entries());
   const record = {
-    id: editGlossaryIndex !== null ? (glossaryTerms[editGlossaryIndex].id || uid('gls')) : uid('gls'),
-    term:        data.term?.trim() || '',
-    definition:  data.definition?.trim() || '',
-    info:        data.info?.trim() || '',
-    owner:       data.owner?.trim() || '',
-    fieldRef:    data.fieldRef || '',
-    type:        (data.type && GLOSSARY_TYPES.includes(data.type)) ? data.type : 'Term'
+    id:
+      editGlossaryIndex !== null
+        ? glossaryTerms[editGlossaryIndex].id || uid('gls')
+        : uid('gls'),
+    term: data.term?.trim() || '',
+    definition: data.definition?.trim() || '',
+    info: data.info?.trim() || '',
+    owner: data.owner?.trim() || '',
+    fieldRef: data.fieldRef || '',
+    type: data.type && GLOSSARY_TYPES.includes(data.type) ? data.type : 'Term',
   };
   if (editGlossaryIndex !== null) glossaryTerms[editGlossaryIndex] = record;
   else glossaryTerms.push(record);
@@ -1624,12 +1815,18 @@ function openDialog(dlg) {
   // WICHTIG: inline display:none entfernen, sonst bleibt der Dialog unsichtbar
   dlg.style.removeProperty('display');
   if (dlg.showModal) dlg.showModal();
-  else { dlg.classList.add('open'); dlg.setAttribute('open', ''); }
+  else {
+    dlg.classList.add('open');
+    dlg.setAttribute('open', '');
+  }
 }
 function closeDialog(dlg) {
   if (!dlg) return;
   if (dlg.close) dlg.close();
-  else { dlg.classList.remove('open'); dlg.removeAttribute('open'); }
+  else {
+    dlg.classList.remove('open');
+    dlg.removeAttribute('open');
+  }
   // optional, damit der Safari-Workaround weiter gilt:
   dlg.style.display = 'none';
 }
@@ -1637,11 +1834,12 @@ function closeDialog(dlg) {
 /* Teil 6 Zeilen 1803-2068*/
 /* ================= Dialog Logic: Fields/Systems/Data Objects/Columns/Domains ================= */
 function updateSourceFieldSelect() {
-  const sys  = sourceSystemSelect?.value;
+  const sys = sourceSystemSelect?.value;
   const list = sys ? fields.filter((f) => f.system === sys) : [];
   if (!sourceFieldSelect) return;
   sourceFieldSelect.innerHTML = sys
-    ? `<option value="">(select field)</option>` + list.map((f) => `<option value="${f.name}">${f.name}</option>`).join('')
+    ? `<option value="">(select field)</option>` +
+      list.map((f) => `<option value="${f.name}">${f.name}</option>`).join('')
     : `<option value="">Select a system first</option>`;
   sourceFieldSelect.disabled = !sys;
 }
@@ -1654,12 +1852,16 @@ function openFieldDialog(index = null, opts = {}) {
   // Reaktives Nachladen der LE-Optionen bei System-/Local-Änderung
   fieldForm?.elements.system?.addEventListener('change', () => {
     const sysName = fieldForm.elements.system.value;
-    const isLocal = !!(fieldForm.elements.local && fieldForm.elements.local.checked);
+    const isLocal = !!(
+      fieldForm.elements.local && fieldForm.elements.local.checked
+    );
     populateLESelectForSystem(sysName, isLocal, legalEntitySelect?.value || '');
   });
   fieldForm?.elements.local?.addEventListener('change', () => {
     const sysName = fieldForm.elements.system.value;
-    const isLocal = !!(fieldForm.elements.local && fieldForm.elements.local.checked);
+    const isLocal = !!(
+      fieldForm.elements.local && fieldForm.elements.local.checked
+    );
     populateLESelectForSystem(sysName, isLocal, legalEntitySelect?.value || '');
   });
 
@@ -1667,33 +1869,44 @@ function openFieldDialog(index = null, opts = {}) {
 
   // System-Select
   if (systemSelect) {
-    systemSelect.innerHTML = systems.map((s) => `<option value="${s.name}">${s.name}</option>`).join('');
+    systemSelect.innerHTML = systems
+      .map((s) => `<option value="${s.name}">${s.name}</option>`)
+      .join('');
   }
 
-// ALT: value = f.name
-if (foundationSelect) {
-  foundationSelect.innerHTML = dataObjects
-    .map((o) => `<option value="${o.id}">${o.name}</option>`)
-    .join('');
-}
+  // ALT: value = f.name
+  if (foundationSelect) {
+    foundationSelect.innerHTML = dataObjects
+      .map((o) => `<option value="${o.id}">${o.name}</option>`)
+      .join('');
+  }
 
   // Glossary-Select
   if (glossarySelect) {
     glossarySelect.innerHTML =
       `<option value="">(keine Zuordnung)</option>` +
-      glossaryTerms.map(g => `<option value="${g.id}">${g.term}</option>`).join('');
+      glossaryTerms
+        .map((g) => `<option value="${g.id}">${g.term}</option>`)
+        .join('');
   }
 
   // Source-System-Select
   if (sourceSystemSelect) {
     sourceSystemSelect.innerHTML =
       `<option value="">(originates here)</option>` +
-      systems.map((s) => `<option value="${s.name}">${s.name}</option>`).join('');
+      systems
+        .map((s) => `<option value="${s.name}">${s.name}</option>`)
+        .join('');
   }
 
   // System aus Kontext vorbelegen
-  if (currentSystem !== 'ADMIN' && currentSystem !== 'MAP' && currentSystem !== 'GLOSSARY' &&
-      currentSystem !== 'All Systems' && isValidSystemName(currentSystem)) {
+  if (
+    currentSystem !== 'ADMIN' &&
+    currentSystem !== 'MAP' &&
+    currentSystem !== 'GLOSSARY' &&
+    currentSystem !== 'All Systems' &&
+    isValidSystemName(currentSystem)
+  ) {
     fieldForm.elements.system.value = currentSystem;
   }
 
@@ -1703,15 +1916,18 @@ if (foundationSelect) {
   }
 
   // LE-Select initial befüllen (abhängig von System & Local)
-  const curSystemName = (fieldForm?.elements.system?.value) || systems[0]?.name || '';
-  const isLocalNow = !!(fieldForm?.elements.local?.checked);
+  const curSystemName =
+    fieldForm?.elements.system?.value || systems[0]?.name || '';
+  const isLocalNow = !!fieldForm?.elements.local?.checked;
   populateLESelectForSystem(curSystemName, isLocalNow, '');
 
   // Falls mitgegebene LE-Nummer existiert, vorbelegen
   if (opts?.presetLegalEntityNumber && legalEntitySelect && !index) {
     // nur beim Neu-Anlegen sinnvoll
     const want = String(opts.presetLegalEntityNumber).trim();
-    const hasOption = Array.from(legalEntitySelect.options).some(o => o.value === want);
+    const hasOption = Array.from(legalEntitySelect.options).some(
+      (o) => o.value === want
+    );
     if (hasOption) {
       legalEntitySelect.value = want;
     }
@@ -1719,26 +1935,36 @@ if (foundationSelect) {
 
   if (index !== null) {
     const f = fields[index];
-  
+
     // Grunddaten in die Form schreiben
-    fieldForm.elements.name.value   = f.name || '';
-    fieldForm.elements.system.value = f.system || fieldForm.elements.system.value;
-    if (fieldForm.elements.mandatory) fieldForm.elements.mandatory.checked = !!f.mandatory;
-    if (fieldForm.elements.local)     fieldForm.elements.local.checked     = !!f.local;
-    if (fieldForm.elements.mapping)   fieldForm.elements.mapping.value     = f.mapping || '';
-  
+    fieldForm.elements.name.value = f.name || '';
+    fieldForm.elements.system.value =
+      f.system || fieldForm.elements.system.value;
+    if (fieldForm.elements.mandatory)
+      fieldForm.elements.mandatory.checked = !!f.mandatory;
+    if (fieldForm.elements.local) fieldForm.elements.local.checked = !!f.local;
+    if (fieldForm.elements.mapping)
+      fieldForm.elements.mapping.value = f.mapping || '';
+
     if (fieldForm.elements.foundationObject) {
-      const val = (f.foundationObjectId != null) ? String(f.foundationObjectId) : '';
+      const val =
+        f.foundationObjectId != null ? String(f.foundationObjectId) : '';
       fieldForm.elements.foundationObject.value = val;
     }
-  
+
     // Glossary vorauswählen
     if (glossarySelect) glossarySelect.value = f.glossaryId || '';
-  
+
     // LE-Select nach System/Local erneut passend befüllen & vorbelegen
-    const editedLocal = !!(fieldForm.elements.local && fieldForm.elements.local.checked);
-    populateLESelectForSystem(fieldForm.elements.system.value, editedLocal, (fields[index].legalEntityNumber || ''));
-  
+    const editedLocal = !!(
+      fieldForm.elements.local && fieldForm.elements.local.checked
+    );
+    populateLESelectForSystem(
+      fieldForm.elements.system.value,
+      editedLocal,
+      fields[index].legalEntityNumber || ''
+    );
+
     // Source-System/-Feld
     if (f.source?.system) {
       if (sourceSystemSelect) sourceSystemSelect.value = f.source.system;
@@ -1762,31 +1988,39 @@ fieldForm?.addEventListener('submit', (e) => {
 
   // 1) Form auslesen
   const data = Object.fromEntries(new FormData(fieldForm).entries());
-  const pickedFoundationId = (fieldForm.elements.foundationObject?.value || '').trim();
-  const pickedGlossaryId   = (fieldForm.elements['fld-glossary']?.value || '').trim() || '';
+  const pickedFoundationId = (
+    fieldForm.elements.foundationObject?.value || ''
+  ).trim();
+  const pickedGlossaryId =
+    (fieldForm.elements['fld-glossary']?.value || '').trim() || '';
 
   // Checkboxen korrekt auslesen
   data.mandatory = fieldForm.elements['fld-mandatory']?.checked || false;
-  data.local     = fieldForm.elements.local?.checked || false;
+  data.local = fieldForm.elements.local?.checked || false;
 
   // 2) Legal Entity nur zulassen, wenn erlaubt
   const sysNameForLE = data.system;
   const isLocalForLE = !!data.local;
-  let pickedLENumber = (fieldForm.elements.legalEntityNumber?.value || '').trim();
+  let pickedLENumber = (
+    fieldForm.elements.legalEntityNumber?.value || ''
+  ).trim();
   if (!eligibleForLE(sysNameForLE, isLocalForLE)) pickedLENumber = '';
 
   // 3) Merge/Create
   if (editFieldIndex !== null) {
     const next = { ...fields[editFieldIndex], ...data };
-    if (pickedFoundationId) next.foundationObjectId = pickedFoundationId; else delete next.foundationObjectId;
-    if (pickedGlossaryId)   next.glossaryId        = pickedGlossaryId;   else delete next.glossaryId;
-    if (pickedLENumber)     next.legalEntityNumber = pickedLENumber;     else delete next.legalEntityNumber;
+    if (pickedFoundationId) next.foundationObjectId = pickedFoundationId;
+    else delete next.foundationObjectId;
+    if (pickedGlossaryId) next.glossaryId = pickedGlossaryId;
+    else delete next.glossaryId;
+    if (pickedLENumber) next.legalEntityNumber = pickedLENumber;
+    else delete next.legalEntityNumber;
     fields[editFieldIndex] = next;
   } else {
     const rec = { id: uid('fld'), ...data };
     if (pickedFoundationId) rec.foundationObjectId = pickedFoundationId;
-    if (pickedGlossaryId)   rec.glossaryId        = pickedGlossaryId;
-    if (pickedLENumber)     rec.legalEntityNumber = pickedLENumber;
+    if (pickedGlossaryId) rec.glossaryId = pickedGlossaryId;
+    if (pickedLENumber) rec.legalEntityNumber = pickedLENumber;
     fields.push(rec);
   }
 
@@ -1805,14 +2039,17 @@ function openSystemDialog(index = null) {
 
   if (systemDomainSelect) {
     systemDomainSelect.innerHTML =
-      `<option value="">(unassigned)</option>` + getDomainNames().map((n) => `<option value="${n}">${n}</option>`).join('');
+      `<option value="">(unassigned)</option>` +
+      getDomainNames()
+        .map((n) => `<option value="${n}">${n}</option>`)
+        .join('');
   }
   if (index !== null) {
     const s = systems[index];
-    systemForm.elements.name.value       = s.name;
-    systemForm.elements.owner.value      = s.owner || '';
-    systemForm.elements.version.value    = s.version || '';
-    systemForm.elements.scope.value      = s.scope || 'both';
+    systemForm.elements.name.value = s.name;
+    systemForm.elements.owner.value = s.owner || '';
+    systemForm.elements.version.value = s.version || '';
+    systemForm.elements.scope.value = s.scope || 'both';
     systemForm.elements.dataDomain.value = s.dataDomain || '';
   } else {
     systemForm.elements.scope.value = 'both';
@@ -1823,12 +2060,18 @@ systemForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(systemForm).entries());
   if (editSystemIndex !== null) {
-    const old    = systems[editSystemIndex];
-    const oldName= old.name;
+    const old = systems[editSystemIndex];
+    const oldName = old.name;
     systems[editSystemIndex] = { ...old, ...data };
     if (oldName !== data.name) {
-      fields = fields.map((f) => f.system === oldName ? { ...f, system: data.name } : f);
-      fields = fields.map((f) => f.source?.system === oldName ? { ...f, source: { ...f.source, system: data.name } } : f);
+      fields = fields.map((f) =>
+        f.system === oldName ? { ...f, system: data.name } : f
+      );
+      fields = fields.map((f) =>
+        f.source?.system === oldName
+          ? { ...f, source: { ...f.source, system: data.name } }
+          : f
+      );
       state.fields = fields;
       if (currentSystem === oldName) {
         currentSystem = data.name;
@@ -1855,9 +2098,9 @@ function openColumnDialog(index = null) {
   if (!columnForm) return;
   if (index !== null) {
     const c = fieldColumns[index];
-    columnForm.elements.name.value     = c.name;
-    columnForm.elements.visible.checked= !!c.visible;
-    columnForm.elements.order.value    = c.order ?? 1;
+    columnForm.elements.name.value = c.name;
+    columnForm.elements.visible.checked = !!c.visible;
+    columnForm.elements.order.value = c.order ?? 1;
   }
   openDialog(columnDialog);
 }
@@ -1865,7 +2108,7 @@ columnForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(columnForm).entries());
   data.visible = columnForm.elements.visible.checked;
-  data.order   = data.order ? Number(data.order) : 1;
+  data.order = data.order ? Number(data.order) : 1;
   if (editColumnIndex !== null) fieldColumns[editColumnIndex] = data;
   else fieldColumns.push(data);
   saveColumns();
@@ -1881,13 +2124,13 @@ function openDomainDialog(index = null) {
   if (!domainForm) return;
   if (index !== null) {
     const d = dataDomains[index];
-    domainForm.elements.name.value    = d.name;
+    domainForm.elements.name.value = d.name;
     domainForm.elements.manager.value = d.manager || '';
-    domainForm.elements.active.checked= !!d.active;
-    domainForm.elements.color.value   = d.color || '#6a6a6a';
+    domainForm.elements.active.checked = !!d.active;
+    domainForm.elements.color.value = d.color || '#6a6a6a';
   } else {
     domainForm.elements.active.checked = true;
-    domainForm.elements.color.value    = '#6a6a6a';
+    domainForm.elements.color.value = '#6a6a6a';
   }
   openDialog(domainDialog);
 }
@@ -1903,7 +2146,10 @@ domainForm?.addEventListener('submit', (e) => {
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
   if (systemDomainSelect) {
     systemDomainSelect.innerHTML =
-      `<option value="">(unassigned)</option>` + getDomainNames().map((n) => `<option value="${n}">${n}</option>`).join('');
+      `<option value="">(unassigned)</option>` +
+      getDomainNames()
+        .map((n) => `<option value="${n}">${n}</option>`)
+        .join('');
   }
   closeDialog(domainDialog);
 });
@@ -1936,9 +2182,13 @@ function makeEdgeDefs() {
 function hexWithAlpha(hex, a) {
   try {
     const c = hex.replace('#', '');
-    const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+    const r = parseInt(c.slice(0, 2), 16),
+      g = parseInt(c.slice(2, 4), 16),
+      b = parseInt(c.slice(4, 6), 16);
     return `rgba(${r},${g},${b},${a})`;
-  } catch { return 'rgba(0,0,0,.06)'; }
+  } catch {
+    return 'rgba(0,0,0,.06)';
+  }
 }
 function computeNodePositions(nodeEntries = []) {
   const positions = new Map();
@@ -1952,12 +2202,20 @@ function computeNodePositions(nodeEntries = []) {
       const x = Number(existing.x) || 0;
       const y = Number(existing.y) || 0;
       positions.set(sys.name, { x, y });
-      occupied.push({ x, y, width: node.offsetWidth || 0, height: node.offsetHeight || 0 });
+      occupied.push({
+        x,
+        y,
+        width: node.offsetWidth || 0,
+        height: node.offsetHeight || 0,
+      });
     }
   });
 
   let currentY = occupied.length
-    ? occupied.reduce((max, item) => Math.max(max, item.y + item.height + padding), baseX)
+    ? occupied.reduce(
+        (max, item) => Math.max(max, item.y + item.height + padding),
+        baseX
+      )
     : baseX;
 
   nodeEntries.forEach(({ sys, node }) => {
@@ -1973,28 +2231,58 @@ function computeNodePositions(nodeEntries = []) {
   return positions;
 }
 function getNodeEl(name) {
-  return mapNodesLayer?.querySelector(`.map-node[data-system="${CSS.escape(name)}"]`);
+  return mapNodesLayer?.querySelector(
+    `.map-node[data-system="${CSS.escape(name)}"]`
+  );
 }
 function getFieldEl(systemName, fieldName) {
-  return mapNodesLayer?.querySelector(`.map-field[data-system="${CSS.escape(systemName)}"][data-field="${CSS.escape(fieldName)}"]`);
+  return mapNodesLayer?.querySelector(
+    `.map-field[data-system="${CSS.escape(
+      systemName
+    )}"][data-field="${CSS.escape(fieldName)}"]`
+  );
 }
 function rectToMap(rect) {
   if (!mapCanvas) return { left: 0, right: 0, top: 0, bottom: 0 };
   const canvasRect = mapCanvas.getBoundingClientRect();
   return {
-    left:   (rect.left   - canvasRect.left - mapTransformState.x) / mapTransformState.k,
-    right:  (rect.right  - canvasRect.left - mapTransformState.x) / mapTransformState.k,
-    top:    (rect.top    - canvasRect.top  - mapTransformState.y) / mapTransformState.k,
-    bottom: (rect.bottom - canvasRect.top  - mapTransformState.y) / mapTransformState.k,
+    left:
+      (rect.left - canvasRect.left - mapTransformState.x) / mapTransformState.k,
+    right:
+      (rect.right - canvasRect.left - mapTransformState.x) /
+      mapTransformState.k,
+    top:
+      (rect.top - canvasRect.top - mapTransformState.y) / mapTransformState.k,
+    bottom:
+      (rect.bottom - canvasRect.top - mapTransformState.y) /
+      mapTransformState.k,
   };
 }
 function fieldAnchor(systemName, fieldName, side = 'right') {
   const row = getFieldEl(systemName, fieldName);
   if (!row || !mapCanvas) return { x: 0, y: 0 };
-  const r = row.getBoundingClientRect(), c = mapCanvas.getBoundingClientRect(), m = 10;
-  const x = side === 'right' ? r.right + m : r.left - m;
-  const y = r.top + r.height / 2;
-  return { x: (x - c.left - mapTransformState.x) / mapTransformState.k, y: (y - c.top - mapTransformState.y) / mapTransformState.k };
+
+  // Neu: am Container (map-node) ausrichten, damit die Linie klar außerhalb startet/endet
+  const node = row.closest('.map-node');
+  const canvasRect = mapCanvas.getBoundingClientRect();
+  const rowRect    = row.getBoundingClientRect();
+  const nodeRect   = (node ? node.getBoundingClientRect() : rowRect);
+
+  const OUTSIDE = 14; // Abstand außerhalb des Knotencontainers
+
+  // y bleibt: Mitte der Zeile
+  const yAbs = rowRect.top + rowRect.height / 2;
+
+  // x neu: am Knotenrand, nicht am Zellrand
+  const xAbs = (side === 'right')
+    ? (nodeRect.right + OUTSIDE)
+    : (nodeRect.left  - OUTSIDE);
+
+  // In die Map-Koordinaten mit aktuellem Pan/Zoom umrechnen
+  const x = (xAbs - canvasRect.left - mapTransformState.x) / mapTransformState.k;
+  const y = (yAbs - canvasRect.top  - mapTransformState.y) / mapTransformState.k;
+
+  return { x, y };
 }
 function orthoPath(p1, p2) {
   const dx = p2.x - p1.x;
@@ -2028,7 +2316,10 @@ function drawEdgePath(d, arrow = true, cls = '') {
 
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   path.setAttribute('d', d);
-  path.setAttribute('class', 'edge-path' + (arrow ? ' arrowed' : '') + (cls ? ` ${cls}` : ''));
+  path.setAttribute(
+    'class',
+    'edge-path' + (arrow ? ' arrowed' : '') + (cls ? ` ${cls}` : '')
+  );
   path.setAttribute('fill', 'none');
   path.setAttribute('stroke', 'currentColor');
   path.setAttribute('stroke-width', '2');
@@ -2040,8 +2331,14 @@ function drawEdgePath(d, arrow = true, cls = '') {
 function systemPassesFilters(sysName) {
   const sys = systems.find((s) => s.name === sysName);
   if (!sys) return false;
-  if (mapFilters.systems.length && !mapFilters.systems.includes(sysName)) return false;
-  if (mapFilters.domains.length && sys.dataDomain && !mapFilters.domains.includes(sys.dataDomain)) return false;
+  if (mapFilters.systems.length && !mapFilters.systems.includes(sysName))
+    return false;
+  if (
+    mapFilters.domains.length &&
+    sys.dataDomain &&
+    !mapFilters.domains.includes(sys.dataDomain)
+  )
+    return false;
   return true;
 }
 function fieldPassesFilters(f) {
@@ -2051,13 +2348,16 @@ function fieldPassesFilters(f) {
   const domSel = mapFilters.domains.length ? new Set(mapFilters.domains) : null;
   if (domSel && sys?.dataDomain && !domSel.has(sys.dataDomain)) return false;
   if (mapFilters.scope.global === false && !f.local) return false;
-  if (mapFilters.scope.local === false &&  f.local) return false;
-  if (mapFilters.search && !f.name.toLowerCase().includes(mapFilters.search)) return false;
+  if (mapFilters.scope.local === false && f.local) return false;
+  if (mapFilters.search && !f.name.toLowerCase().includes(mapFilters.search))
+    return false;
   return true;
 }
 function clearSelectionVisuals() {
   clearEdgesKeepDefs();
-  $$('.map-field.is-highlight')?.forEach((el) => el.classList.remove('is-highlight'));
+  $$('.map-field.is-highlight')?.forEach((el) =>
+    el.classList.remove('is-highlight')
+  );
 }
 function drawSelectedFieldEdges() {
   clearSelectionVisuals();
@@ -2066,8 +2366,12 @@ function drawSelectedFieldEdges() {
   const srcEl = getFieldEl(system, field);
   if (srcEl) srcEl.classList.add('is-highlight');
 
-  const outgoing = fields.filter((f) => f.source?.system === system && (f.source.field || f.name) === field);
-  const incoming = fields.filter((f) => f.system === system && f.name === field && f.source?.system);
+  const outgoing = fields.filter(
+    (f) => f.source?.system === system && (f.source.field || f.name) === field
+  );
+  const incoming = fields.filter(
+    (f) => f.system === system && f.name === field && f.source?.system
+  );
 
   outgoing.forEach((tgt) => {
     const p1 = fieldAnchor(system, field, 'right');
@@ -2077,20 +2381,59 @@ function drawSelectedFieldEdges() {
     drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
   });
   incoming.forEach((src) => {
-    const p1 = fieldAnchor(src.source.system, src.source.field || src.name, 'right');
+    const p1 = fieldAnchor(
+      src.source.system,
+      src.source.field || src.name,
+      'right'
+    );
     const p2 = fieldAnchor(system, field, 'left');
     const srcRow = getFieldEl(src.source.system, src.source.field || src.name);
     srcRow?.classList.add('is-highlight');
     drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
   });
 }
+function drawSystemEdges() {
+  // Alle Edges neu zeichnen, wenn nichts selektiert ist
+  makeEdgeDefs();
+  clearEdgesKeepDefs();
+
+  // Für jede Feld-Beziehung (source -> target) eine Linie zeichnen
+  fields.forEach((f) => {
+    // Nur wenn es eine Quelle gibt
+    if (!f?.source?.system) return;
+
+    const srcSystem = f.source.system;
+    const srcField  = f.source.field || f.name;
+    const dstSystem = f.system;
+    const dstField  = f.name;
+
+    // Filter respektieren (wie bei Knoten)
+    if (!systemPassesFilters(srcSystem) || !systemPassesFilters(dstSystem)) return;
+
+    // Nur zeichnen, wenn beide Feldzeilen im DOM sind
+    const srcEl = getFieldEl(srcSystem, srcField);
+    const dstEl = getFieldEl(dstSystem, dstField);
+    if (!srcEl || !dstEl) return;
+
+    // Ankerpunkte: rechts am Quell-Knoten, links am Ziel-Knoten (außerhalb)
+    const p1 = fieldAnchor(srcSystem, srcField, 'right');
+    const p2 = fieldAnchor(dstSystem, dstField, 'left');
+
+    drawEdgePath(orthoPath(p1, p2), true);
+  });
+}
+
 function buildChipList(container, items, selectedSet, onChange) {
   container.innerHTML = '';
   items.forEach((val) => {
-    const id = `chip-${val.replace(/\s+/g, '_')}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = `chip-${val.replace(/\s+/g, '_')}-${Math.random()
+      .toString(36)
+      .slice(2, 6)}`;
     const label = document.createElement('label');
     label.className = 'chip';
-    label.innerHTML = `<input type="checkbox" id="${id}" ${selectedSet.has(val) ? 'checked' : ''} /><span>${val}</span>`;
+    label.innerHTML = `<input type="checkbox" id="${id}" ${
+      selectedSet.has(val) ? 'checked' : ''
+    } /><span>${val}</span>`;
     const input = label.querySelector('input');
     input.addEventListener('change', () => {
       if (input.checked) selectedSet.add(val);
@@ -2103,14 +2446,42 @@ function buildChipList(container, items, selectedSet, onChange) {
 function openFilterOverlay() {
   const sysSet = new Set(mapFilters.systems);
   const domSet = new Set(mapFilters.domains);
-  buildChipList(chipSystems, systems.map((s) => s.name), sysSet, (set) => { mapFilters.systems = [...set]; saveFilters(); renderDataMap(); });
-  buildChipList(chipDomains, getDomainNames(), domSet, (set) => { mapFilters.domains = [...set]; saveFilters(); renderDataMap(); });
+  buildChipList(
+    chipSystems,
+    systems.map((s) => s.name),
+    sysSet,
+    (set) => {
+      mapFilters.systems = [...set];
+      saveFilters();
+      renderDataMap();
+    }
+  );
+  buildChipList(chipDomains, getDomainNames(), domSet, (set) => {
+    mapFilters.domains = [...set];
+    saveFilters();
+    renderDataMap();
+  });
   if (scopeGlobal) scopeGlobal.checked = !!mapFilters.scope.global;
-  if (scopeLocal)  scopeLocal.checked  = !!mapFilters.scope.local;
-  if (mapSearch)   mapSearch.value     = mapFilters.search || '';
-  if (scopeGlobal) scopeGlobal.onchange = () => { mapFilters.scope.global = scopeGlobal.checked; saveFilters(); renderDataMap(); };
-  if (scopeLocal)  scopeLocal.onchange  = () => { mapFilters.scope.local  = scopeLocal.checked;  saveFilters(); renderDataMap(); };
-  if (mapSearch)   mapSearch.oninput    = () => { mapFilters.search       = (mapSearch.value || '').trim().toLowerCase(); saveFilters(); renderDataMap(); };
+  if (scopeLocal) scopeLocal.checked = !!mapFilters.scope.local;
+  if (mapSearch) mapSearch.value = mapFilters.search || '';
+  if (scopeGlobal)
+    scopeGlobal.onchange = () => {
+      mapFilters.scope.global = scopeGlobal.checked;
+      saveFilters();
+      renderDataMap();
+    };
+  if (scopeLocal)
+    scopeLocal.onchange = () => {
+      mapFilters.scope.local = scopeLocal.checked;
+      saveFilters();
+      renderDataMap();
+    };
+  if (mapSearch)
+    mapSearch.oninput = () => {
+      mapFilters.search = (mapSearch.value || '').trim().toLowerCase();
+      saveFilters();
+      renderDataMap();
+    };
   filterOverlay?.classList.remove('hidden');
   filterOverlay?.setAttribute('aria-hidden', 'false');
 }
@@ -2140,10 +2511,17 @@ function renderDataMap() {
 
     const header = document.createElement('div');
     header.className = 'map-node-header';
-    header.style.background = 'linear-gradient(0deg, rgba(0,0,0,0) 0%, ' + hexWithAlpha(color, 0.08) + ' 100%)';
+    header.style.background =
+      'linear-gradient(0deg, rgba(0,0,0,0) 0%, ' +
+      hexWithAlpha(color, 0.08) +
+      ' 100%)';
 
     const collapsed = !!nodeCollapsed.get(sys.name);
-    header.innerHTML = `<div class="map-node-title">${sys.name}</div><button class="map-node-toggle">${collapsed ? 'Expand' : 'Collapse'}</button>`;
+    header.innerHTML = `<div class="map-node-title">${
+      sys.name
+    }</div><button class="map-node-toggle">${
+      collapsed ? 'Expand' : 'Collapse'
+    }</button>`;
     node.appendChild(header);
     if (collapsed) node.classList.add('is-collapsed');
 
@@ -2151,22 +2529,35 @@ function renderDataMap() {
     wrap.className = 'map-node-fields';
 
     let list = getFieldsBySystem(sys.name).filter(fieldPassesFilters);
-    if (list.length > 10) wrap.classList.add('is-scroll'); else wrap.classList.remove('is-scroll');
+    if (list.length > 10) wrap.classList.add('is-scroll');
+    else wrap.classList.remove('is-scroll');
 
     list.forEach((f) => {
       const row = document.createElement('div');
       row.className = 'map-field is-selectable';
       row.dataset.system = sys.name;
-      row.dataset.field  = f.name;
+      row.dataset.field = f.name;
 
-      const chev = document.createElement('div'); chev.className = 'chev'; chev.title = 'Toggle details';
-      const name = document.createElement('div'); name.className = 'map-field-name'; name.textContent = f.name; name.title = 'Show connections';
-      const right = document.createElement('div'); right.className = 'map-field-badges';
+      const chev = document.createElement('div');
+      chev.className = 'chev';
+      chev.title = 'Toggle details';
+      const name = document.createElement('div');
+      name.className = 'map-field-name';
+      name.textContent = f.name;
+      name.title = 'Show connections';
+      const right = document.createElement('div');
+      right.className = 'map-field-badges';
       if (f.source?.system) {
-        const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'from ' + f.source.system; right.appendChild(b);
+        const b = document.createElement('span');
+        b.className = 'badge';
+        b.textContent = 'from ' + f.source.system;
+        right.appendChild(b);
       }
 
-      row.appendChild(chev); row.appendChild(name); row.appendChild(right); wrap.appendChild(row);
+      row.appendChild(chev);
+      row.appendChild(name);
+      row.appendChild(right);
+      wrap.appendChild(row);
 
       const details = document.createElement('div');
       details.className = 'map-field-details';
@@ -2174,15 +2565,26 @@ function renderDataMap() {
         <div><strong>Mandatory:</strong> ${f.mandatory ? 'Yes' : 'No'}</div>
         <div><strong>Mapping:</strong> ${f.mapping || '-'}</div>
         <div><strong>Data Object:</strong> ${foundationLabelForField(f)}</div>
-        <div><strong>Source:</strong> ${f.source?.system ? `${f.source.system} • ${f.source.field || f.name}` : '—'}</div>
+        <div><strong>Source:</strong> ${
+          f.source?.system
+            ? `${f.source.system} • ${f.source.field || f.name}`
+            : '—'
+        }</div>
       `;
       wrap.appendChild(details);
 
-      chev.addEventListener('click', (ev) => { ev.stopPropagation(); row.classList.toggle('is-open'); });
+      chev.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        row.classList.toggle('is-open');
+      });
 
       name.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        if (selectedFieldRef && selectedFieldRef.system === sys.name && selectedFieldRef.field === f.name) {
+        if (
+          selectedFieldRef &&
+          selectedFieldRef.system === sys.name &&
+          selectedFieldRef.field === f.name
+        ) {
           selectedFieldRef = null;
           state.selectedFieldRef = selectedFieldRef;
           clearSelectionVisuals();
@@ -2198,7 +2600,8 @@ function renderDataMap() {
       ev.stopPropagation();
       node.classList.toggle('is-collapsed');
       nodeCollapsed.set(sys.name, node.classList.contains('is-collapsed'));
-      if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
+      if (selectedFieldRef) drawSelectedFieldEdges(); 
+      else drawSystemEdges();
     });
 
     node.appendChild(wrap);
@@ -2215,12 +2618,13 @@ function renderDataMap() {
       : { x: 40, y: 40 };
     const p = pos.get(sys.name) || fallback;
     node.style.left = `${p.x}px`;
-    node.style.top  = `${p.y}px`;
+    node.style.top = `${p.y}px`;
     mapPositions[sys.name] = { x: p.x, y: p.y };
     enableDrag(node, header, sys.name);
   });
 
-  if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
+  if (selectedFieldRef) drawSelectedFieldEdges(); 
+  else drawSystemEdges();
 
   requestAnimationFrame(() => fitMapToContent());
 }
@@ -2250,8 +2654,12 @@ function isNodePositionFree(node, candidate, name) {
     const otherName = other.dataset.system;
     if (!otherName || otherName === name) continue;
     const stored = mapPositions[otherName];
-    const ox = stored ? Number(stored.x) || 0 : parseFloat(other.style.left) || 0;
-    const oy = stored ? Number(stored.y) || 0 : parseFloat(other.style.top) || 0;
+    const ox = stored
+      ? Number(stored.x) || 0
+      : parseFloat(other.style.left) || 0;
+    const oy = stored
+      ? Number(stored.y) || 0
+      : parseFloat(other.style.top) || 0;
     const rect = {
       x: ox,
       y: oy,
@@ -2270,13 +2678,19 @@ function enableDrag(node, handle, name) {
     lastValid = null;
   handle.style.cursor = 'grab';
   handle.addEventListener('mousedown', (e) => {
-    const isInteractive = e.target.closest('button, a, [role="button"], .map-node-toggle, .chev');
+    const isInteractive = e.target.closest(
+      'button, a, [role="button"], .map-node-toggle, .chev'
+    );
     if (e.button !== 0 || isInteractive) return;
     dragging = true;
     handle.style.cursor = 'grabbing';
     start = { x: e.clientX, y: e.clientY };
-    const rect = node.getBoundingClientRect(), parentRect = mapCanvas.getBoundingClientRect();
-    startPos = { x: rect.left - parentRect.left - mapTransformState.x, y: rect.top - parentRect.top - mapTransformState.y };
+    const rect = node.getBoundingClientRect(),
+      parentRect = mapCanvas.getBoundingClientRect();
+    startPos = {
+      x: rect.left - parentRect.left - mapTransformState.x,
+      y: rect.top - parentRect.top - mapTransformState.y,
+    };
     lastValid = {
       x: parseFloat(node.style.left) || 0,
       y: parseFloat(node.style.top) || 0,
@@ -2284,20 +2698,24 @@ function enableDrag(node, handle, name) {
   });
   window.addEventListener('mousemove', (e) => {
     if (!dragging) return;
-    const dx = (e.clientX - start.x) / mapTransformState.k, dy = (e.clientY - start.y) / mapTransformState.k;
-    const nx = startPos.x + dx, ny = startPos.y + dy;
+    const dx = (e.clientX - start.x) / mapTransformState.k,
+      dy = (e.clientY - start.y) / mapTransformState.k;
+    const nx = startPos.x + dx,
+      ny = startPos.y + dy;
     if (!isNodePositionFree(node, { x: nx, y: ny }, name)) return;
     node.style.left = `${nx}px`;
-    node.style.top  = `${ny}px`;
+    node.style.top = `${ny}px`;
     lastValid = { x: nx, y: ny };
     mapPositions[name] = { x: nx, y: ny };
-    if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
+    if (selectedFieldRef) drawSelectedFieldEdges();
+    else clearSelectionVisuals();
   });
   window.addEventListener('mouseup', () => {
     if (dragging) {
       if (lastValid) mapPositions[name] = { ...lastValid };
       savePositions();
-      if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
+      if (selectedFieldRef) drawSelectedFieldEdges();
+      else clearSelectionVisuals();
     }
     dragging = false;
     handle.style.cursor = 'grab';
@@ -2314,22 +2732,34 @@ function applyMapTransform() {
 function fitMapToContent() {
   const nodes = mapNodesLayer?.querySelectorAll('.map-node');
   if (!nodes || !nodes.length) return;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
   nodes.forEach((n) => {
-    const x = parseFloat(n.style.left) || 0, y = parseFloat(n.style.top) || 0, w = n.offsetWidth || 340, h = n.offsetHeight || 240;
+    const x = parseFloat(n.style.left) || 0,
+      y = parseFloat(n.style.top) || 0,
+      w = n.offsetWidth || 340,
+      h = n.offsetHeight || 240;
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x + w);
     maxY = Math.max(maxY, y + h);
   });
   if (!mapCanvas) return;
-  const vw = mapCanvas.clientWidth, vh = mapCanvas.clientHeight, cw = maxX - minX + 120, ch = maxY - minY + 120;
+  const vw = mapCanvas.clientWidth,
+    vh = mapCanvas.clientHeight,
+    cw = maxX - minX + 120,
+    ch = maxY - minY + 120;
   const k = Math.min(vw / cw, vh / ch, 1.2);
   mapTransformState.k = Math.max(0.6, Math.min(2.5, k));
-  mapTransformState.x = 20 + (vw - cw * mapTransformState.k) / 2 - minX * mapTransformState.k + 20;
-  mapTransformState.y = 20 + (vh - ch * mapTransformState.k) / 2 - minY * mapTransformState.k + 20;
+  mapTransformState.x =
+    20 + (vw - cw * mapTransformState.k) / 2 - minX * mapTransformState.k + 20;
+  mapTransformState.y =
+    20 + (vh - ch * mapTransformState.k) / 2 - minY * mapTransformState.k + 20;
   applyMapTransform();
-  if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
+  if (selectedFieldRef) drawSelectedFieldEdges();
+  else clearSelectionVisuals();
 }
 
 /* ===== Error banner helper ===== */
@@ -2365,19 +2795,19 @@ function initializeApp() {
   console.log('[script.js] initializeApp() gestartet');
 
   // Verhindert, dass Dialog-Inhalte ohne "open" sichtbar sind (Safari/Preview)
-document.querySelectorAll('dialog').forEach(dlg => {
-  if (!dlg.hasAttribute('open') && !dlg.classList.contains('open')) {
-    dlg.style.display = 'none';
-  }
-});
+  document.querySelectorAll('dialog').forEach((dlg) => {
+    if (!dlg.hasAttribute('open') && !dlg.classList.contains('open')) {
+      dlg.style.display = 'none';
+    }
+  });
   try {
     // =============================
     //  Element-Referenzen (lokal)
     // =============================
-    const systemsNavItem  = document.getElementById('systemsNavItem');
-    const dataMapNavItem  = document.getElementById('dataMapNavItem');
+    const systemsNavItem = document.getElementById('systemsNavItem');
+    const dataMapNavItem = document.getElementById('dataMapNavItem');
     const glossaryNavItem = document.getElementById('glossaryNavItem');
-    const adminNavItem    = document.getElementById('adminNavItem');
+    const adminNavItem = document.getElementById('adminNavItem');
 
     // =============================
     //  Navigation: Klick-Handler
@@ -2400,25 +2830,30 @@ document.querySelectorAll('dialog').forEach(dlg => {
       document.body.setAttribute('data-mode', 'map');
       showOnly('map');
       showGlossarySubnav(false);
-      try { renderDataMap(); fitMapToContent(); }
-      catch (e) { console.error(e); showErrorBanner(`Data Map konnte nicht gerendert werden: ${e.message}`); }
+      try {
+        renderDataMap();
+        fitMapToContent();
+      } catch (e) {
+        console.error(e);
+        showErrorBanner(`Data Map konnte nicht gerendert werden: ${e.message}`);
+      }
     });
 
-// Glossary
-glossaryNavItem?.addEventListener('click', () => {
-  document.body.setAttribute('data-mode', 'glossary');
-  showOnly('glossary');
-  showGlossarySubnav(true);
-  installGlossarySubnavHandlers();   // Filter-Buttons einmalig anbinden
+    // Glossary
+    glossaryNavItem?.addEventListener('click', () => {
+      document.body.setAttribute('data-mode', 'glossary');
+      showOnly('glossary');
+      showGlossarySubnav(true);
+      installGlossarySubnavHandlers(); // Filter-Buttons einmalig anbinden
 
-  try {
-    // Wichtig: NICHT renderGlossaryTable() direkt aufrufen,
-    // sondern die Wrapper-Funktion, die auch den Header baut:
-    renderGlossary();
-  } catch (e) {
-    console.error(e);
-  }
-});
+      try {
+        // Wichtig: NICHT renderGlossaryTable() direkt aufrufen,
+        // sondern die Wrapper-Funktion, die auch den Header baut:
+        renderGlossary();
+      } catch (e) {
+        console.error(e);
+      }
+    });
 
     // Admin
     adminNavItem?.addEventListener('click', () => {
@@ -2428,14 +2863,19 @@ glossaryNavItem?.addEventListener('click', () => {
       try {
         // Default-Tab wählen und rendern
         const firstTab =
-          document.querySelector('#adminTabs .tab[data-admin-tab="admin-domains"]')
-          || document.querySelector('#adminTabs .tab');
+          document.querySelector(
+            '#adminTabs .tab[data-admin-tab="admin-domains"]'
+          ) || document.querySelector('#adminTabs .tab');
         if (firstTab) {
-          document.querySelectorAll('#adminTabs .tab').forEach((t) => t.classList.remove('is-active'));
+          document
+            .querySelectorAll('#adminTabs .tab')
+            .forEach((t) => t.classList.remove('is-active'));
           firstTab.classList.add('is-active');
           showAdminSubview(firstTab.dataset.adminTab || 'admin-domains');
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error(e);
+      }
     });
 
     // =============================
@@ -2444,14 +2884,22 @@ glossaryNavItem?.addEventListener('click', () => {
     document.querySelectorAll('#topTabs .tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         if (tab.style.display === 'none') return;
-        document.querySelectorAll('#topTabs .tab').forEach((t) => t.classList.remove('is-active'));
+        document
+          .querySelectorAll('#topTabs .tab')
+          .forEach((t) => t.classList.remove('is-active'));
         tab.classList.add('is-active');
         const view = tab.dataset.tab;
         const globalEl = document.getElementById('global');
-        const localEl  = document.getElementById('local');
-        if (globalEl) globalEl.style.display = view === 'global' ? 'block' : 'none';
-        if (localEl)  localEl.style.display  = view === 'local'  ? 'block' : 'none';
-        try { renderFieldsTable(); } catch (e) { console.error(e); }
+        const localEl = document.getElementById('local');
+        if (globalEl)
+          globalEl.style.display = view === 'global' ? 'block' : 'none';
+        if (localEl)
+          localEl.style.display = view === 'local' ? 'block' : 'none';
+        try {
+          renderFieldsTable();
+        } catch (e) {
+          console.error(e);
+        }
       });
     });
 
@@ -2460,7 +2908,9 @@ glossaryNavItem?.addEventListener('click', () => {
     // =============================
     document.querySelectorAll('#adminTabs .tab').forEach((tab) => {
       tab.addEventListener('click', () => {
-        document.querySelectorAll('#adminTabs .tab').forEach((t) => t.classList.remove('is-active'));
+        document
+          .querySelectorAll('#adminTabs .tab')
+          .forEach((t) => t.classList.remove('is-active'));
         tab.classList.add('is-active');
         const target = tab.dataset.adminTab;
         if (target) showAdminSubview(target);
@@ -2472,13 +2922,14 @@ glossaryNavItem?.addEventListener('click', () => {
     // =============================
     document.addEventListener('click', (e) => {
       const t = e.target;
-      if (t.closest('#addFieldBtn'))      openFieldDialog(null);
-      if (t.closest('#addLocalFieldBtn')) openFieldDialog(null, { presetLocal: true });
-      if (t.closest('#addSystemBtn'))     openSystemDialog(null);
-      if (t.closest('#addColumnBtn'))     openColumnDialog(null);
-      if (t.closest('#addDomainBtn'))     openDomainDialog(null);
-      if (t.closest('#addLegalBtn'))      openLegalDialog(null);
-      if (t.closest('#addGlossaryBtn'))   openGlossaryDialog(null);
+      if (t.closest('#addFieldBtn')) openFieldDialog(null);
+      if (t.closest('#addLocalFieldBtn'))
+        openFieldDialog(null, { presetLocal: true });
+      if (t.closest('#addSystemBtn')) openSystemDialog(null);
+      if (t.closest('#addColumnBtn')) openColumnDialog(null);
+      if (t.closest('#addDomainBtn')) openDomainDialog(null);
+      if (t.closest('#addLegalBtn')) openLegalDialog(null);
+      if (t.closest('#addGlossaryBtn')) openGlossaryDialog(null);
       if (t.closest('#addDataObjectBtn')) openDataObjectDialog(null);
     });
 
@@ -2504,59 +2955,91 @@ glossaryNavItem?.addEventListener('click', () => {
     filterCloseBtn?.addEventListener('click', closeFilterOverlay);
     filterDone?.addEventListener('click', closeFilterOverlay);
     filterClear?.addEventListener('click', () => {
-      mapFilters = { systems: [], domains: [], scope: { global: true, local: true }, search: '' };
+      mapFilters = {
+        systems: [],
+        domains: [],
+        scope: { global: true, local: true },
+        search: '',
+      };
       state.mapFilters = mapFilters;
       saveFilters();
-      buildChipList(chipSystems, systems.map((s) => s.name), new Set(), (set) => { mapFilters.systems = [...set]; saveFilters(); renderDataMap(); });
-      buildChipList(chipDomains, getDomainNames(), new Set(), (set) => { mapFilters.domains = [...set]; saveFilters(); renderDataMap(); });
+      buildChipList(
+        chipSystems,
+        systems.map((s) => s.name),
+        new Set(),
+        (set) => {
+          mapFilters.systems = [...set];
+          saveFilters();
+          renderDataMap();
+        }
+      );
+      buildChipList(chipDomains, getDomainNames(), new Set(), (set) => {
+        mapFilters.domains = [...set];
+        saveFilters();
+        renderDataMap();
+      });
       if (scopeGlobal) scopeGlobal.checked = true;
-      if (scopeLocal)  scopeLocal.checked  = true;
-      if (mapSearch)   mapSearch.value     = '';
+      if (scopeLocal) scopeLocal.checked = true;
+      if (mapSearch) mapSearch.value = '';
       renderDataMap();
     });
     filterOverlay?.addEventListener('click', (e) => {
-      if (e.target.classList?.contains('overlay-backdrop')) closeFilterOverlay();
+      if (e.target.classList?.contains('overlay-backdrop'))
+        closeFilterOverlay();
     });
 
-// === Section-Action Buttons ===
-document.getElementById('btnGlobalFilter')?.addEventListener('click', () => {
-  showGlobalFilters = !showGlobalFilters;
-  state.showGlobalFilters = showGlobalFilters;
-  // Header neu aufbauen (zeigt/versteckt Filterzeile) + tbody aktualisieren
-  renderFieldsTable();
-});
+    // === Section-Action Buttons ===
+    document
+      .getElementById('btnGlobalFilter')
+      ?.addEventListener('click', () => {
+        showGlobalFilters = !showGlobalFilters;
+        state.showGlobalFilters = showGlobalFilters;
+        // Header neu aufbauen (zeigt/versteckt Filterzeile) + tbody aktualisieren
+        renderFieldsTable();
+      });
 
-document.getElementById('btnGlobalNew')?.addEventListener('click', () => {
-  openFieldDialog(null); // neues Feld (global)
-});
+    document.getElementById('btnGlobalNew')?.addEventListener('click', () => {
+      openFieldDialog(null); // neues Feld (global)
+    });
 
-document.getElementById('btnGlobalExport')?.addEventListener('click', () => {
-  // Exportiert die Global-Tabelle
-  exportSingleTableAsXlsx('#global .table', 'Global_DataFields.xlsx');
-});
+    document
+      .getElementById('btnGlobalExport')
+      ?.addEventListener('click', () => {
+        // Exportiert die Global-Tabelle
+        exportSingleTableAsXlsx('#global .table', 'Global_DataFields.xlsx');
+      });
 
-document.getElementById('btnLocalFilter')?.addEventListener('click', () => {
-  showLocalFilters = !showLocalFilters;
-  state.showLocalFilters = showLocalFilters;
-  renderLocalFieldsTables();
-});
+    document.getElementById('btnLocalFilter')?.addEventListener('click', () => {
+      showLocalFilters = !showLocalFilters;
+      state.showLocalFilters = showLocalFilters;
+      renderLocalFieldsTables();
+    });
 
-document.getElementById('btnLocalNew')?.addEventListener('click', () => {
-  openFieldDialog(null, { presetLocal: true });
-});
+    document.getElementById('btnLocalNew')?.addEventListener('click', () => {
+      openFieldDialog(null, { presetLocal: true });
+    });
 
-document.getElementById('btnLocalExport')?.addEventListener('click', () => {
-  // Exportiert alle lokalen Tabellen zusammenhängend
-  const tables = Array.from(document.querySelectorAll('#localTables table.table'));
-  if (!tables.length) { alert('Keine Local-Tabellen gefunden.'); return; }
-  exportMultipleTablesAsXlsx(tables, 'Local_DataFields.xlsx');
-});
-    
+    document.getElementById('btnLocalExport')?.addEventListener('click', () => {
+      // Exportiert alle lokalen Tabellen zusammenhängend
+      const tables = Array.from(
+        document.querySelectorAll('#localTables table.table')
+      );
+      if (!tables.length) {
+        alert('Keine Local-Tabellen gefunden.');
+        return;
+      }
+      exportMultipleTablesAsXlsx(tables, 'Local_DataFields.xlsx');
+    });
+
     // =============================
     //  Map Interaktionen
     // =============================
     mapCanvas?.addEventListener('mousedown', (e) => {
-      if (e.target === mapCanvas || e.target === mapViewport || e.target === mapEdgesSvg) {
+      if (
+        e.target === mapCanvas ||
+        e.target === mapViewport ||
+        e.target === mapEdgesSvg
+      ) {
         selectedFieldRef = null;
         state.selectedFieldRef = selectedFieldRef;
         clearSelectionVisuals();
@@ -2564,7 +3047,10 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
       if (e.button !== 0) return;
       isPanning = true;
       state.isPanning = isPanning;
-      panStart = { x: e.clientX - mapTransformState.x, y: e.clientY - mapTransformState.y };
+      panStart = {
+        x: e.clientX - mapTransformState.x,
+        y: e.clientY - mapTransformState.y,
+      };
       state.panStart = panStart;
     });
     window.addEventListener('mousemove', (e) => {
@@ -2572,70 +3058,94 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
       mapTransformState.x = e.clientX - panStart.x;
       mapTransformState.y = e.clientY - panStart.y;
       applyMapTransform();
-      if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
+      if (selectedFieldRef) drawSelectedFieldEdges();
+      else clearSelectionVisuals();
     });
-    window.addEventListener('mouseup', () => { isPanning = false; state.isPanning = isPanning; });
-    mapCanvas?.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const factor = e.deltaY < 0 ? 1.1 : 0.9, prev = mapTransformState.k, next = Math.min(3, Math.max(0.4, prev * factor));
-      const r = mapCanvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-      mapTransformState.x = mx - (mx - mapTransformState.x) * (next / prev);
-      mapTransformState.y = my - (my - mapTransformState.y) * (next / prev);
-      mapTransformState.k = next;
-      applyMapTransform();
-      if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
-    }, { passive: false });
+    window.addEventListener('mouseup', () => {
+      isPanning = false;
+      state.isPanning = isPanning;
+    });
+    mapCanvas?.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 0.9,
+          prev = mapTransformState.k,
+          next = Math.min(3, Math.max(0.4, prev * factor));
+        const r = mapCanvas.getBoundingClientRect(),
+          mx = e.clientX - r.left,
+          my = e.clientY - r.top;
+        mapTransformState.x = mx - (mx - mapTransformState.x) * (next / prev);
+        mapTransformState.y = my - (my - mapTransformState.y) * (next / prev);
+        mapTransformState.k = next;
+        applyMapTransform();
+        if (selectedFieldRef) drawSelectedFieldEdges();
+        else clearSelectionVisuals();
+      },
+      { passive: false }
+    );
 
-    window.addEventListener('resize', () => { if (document.body.getAttribute('data-mode') === 'map') fitMapToContent(); });
+    window.addEventListener('resize', () => {
+      if (document.body.getAttribute('data-mode') === 'map') fitMapToContent();
+    });
 
     function installMapArrowMarker() {
       const svg = document.getElementById('mapEdges');
       if (!svg) return;
-    
+
       // Bestehendes <defs> ggf. entfernen, um doppelte Marker zu vermeiden
       const oldDefs = svg.querySelector('defs');
       if (oldDefs) oldDefs.remove();
-    
-      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    
+
+      const defs = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'defs'
+      );
+
       // Kleiner, dezenter Pfeil – userSpaceOnUse = keine Überraschungen bei Skalierung
-      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+      const marker = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'marker'
+      );
       marker.setAttribute('id', 'arrowHead');
       marker.setAttribute('markerUnits', 'userSpaceOnUse');
-      marker.setAttribute('markerWidth', '9');   // kompakt
+      marker.setAttribute('markerWidth', '9'); // kompakt
       marker.setAttribute('markerHeight', '9');
-      marker.setAttribute('refX', '9');          // sitzt exakt am Linienende
+      marker.setAttribute('refX', '9'); // sitzt exakt am Linienende
       marker.setAttribute('refY', '4.5');
       marker.setAttribute('orient', 'auto-start-reverse'); // korrekte Ausrichtung
-    
+
       // Dreieck (Pfeil) – nutzt currentColor -> folgt Kantenfarbe
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const path = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'path'
+      );
       // Ein kompaktes, leicht „weiches“ Dreieck
       path.setAttribute('d', 'M0,0 L0,9 L9,4.5 Z');
       path.setAttribute('fill', 'currentColor');
       path.setAttribute('opacity', '0.85');
-    
+
       marker.appendChild(path);
       defs.appendChild(marker);
       svg.prepend(defs); // voranstellen -> sichergestellt, dass es vorhanden ist
     }
-    
+
     // >>> Rufe das NACH dem Erzeugen des SVG-Layers genau einmal auf:
     installMapArrowMarker();
-/* Ende Teil 8*/
-/* Teil 9 Zeilen 2706-3035*/
+    /* Ende Teil 8*/
+    /* Teil 9 Zeilen 2706-3035*/
     // =============================
     //  Persistenz laden
     // =============================
     loadColumns();
     loadSystems();
     function ensureColumnExists(name, order = 99, visible = true) {
-      if (!fieldColumns.some(c => c.name === name)) {
+      if (!fieldColumns.some((c) => c.name === name)) {
         fieldColumns.push({ name, visible, order });
         saveColumns(); // optional, damit es bestehen bleibt
       }
     }
-    
+
     // ...
     // Persistenz laden
     loadPositions();
@@ -2643,31 +3153,42 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
     loadLeSystems();
     loadGlossary();
     loadFields();
-    
+
     // NEU: sicherstellen, dass "Definition" existiert
     ensureColumnExists('Definition', 6, true);
     ensureColumnExists('Legal Entity', 7, true);
 
     (function migrateFoundationToDataObjectColumn() {
-      const idx = fieldColumns.findIndex(c => c.name === 'Foundation Data');
+      const idx = fieldColumns.findIndex((c) => c.name === 'Foundation Data');
       if (idx > -1) {
         fieldColumns[idx].name = 'Data Object';
-        try { saveColumns(); } catch {}
+        try {
+          saveColumns();
+        } catch {}
       }
     })();
 
     (function ensureDefinitionColumn() {
-      if (!fieldColumns.some(c => c.name === 'Definition')) {
-        fieldColumns.push({ name: 'Definition', visible: true, order: (fieldColumns.length + 1) });
-        try { saveColumns(); } catch {}
+      if (!fieldColumns.some((c) => c.name === 'Definition')) {
+        fieldColumns.push({
+          name: 'Definition',
+          visible: true,
+          order: fieldColumns.length + 1,
+        });
+        try {
+          saveColumns();
+        } catch {}
       }
     })();
 
-    (function migrateFieldFoundationObjectToId(){
+    (function migrateFieldFoundationObjectToId() {
       let changed = false;
-      fields.forEach(f => {
+      fields.forEach((f) => {
         // Wenn neue ID nicht existiert, aber alter Name vorhanden ist -> auflösen
-        if ((f.foundationObjectId == null || f.foundationObjectId === '') && f.foundationObject) {
+        if (
+          (f.foundationObjectId == null || f.foundationObjectId === '') &&
+          f.foundationObject
+        ) {
           const obj = getDataObjectByName(f.foundationObject);
           if (obj) {
             f.foundationObjectId = obj.id;
@@ -2701,9 +3222,11 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
       const link = e.target.closest('.glossary-link');
       if (link) {
         const id = link.dataset.id;
-        const term = glossaryTerms.find(g => g.id === id);
+        const term = glossaryTerms.find((g) => g.id === id);
         if (!term) return;
-        alert(`${term.term}\n\n${term.definition || '(no definition available)'}`);
+        alert(
+          `${term.term}\n\n${term.definition || '(no definition available)'}`
+        );
         // Hinweis: später kann hier statt alert() ein eigenes Overlay kommen
       }
     });
@@ -2724,8 +3247,8 @@ if (document.readyState === 'loading') {
 
 // ====== Toggle-Listener (ein/ausblenden des Untermenüs) ======
 document.addEventListener('DOMContentLoaded', () => {
-  const toggle  = document.getElementById('sidebarToggle');
-  const app     = document.querySelector('.app');
+  const toggle = document.getElementById('sidebarToggle');
+  const app = document.querySelector('.app');
   const sidebar = document.querySelector('.sidebar');
 
   // Export: Global
@@ -2734,7 +3257,10 @@ document.addEventListener('DOMContentLoaded', () => {
     exportGlobalBtn.addEventListener('click', () => {
       console.log('[Export] Global clicked');
       const table = document.querySelector('#global .table');
-      if (!table) { alert('Keine Global-Tabelle gefunden.'); return; }
+      if (!table) {
+        alert('Keine Global-Tabelle gefunden.');
+        return;
+      }
       const csv = tableToCsv(table);
       downloadAsPseudoXlsx(csv, 'Global_DataFields.xlsx');
     });
@@ -2745,13 +3271,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (exportLocalBtn) {
     exportLocalBtn.addEventListener('click', () => {
       console.log('[Export] Local clicked');
-      const tables = Array.from(document.querySelectorAll('#localTables table.table'));
-      if (tables.length === 0) { alert('Keine Local-Tabellen gefunden.'); return; }
+      const tables = Array.from(
+        document.querySelectorAll('#localTables table.table')
+      );
+      if (tables.length === 0) {
+        alert('Keine Local-Tabellen gefunden.');
+        return;
+      }
       let out = '';
       tables.forEach((t, idx) => {
-        const title = t.getAttribute('data-title')
-          || t.closest('.le-section')?.querySelector('.table-title')?.innerText
-          || `Table ${idx + 1}`;
+        const title =
+          t.getAttribute('data-title') ||
+          t.closest('.le-section')?.querySelector('.table-title')?.innerText ||
+          `Table ${idx + 1}`;
         out += `"${String(title).replace(/"/g, '""')}"\n`;
         out += tableToCsv(t);
         out += '\n';
@@ -2768,60 +3300,65 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-// Sidebar Toggle – flüssige Slide-Animation mit Snap des Grids
-(() => {
-  const app = document.querySelector('.app');
-  const sidebar = document.querySelector('.sidebar');
-  const toggle = document.querySelector('.sidebar-toggle');
+  // Sidebar Toggle – flüssige Slide-Animation mit Snap des Grids
+  (() => {
+    const app = document.querySelector('.app');
+    const sidebar = document.querySelector('.sidebar');
+    const toggle = document.querySelector('.sidebar-toggle');
 
-  // Dauer MUSS zu CSS --sb-dur passen (.48s -> 480 ms)
-  const DUR = 480;
+    // Dauer MUSS zu CSS --sb-dur passen (.48s -> 480 ms)
+    const DUR = 480;
 
-  if (!app || !sidebar || !toggle) return;
+    if (!app || !sidebar || !toggle) return;
 
-  // Säubere alte Klassen beim Start (falls noch vorhanden)
-  app.classList.remove('sidebar-collapsing', 'sidebar-expanding', 'sidebar-collapsed', 'is-sliding');
-  sidebar.style.willChange = 'transform, opacity';
+    // Säubere alte Klassen beim Start (falls noch vorhanden)
+    app.classList.remove(
+      'sidebar-collapsing',
+      'sidebar-expanding',
+      'sidebar-collapsed',
+      'is-sliding'
+    );
+    sidebar.style.willChange = 'transform, opacity';
 
-  toggle.addEventListener('click', () => {
-    const isCollapsed = app.classList.contains('sidebar-collapsed');
+    toggle.addEventListener('click', () => {
+      const isCollapsed = app.classList.contains('sidebar-collapsed');
 
-    // Globale „wir sliden gerade“-Sperre (blockt pointer-events in CSS)
-    app.classList.add('is-sliding');
+      // Globale „wir sliden gerade“-Sperre (blockt pointer-events in CSS)
+      app.classList.add('is-sliding');
 
-    if (!isCollapsed) {
-      // == COLLAPSE ==
-      // 1) Sidebar rausfahren (transform/opacity animieren)
-      app.classList.add('sidebar-collapsing');
+      if (!isCollapsed) {
+        // == COLLAPSE ==
+        // 1) Sidebar rausfahren (transform/opacity animieren)
+        app.classList.add('sidebar-collapsing');
 
-      // 2) Nach Ende der Sidebar-Animation: Grid-Spalte auf 0 setzen
-      window.setTimeout(() => {
-        app.classList.add('sidebar-collapsed');       // grid: 0 1fr (animiert via CSS)
-        app.classList.remove('sidebar-collapsing');    // Clean up
-        app.classList.remove('is-sliding');
-      }, DUR);
-    } else {
-      // == EXPAND ==
-      // 1) Grid sofort auf volle Breite stellen (animiert), Sidebar bleibt noch links außerhalb
-      app.classList.remove('sidebar-collapsed');
-      app.classList.add('sidebar-expanding');
+        // 2) Nach Ende der Sidebar-Animation: Grid-Spalte auf 0 setzen
+        window.setTimeout(() => {
+          app.classList.add('sidebar-collapsed'); // grid: 0 1fr (animiert via CSS)
+          app.classList.remove('sidebar-collapsing'); // Clean up
+          app.classList.remove('is-sliding');
+        }, DUR);
+      } else {
+        // == EXPAND ==
+        // 1) Grid sofort auf volle Breite stellen (animiert), Sidebar bleibt noch links außerhalb
+        app.classList.remove('sidebar-collapsed');
+        app.classList.add('sidebar-expanding');
 
-      // 2) Nächster Frame: Startposition (-110%) anlegen
-      requestAnimationFrame(() => {
-        // 3) Noch ein Frame: „run-in“ -> transform auf 0 (löst die .48s-Transition aus)
+        // 2) Nächster Frame: Startposition (-110%) anlegen
         requestAnimationFrame(() => {
-          app.classList.add('run-in');
+          // 3) Noch ein Frame: „run-in“ -> transform auf 0 (löst die .48s-Transition aus)
+          requestAnimationFrame(() => {
+            app.classList.add('run-in');
 
-          // 4) Nach Ende der Animation aufräumen
-          window.setTimeout(() => {
-            app.classList.remove('run-in', 'sidebar-expanding');
-            app.classList.remove('is-sliding');
-          }, DUR);
+            // 4) Nach Ende der Animation aufräumen
+            window.setTimeout(() => {
+              app.classList.remove('run-in', 'sidebar-expanding');
+              app.classList.remove('is-sliding');
+            }, DUR);
+          });
         });
-      });
-    }
-  });
-})();
+      }
+    });
+  })();
 });
 // --- CSV/XLSX Helfer (Variante 1: "falsches" XLSX, aber Excel-kompatibel) ---
 
@@ -2829,9 +3366,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function tableToCsv(tableEl) {
   const rows = tableEl.querySelectorAll('tr');
   let csv = '';
-  rows.forEach(row => {
+  rows.forEach((row) => {
     const cells = row.querySelectorAll('th,td');
-    const values = Array.from(cells).map(cell => {
+    const values = Array.from(cells).map((cell) => {
       // Text sauber extrahieren
       const txt = (cell.innerText ?? '').replace(/\r?\n+/g, ' ').trim();
       // CSV-Escaping: Doppelte Anführungszeichen verdoppeln
@@ -2848,7 +3385,9 @@ function tableToCsv(tableEl) {
  * Excel öffnet das direkt, Formatierung ist jedoch "plain".
  */
 function downloadAsPseudoXlsx(csvText, fileName = 'export.xlsx') {
-  const blob = new Blob([csvText], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const blob = new Blob([csvText], {
+    type: 'application/vnd.ms-excel;charset=utf-8;',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -2861,9 +3400,10 @@ function downloadAsPseudoXlsx(csvText, fileName = 'export.xlsx') {
 
 /** Exportiert genau eine Tabelle (Selector oder Element) als .xlsx */
 function exportSingleTableAsXlsx(tableSelectorOrEl, fileName) {
-  const table = typeof tableSelectorOrEl === 'string'
-    ? document.querySelector(tableSelectorOrEl)
-    : tableSelectorOrEl;
+  const table =
+    typeof tableSelectorOrEl === 'string'
+      ? document.querySelector(tableSelectorOrEl)
+      : tableSelectorOrEl;
 
   if (!table) {
     alert('Tabelle nicht gefunden.');
@@ -2881,21 +3421,26 @@ function exportSingleTableAsXlsx(tableSelectorOrEl, fileName) {
 function exportMultipleTablesAsXlsx(tables, fileName) {
   let out = '';
   tables.forEach((t, idx) => {
-    const title = t.getAttribute('data-title') || t.closest('.le-section')?.querySelector('.table-title')?.innerText || `Table ${idx+1}`;
-    out += `"${title.replace(/"/g, '""')}"\n`;  // Abschnittsüberschrift
+    const title =
+      t.getAttribute('data-title') ||
+      t.closest('.le-section')?.querySelector('.table-title')?.innerText ||
+      `Table ${idx + 1}`;
+    out += `"${title.replace(/"/g, '""')}"\n`; // Abschnittsüberschrift
     out += tableToCsv(t);
     out += '\n'; // Leerzeile
   });
   function downloadAsPseudoXlsx(csvText, fileName = 'export.xlsx') {
-    const blob = new Blob([csvText], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const blob = new Blob([csvText], {
+      type: 'application/vnd.ms-excel;charset=utf-8;',
+    });
     const url = URL.createObjectURL(blob);
-  
+
     // Primärer Weg (funktioniert lokal/ohne Sandbox):
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
     document.body.appendChild(a);
-  
+
     let clicked = false;
     try {
       a.click();
@@ -2904,23 +3449,27 @@ function exportMultipleTablesAsXlsx(tables, fileName) {
       clicked = false;
     }
     document.body.removeChild(a);
-  
+
     // Fallback für sandboxed Iframes (StackBlitz Preview):
     if (!clicked) {
       try {
         window.open(url, '_blank'); // öffnet ein neues Tab -> Rechtsklick „Speichern unter…“
       } catch (e) {
         // Allerletzte Rückfallebene: zeig den CSV-Text an
-        alert('Download im Preview blockiert. Es öffnet sich ein neues Tab oder du kopierst die Daten manuell.');
+        alert(
+          'Download im Preview blockiert. Es öffnet sich ein neues Tab oder du kopierst die Daten manuell.'
+        );
         const w = window.open('', '_blank');
         if (w) {
-          w.document.write('<pre style="white-space:pre-wrap;word-break:break-word;">');
+          w.document.write(
+            '<pre style="white-space:pre-wrap;word-break:break-word;">'
+          );
           w.document.write(csvText.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
           w.document.write('</pre>');
         }
       }
     }
-  
+
     // URL wieder freigeben
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -2955,3 +3504,90 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 /* Ende Teil 9*/
+// =========================
+// Data-Map: Verbindungen
+// =========================
+
+function drawSystemEdges() {
+  // Gemeinsamer Wrapper der beiden Tabellen (passen wir unten an)
+  const wrapper =
+    document.querySelector('.data-map') ||   // bevorzugt
+    document.querySelector('.dataMapWrapper') ||
+    document.querySelector('.map-container') ||
+    document.body;
+
+  // SVG-Layer bereitstellen
+  let svg = document.getElementById('edgeLayer');
+  if (!svg) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('id', 'edgeLayer');
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', '100%');
+    svg.style.position = 'absolute';
+    svg.style.inset = '0';
+    svg.style.pointerEvents = 'none';
+    svg.style.overflow = 'visible';
+    wrapper.appendChild(svg);
+  }
+
+  // Alte Pfade entfernen
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const wrapperRect = wrapper.getBoundingClientRect();
+  const OUTSIDE_OFFSET = 12; // Start/Ende bewusst außerhalb der Tabellen
+
+  // Kantenliste: Anpassen, falls euer Name abweicht
+  const edges = Array.isArray(window.fieldLinks) ? window.fieldLinks : [];
+
+  // Hilfsfunktion: Feldzelle per ID finden
+  const findCell = (id) =>
+    document.querySelector(`[data-field-id="${id}"]`);
+
+  edges.forEach(({ from, to }) => {
+    const src = findCell(from);
+    const dst = findCell(to);
+    if (!src || !dst) return;
+
+    const a = src.getBoundingClientRect();
+    const b = dst.getBoundingClientRect();
+
+    // y-Mitte relativ zum Wrapper
+    const y1 = (a.top + a.height / 2) - wrapperRect.top;
+    const y2 = (b.top + b.height / 2) - wrapperRect.top;
+
+    // x rechts von Quelle (außerhalb) / links vom Ziel (außerhalb)
+    const x1 = (a.right - wrapperRect.left) + OUTSIDE_OFFSET;
+    const x2 = (b.left - wrapperRect.left)  - OUTSIDE_OFFSET;
+
+    // schöne S-Kurve
+    const dx = Math.max(40, Math.abs(x2 - x1) * 0.25);
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', '#9aa3af');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('opacity', '0.9');
+    svg.appendChild(path);
+  });
+}
+
+// Alias, damit alte Aufrufe mit großem D weiter funktionieren:
+if (typeof window !== 'undefined') window.DrawSystemEdges = drawSystemEdges;
+
+// Neu zeichnen bei Größen- und Scrolländerungen
+(function installEdgeRedraw() {
+  const schedule = () => requestAnimationFrame(drawSystemEdges);
+  window.addEventListener('resize', schedule, { passive: true });
+  window.addEventListener('scroll', schedule, { passive: true });
+
+  // falls die Tabellen in scrollbaren Containern liegen, hier Klassen anpassen:
+  document.querySelectorAll('.left-table, .right-table, .data-map, .dataMapWrapper, .map-container')
+    .forEach(el => el.addEventListener('scroll', schedule, { passive: true }));
+
+  // initial
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => drawSystemEdges(), { once: true });
+  } else {
+    drawSystemEdges();
+  }
+})();
