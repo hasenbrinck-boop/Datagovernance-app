@@ -40,6 +40,9 @@ let editGlossaryIndex = state.editGlossaryIndex;
 let glossaryTypeFilter = state.glossaryTypeFilter;
 const nodeCollapsed = state.nodeCollapsed;
 const mapTransformState = state.mapTransformState;
+if (typeof window !== 'undefined') {
+  window.mapTransformState = mapTransformState;
+}
 let mapFilters = state.mapFilters;
 let mapPositions = state.mapPositions;
 let selectedFieldRef = state.selectedFieldRef;
@@ -2199,40 +2202,51 @@ function hexWithAlpha(hex, a) {
 }
 function computeNodePositions(nodeEntries = []) {
   const positions = new Map();
-  const padding = 40;
+  const paddingY = 32;
   const baseX = 40;
-  const occupied = [];
+  const baseY = 40;
+  const columnGap = 48;
+
+  const fallbackHeight =
+    typeof window !== 'undefined' && window.innerHeight
+      ? window.innerHeight
+      : 800;
+  const canvasHeight = mapCanvas?.clientHeight || mapCanvas?.offsetHeight || fallbackHeight;
+
+  const maxColumnHeight = Math.max(canvasHeight - baseY * 2, 520);
+
+  let measuredWidth = 0;
+  nodeEntries.forEach(({ node }) => {
+    if (!measuredWidth) {
+      measuredWidth = node.offsetWidth || 0;
+    }
+  });
+  const baseWidth = measuredWidth || 360;
+  const columnWidth = baseWidth + columnGap;
 
   nodeEntries.forEach(({ sys, node }) => {
-    const existing = mapPositions[sys.name];
-    if (existing) {
-      const x = Number(existing.x) || 0;
-      const y = Number(existing.y) || 0;
-      positions.set(sys.name, { x, y });
-      occupied.push({
-        x,
-        y,
-        width: node.offsetWidth || 0,
-        height: node.offsetHeight || 0,
-      });
+    const stored = mapPositions[sys.name];
+    const sx = Number(stored?.x);
+    const sy = Number(stored?.y);
+    if (Number.isFinite(sx) && Number.isFinite(sy)) {
+      positions.set(sys.name, { x: sx, y: sy });
     }
   });
 
-  let currentY = occupied.length
-    ? occupied.reduce(
-        (max, item) => Math.max(max, item.y + item.height + padding),
-        baseX
-      )
-    : baseX;
+  let colX = baseX;
+  let colY = baseY;
 
   nodeEntries.forEach(({ sys, node }) => {
     if (positions.has(sys.name)) return;
-    const height = node.offsetHeight || 0;
-    const x = baseX;
-    const y = currentY;
-    positions.set(sys.name, { x, y });
-    occupied.push({ x, y, width: node.offsetWidth || 0, height });
-    currentY += height + padding;
+    const nodeHeight = node.offsetHeight || 220;
+
+    if (colY > baseY && colY + nodeHeight > baseY + maxColumnHeight) {
+      colX += columnWidth;
+      colY = baseY;
+    }
+
+    positions.set(sys.name, { x: colX, y: colY });
+    colY += nodeHeight + paddingY;
   });
 
   return positions;
@@ -2289,10 +2303,16 @@ function fieldAnchor(systemName, fieldName, side = 'right') {
                                   : (nodeRect.left  - OUTSIDE);
 
   // mapTransformState defensiv (falls noch nicht initialisiert)
-  const mts = window.mapTransformState || { x: 0, y: 0, k: 1 };
+  const mtsSource =
+    (mapTransformState && typeof mapTransformState === 'object'
+      ? mapTransformState
+      : null) ||
+    (typeof window !== 'undefined' ? window.mapTransformState : null) ||
+    { x: 0, y: 0, k: 1 };
+  const scale = mtsSource.k || 1;
 
-  const x = (xAbs - canvasRect.left - mts.x) / (mts.k || 1);
-  const y = (yAbs - canvasRect.top  - mts.y) / (mts.k || 1);
+  const x = (xAbs - canvasRect.left - mtsSource.x) / scale;
+  const y = (yAbs - canvasRect.top  - mtsSource.y) / scale;
 
   return { x, y };
 }
@@ -2573,6 +2593,7 @@ function renderDataMap() {
           selectedFieldRef = null;
           state.selectedFieldRef = selectedFieldRef;
           clearSelectionVisuals();
+          safeDrawAllEdges();
         } else {
           selectedFieldRef = { system: sys.name, field: f.name };
           state.selectedFieldRef = selectedFieldRef;
@@ -2691,14 +2712,14 @@ function enableDrag(node, handle, name) {
     lastValid = { x: nx, y: ny };
     mapPositions[name] = { x: nx, y: ny };
     if (selectedFieldRef) drawSelectedFieldEdges();
-    else clearSelectionVisuals();
+    else safeDrawAllEdges();
   });
   window.addEventListener('mouseup', () => {
     if (dragging) {
       if (lastValid) mapPositions[name] = { ...lastValid };
       savePositions();
       if (selectedFieldRef) drawSelectedFieldEdges();
-      else clearSelectionVisuals();
+      else safeDrawAllEdges();
     }
     dragging = false;
     handle.style.cursor = 'grab';
@@ -2742,7 +2763,7 @@ function fitMapToContent() {
     20 + (vh - ch * mapTransformState.k) / 2 - minY * mapTransformState.k + 20;
   applyMapTransform();
   if (selectedFieldRef) drawSelectedFieldEdges();
-  else clearSelectionVisuals();
+  else safeDrawAllEdges();
 }
 
 /* ===== Error banner helper ===== */
@@ -3026,6 +3047,7 @@ function initializeApp() {
         selectedFieldRef = null;
         state.selectedFieldRef = selectedFieldRef;
         clearSelectionVisuals();
+        safeDrawAllEdges();
       }
       if (e.button !== 0) return;
       isPanning = true;
@@ -3042,7 +3064,7 @@ function initializeApp() {
       mapTransformState.y = e.clientY - panStart.y;
       applyMapTransform();
       if (selectedFieldRef) drawSelectedFieldEdges();
-      else clearSelectionVisuals();
+      else safeDrawAllEdges();
     });
     window.addEventListener('mouseup', () => {
       isPanning = false;
@@ -3063,7 +3085,7 @@ function initializeApp() {
         mapTransformState.k = next;
         applyMapTransform();
         if (selectedFieldRef) drawSelectedFieldEdges();
-        else clearSelectionVisuals();
+        else safeDrawAllEdges();
       },
       { passive: false }
     );
@@ -3492,85 +3514,40 @@ document.addEventListener('DOMContentLoaded', () => {
 // =========================
 
 function drawSystemEdges() {
-  // Gemeinsamer Wrapper der beiden Tabellen (passen wir unten an)
-  const wrapper =
-    document.querySelector('.data-map') ||   // bevorzugt
-    document.querySelector('.dataMapWrapper') ||
-    document.querySelector('.map-container') ||
-    document.body;
+  if (!mapEdgesSvg) return;
 
-  // SVG-Layer bereitstellen
-  let svg = document.getElementById('edgeLayer');
-  if (!svg) {
-    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('id', 'edgeLayer');
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', '100%');
-    svg.style.position = 'absolute';
-    svg.style.inset = '0';
-    svg.style.pointerEvents = 'none';
-    svg.style.overflow = 'visible';
-    wrapper.appendChild(svg);
-  }
+  clearEdgesKeepDefs();
 
-  // Alte Pfade entfernen
-  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const visibleSystems = new Set(
+    Array.from(mapNodesLayer?.querySelectorAll('.map-node') || []).map(
+      (node) => node.dataset.system
+    )
+  );
 
-  const wrapperRect = wrapper.getBoundingClientRect();
-  const OUTSIDE_OFFSET = 12; // Start/Ende bewusst außerhalb der Tabellen
+  const drawn = new Set();
 
-  // Kantenliste: Anpassen, falls euer Name abweicht
-  const edges = Array.isArray(window.fieldLinks) ? window.fieldLinks : [];
+  fields.forEach((field) => {
+    const source = field.source;
+    if (!source?.system) return;
 
-  // Hilfsfunktion: Feldzelle per ID finden
-  const findCell = (id) =>
-    document.querySelector(`[data-field-id="${id}"]`);
+    if (!visibleSystems.has(field.system) || !visibleSystems.has(source.system)) return;
 
-  edges.forEach(({ from, to }) => {
-    const src = findCell(from);
-    const dst = findCell(to);
-    if (!src || !dst) return;
+    const srcFieldName = source.field || field.name;
+    const srcEl = getFieldEl(source.system, srcFieldName);
+    const dstEl = getFieldEl(field.system, field.name);
+    if (!srcEl || !dstEl) return;
 
-    const a = src.getBoundingClientRect();
-    const b = dst.getBoundingClientRect();
+    const key = `${source.system}::${srcFieldName}→${field.system}::${field.name}`;
+    if (drawn.has(key)) return;
 
-    // y-Mitte relativ zum Wrapper
-    const y1 = (a.top + a.height / 2) - wrapperRect.top;
-    const y2 = (b.top + b.height / 2) - wrapperRect.top;
+    const start = fieldAnchor(source.system, srcFieldName, 'right');
+    const end = fieldAnchor(field.system, field.name, 'left');
+    if (start._invalid || end._invalid) return;
 
-    // x rechts von Quelle (außerhalb) / links vom Ziel (außerhalb)
-    const x1 = (a.right - wrapperRect.left) + OUTSIDE_OFFSET;
-    const x2 = (b.left - wrapperRect.left)  - OUTSIDE_OFFSET;
-
-    // schöne S-Kurve
-    const dx = Math.max(40, Math.abs(x2 - x1) * 0.25);
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', '#9aa3af');
-    path.setAttribute('stroke-width', '2');
-    path.setAttribute('opacity', '0.9');
-    svg.appendChild(path);
+    drawn.add(key);
+    drawEdgePath(orthoPath(start, end), true);
   });
 }
 
 // Alias, damit alte Aufrufe mit großem D weiter funktionieren:
 if (typeof window !== 'undefined') window.DrawSystemEdges = drawSystemEdges;
-
-// Neu zeichnen bei Größen- und Scrolländerungen
-(function installEdgeRedraw() {
-  const schedule = () => requestAnimationFrame(drawSystemEdges);
-  window.addEventListener('resize', schedule, { passive: true });
-  window.addEventListener('scroll', schedule, { passive: true });
-
-  // falls die Tabellen in scrollbaren Containern liegen, hier Klassen anpassen:
-  document.querySelectorAll('.left-table, .right-table, .data-map, .dataMapWrapper, .map-container')
-    .forEach(el => el.addEventListener('scroll', schedule, { passive: true }));
-
-  // initial
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => drawSystemEdges(), { once: true });
-  } else {
-    drawSystemEdges();
-  }
-})();
