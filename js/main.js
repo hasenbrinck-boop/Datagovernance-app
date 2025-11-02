@@ -756,6 +756,7 @@ function setModeSystems(name) {
   state.currentSystem = currentSystem;
   selectedFieldRef = null;
   state.selectedFieldRef = selectedFieldRef;
+  clearSelectionVisuals();
   document.body.setAttribute('data-mode', 'systems');
   showOnly('systems');
 
@@ -2036,27 +2037,13 @@ function fieldPassesFilters(f) {
   if (mapFilters.search && !f.name.toLowerCase().includes(mapFilters.search)) return false;
   return true;
 }
-function drawSystemEdges() {
+function clearSelectionVisuals() {
   clearEdgesKeepDefs();
-  const visibleSystems = new Set(systems.filter((s) => systemPassesFilters(s.name)).map((s) => s.name));
-  const candidates = fields.filter((f) => f.source?.system && visibleSystems.has(f.system) && visibleSystems.has(f.source.system));
-  const pairs = new Set();
-  candidates.forEach((f) => { const key = `${f.source.system}|${f.system}`; if (f.source.system !== f.system) pairs.add(key); });
-  pairs.forEach((key) => {
-    const [src, tgt] = key.split('|');
-    const srcNode = getNodeEl(src), tgtNode = getNodeEl(tgt);
-    if (!srcNode || !tgtNode) return;
-    const srcRect = rectToMap(srcNode.getBoundingClientRect());
-    const tgtRect = rectToMap(tgtNode.getBoundingClientRect());
-    const p1 = { x: srcRect.right + 12, y: (srcRect.top + srcRect.bottom) / 2 };
-    const p2 = { x: tgtRect.left  - 12, y: (tgtRect.top + tgtRect.bottom) / 2 };
-    drawEdgePath(orthoPath(p1, p2), true);
-  });
+  $$('.map-field.is-highlight')?.forEach((el) => el.classList.remove('is-highlight'));
 }
 function drawSelectedFieldEdges() {
-  clearEdgesKeepDefs();
-  if (!selectedFieldRef) { drawSystemEdges(); return; }
-  $$('.map-field.is-highlight')?.forEach((el) => el.classList.remove('is-highlight'));
+  clearSelectionVisuals();
+  if (!selectedFieldRef) return;
   const { system, field } = selectedFieldRef;
   const srcEl = getFieldEl(system, field);
   if (srcEl) srcEl.classList.add('is-highlight');
@@ -2150,7 +2137,7 @@ function renderDataMap() {
 
     list.forEach((f) => {
       const row = document.createElement('div');
-      row.className = 'map-field';
+      row.className = 'map-field is-selectable';
       row.dataset.system = sys.name;
       row.dataset.field  = f.name;
 
@@ -2180,8 +2167,7 @@ function renderDataMap() {
         if (selectedFieldRef && selectedFieldRef.system === sys.name && selectedFieldRef.field === f.name) {
           selectedFieldRef = null;
           state.selectedFieldRef = selectedFieldRef;
-          drawSystemEdges();
-          $$('.map-field.is-highlight')?.forEach((el) => el.classList.remove('is-highlight'));
+          clearSelectionVisuals();
         } else {
           selectedFieldRef = { system: sys.name, field: f.name };
           state.selectedFieldRef = selectedFieldRef;
@@ -2194,7 +2180,7 @@ function renderDataMap() {
       ev.stopPropagation();
       node.classList.toggle('is-collapsed');
       nodeCollapsed.set(sys.name, node.classList.contains('is-collapsed'));
-      if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
+      if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
     });
 
     enableDrag(node, header, sys.name);
@@ -2207,7 +2193,7 @@ function renderDataMap() {
     mapNodesLayer.appendChild(node);
   });
 
-  if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
+  if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
 
   requestAnimationFrame(() => fitMapToContent());
 }
@@ -2232,7 +2218,7 @@ function enableDrag(node, handle, name) {
     node.style.left = `${nx}px`;
     node.style.top  = `${ny}px`;
     mapPositions[name] = { x: nx, y: ny };
-    if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
+    if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
   });
   window.addEventListener('mouseup', () => {
     if (dragging) savePositions();
@@ -2266,7 +2252,7 @@ function fitMapToContent() {
   mapTransformState.x = 20 + (vw - cw * mapTransformState.k) / 2 - minX * mapTransformState.k + 20;
   mapTransformState.y = 20 + (vh - ch * mapTransformState.k) / 2 - minY * mapTransformState.k + 20;
   applyMapTransform();
-  if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
+  if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
 }
 
 /* ===== Error banner helper ===== */
@@ -2326,6 +2312,7 @@ document.querySelectorAll('dialog').forEach(dlg => {
       state.currentSystem = currentSystem;
       selectedFieldRef = null;
       state.selectedFieldRef = selectedFieldRef;
+      clearSelectionVisuals();
       document.body.setAttribute('data-mode', 'systems');
       showOnly('systems');
       showGlossarySubnav(false);
@@ -2495,8 +2482,7 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
       if (e.target === mapCanvas || e.target === mapViewport || e.target === mapEdgesSvg) {
         selectedFieldRef = null;
         state.selectedFieldRef = selectedFieldRef;
-        drawSystemEdges();
-        $$('.map-field.is-highlight')?.forEach((el) => el.classList.remove('is-highlight'));
+        clearSelectionVisuals();
       }
       if (e.button !== 0) return;
       isPanning = true;
@@ -2509,7 +2495,7 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
       mapTransformState.x = e.clientX - panStart.x;
       mapTransformState.y = e.clientY - panStart.y;
       applyMapTransform();
-      if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
+      if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
     });
     window.addEventListener('mouseup', () => { isPanning = false; state.isPanning = isPanning; });
     mapCanvas?.addEventListener('wheel', (e) => {
@@ -2520,7 +2506,7 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
       mapTransformState.y = my - (my - mapTransformState.y) * (next / prev);
       mapTransformState.k = next;
       applyMapTransform();
-      if (selectedFieldRef) drawSelectedFieldEdges(); else drawSystemEdges();
+      if (selectedFieldRef) drawSelectedFieldEdges(); else clearSelectionVisuals();
     }, { passive: false });
 
     window.addEventListener('resize', () => { if (document.body.getAttribute('data-mode') === 'map') fitMapToContent(); });

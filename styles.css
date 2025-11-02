@@ -445,11 +445,27 @@
     display:grid; grid-template-columns: 18px 1fr auto; gap:8px;
     align-items:center; padding:10px 12px; border-bottom:1px dashed #e5e7eb;
   }
+  .map-field.is-selectable{
+    transition: background .2s ease, box-shadow .2s ease;
+  }
   .map-field:hover{ background:#f9fafb }
+  .map-field.is-selectable:hover{ box-shadow: inset 0 0 0 1px rgba(76,131,255,.16) }
   .map-field .chev{ width:14px; height:14px; border-radius:3px; border:1px solid var(--divider); position:relative; background:#fff }
   .map-field .chev::before{ content:""; position:absolute; left:3px; right:3px; top:6px; height:2px; background:#64748b; border-radius:2px }
   .map-field.is-open .chev::after{ content:""; position:absolute; top:3px; bottom:3px; left:6px; width:2px; background:#64748b; border-radius:2px; opacity:.0 }
   .map-field-name{ font-weight:500 }
+  .map-field.is-selectable .map-field-name{ cursor:pointer; position:relative }
+  .map-field.is-selectable .map-field-name::after{
+    content:"";
+    position:absolute;
+    left:0; right:0; bottom:-4px;
+    height:3px;
+    border-radius:999px;
+    background: linear-gradient(90deg, rgba(76,131,255,.0) 0%, rgba(76,131,255,.32) 50%, rgba(76,131,255,.0) 100%);
+    opacity:0;
+    transition: opacity .2s ease;
+  }
+  .map-field.is-selectable:hover .map-field-name::after{ opacity:1 }
   .map-field-badges .badge{ display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; background:#f3f6f8; color:#334155; border:1px solid #e2e8f0; font-size:12px }
   .map-field-details{ display:none; padding:8px 12px 12px 30px; color:var(--text-dim); background:#fafafa }
   .map-field.is-open + .map-field-details{ display:block }
