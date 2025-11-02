@@ -1978,8 +1978,15 @@ function fieldAnchor(systemName, fieldName, side = 'right') {
   return { x: (x - c.left - mapTransformState.x) / mapTransformState.k, y: (y - c.top - mapTransformState.y) / mapTransformState.k };
 }
 function orthoPath(p1, p2) {
-  const midX = (p1.x + p2.x) / 2;
-  return `M ${p1.x},${p1.y} L ${midX},${p1.y} L ${midX},${p2.y} L ${p2.x},${p2.y}`;
+  const dx = p2.x - p1.x;
+  const sign = dx >= 0 ? 1 : -1;
+  const base = Math.abs(dx) * 0.4;
+  const offset = Math.min(Math.max(base, 40), 180);
+  const c1x = p1.x + sign * offset;
+  const c2x = p2.x - sign * offset;
+  const c1y = p1.y;
+  const c2y = p2.y;
+  return `M ${p1.x},${p1.y} C ${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`;
 }
 function clearEdgesKeepDefs() {
   if (!mapEdgesSvg) return;
@@ -2532,18 +2539,18 @@ document.getElementById('btnLocalExport')?.addEventListener('click', () => {
       const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
       marker.setAttribute('id', 'arrowHead');
       marker.setAttribute('markerUnits', 'userSpaceOnUse');
-      marker.setAttribute('markerWidth', '8');   // kompakt
-      marker.setAttribute('markerHeight', '8');
-      marker.setAttribute('refX', '8');          // sitzt exakt am Linienende
-      marker.setAttribute('refY', '4');
+      marker.setAttribute('markerWidth', '9');   // kompakt
+      marker.setAttribute('markerHeight', '9');
+      marker.setAttribute('refX', '9');          // sitzt exakt am Linienende
+      marker.setAttribute('refY', '4.5');
       marker.setAttribute('orient', 'auto-start-reverse'); // korrekte Ausrichtung
     
       // Dreieck (Pfeil) – nutzt currentColor -> folgt Kantenfarbe
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       // Ein kompaktes, leicht „weiches“ Dreieck
-      path.setAttribute('d', 'M0,0 L0,8 L8,4 Z');
+      path.setAttribute('d', 'M0,0 L0,9 L9,4.5 Z');
       path.setAttribute('fill', 'currentColor');
-      path.setAttribute('opacity', '0.8');
+      path.setAttribute('opacity', '0.85');
     
       marker.appendChild(path);
       defs.appendChild(marker);

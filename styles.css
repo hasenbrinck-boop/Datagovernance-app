@@ -419,14 +419,14 @@
     overflow:hidden; margin:0; padding:0;
   }
   #mapViewport{ position:absolute; inset:0; transform-origin:0 0 }
-  #mapEdges{ position:absolute; inset:0; width:100%; height:100%; color:#9aa5b8; pointer-events:none; background:transparent }
-  .edge-path{ stroke: currentColor; stroke-width:1.6; fill:none; opacity:.55 }
-  .edge-halo{ stroke: rgba(255,255,255,.92); stroke-width:4; fill:none; opacity:.75 }
+  #mapEdges{ position:absolute; inset:0; width:100%; height:100%; color:rgba(46,109,246,.6); pointer-events:none; background:transparent }
+  .edge-path{ stroke: currentColor; stroke-width:1.8; fill:none; opacity:.7 }
+  .edge-halo{ stroke: rgba(255,255,255,.94); stroke-width:4.2; fill:none; opacity:.78 }
   .edge-path.arrowed{ marker-end: url(#arrowHead) }
-  .edge-selected.edge-path{ color: var(--accent-2); opacity:.9; filter: drop-shadow(0 0 2px rgba(76,131,255,.35)); animation: edgePulse 1.6s ease-in-out infinite }
+  .edge-selected.edge-path{ color: var(--accent-1); opacity:.95; filter: drop-shadow(0 0 2px rgba(46,109,246,.4)); animation: edgePulse 1.6s ease-in-out infinite }
   @keyframes edgePulse{
-    0%,100%{ filter: drop-shadow(0 0 2px rgba(76,131,255,.35)) }
-    50%{    filter: drop-shadow(0 0 6px rgba(76,131,255,.55)) }
+    0%,100%{ filter: drop-shadow(0 0 2px rgba(46,109,246,.4)) }
+    50%{    filter: drop-shadow(0 0 6px rgba(46,109,246,.55)) }
   }
   #mapNodes{ position:absolute; left:0; top:0 }
   .map-node{
