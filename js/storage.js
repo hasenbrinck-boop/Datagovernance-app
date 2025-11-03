@@ -117,8 +117,18 @@ export function loadFields() {
       const parsed = JSON.parse(raw) || [];
       state.fields.splice(0, state.fields.length, ...parsed);
     }
+    const glossaryMap = new Map(
+      state.glossaryTerms.map((term) => [term.id, term])
+    );
     state.fields.forEach((field) => {
       if (field.glossaryRef && !field.glossaryId) field.glossaryId = field.glossaryRef;
+      if (field.glossaryId) {
+        const linked = glossaryMap.get(field.glossaryId);
+        if (linked) {
+          linked.fieldRefId = field.id || '';
+          linked.fieldRef = `${field.system} • ${field.name}`;
+        }
+      }
     });
   } catch (err) {
     console.error('loadFields() failed:', err);
@@ -187,12 +197,33 @@ export function loadGlossary() {
     const raw = storage.getItem(STORAGE_KEY_GLOSSARY);
     if (!raw) return;
     const fromStore = JSON.parse(raw) || [];
-    state.glossaryTerms.forEach((term) => {
-      if (!term.type) term.type = 'Term';
-    });
     if (Array.isArray(fromStore) && fromStore.length > 0) {
       state.glossaryTerms.splice(0, state.glossaryTerms.length, ...fromStore);
     }
+    const matchField = (value) => {
+      if (value == null) return null;
+      const needle = String(value).trim();
+      if (!needle) return null;
+      return (
+        state.fields.find((f) => f.id === needle) ||
+        state.fields.find((f) => `${f.system}:${f.name}` === needle) ||
+        state.fields.find((f) => `${f.system} • ${f.name}` === needle) ||
+        null
+      );
+    };
+    state.glossaryTerms.forEach((term) => {
+      if (!term.type) term.type = 'Term';
+      if (!('fieldRefId' in term) || term.fieldRefId == null) {
+        term.fieldRefId = '';
+      }
+      if (!term.fieldRefId && term.fieldRef) {
+        const match = matchField(term.fieldRef);
+        if (match) {
+          term.fieldRefId = match.id;
+          term.fieldRef = `${match.system} • ${match.name}`;
+        }
+      }
+    });
   } catch (err) {
     console.error('loadGlossary() failed:', err);
   }

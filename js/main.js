@@ -647,7 +647,11 @@ function fieldGlossaryTerm(field) {
 }
 function fieldDefinitionText(field) {
   const t = fieldGlossaryTerm(field);
-  return t ? t.definition || '—' : '—';
+  if (!t) return '—';
+  const term = t.term || '—';
+  const def = (t.definition || '').trim();
+  if (def) return `${term}: ${def}`;
+  return term;
 }
 function fieldDefinitionLabel(field) {
   const t = fieldGlossaryTerm(field);
@@ -1725,33 +1729,79 @@ leSystemsForm?.addEventListener('submit', (e) => {
 });
 
 /* ================= Glossary ================= */
+function fieldRefLabel(field) {
+  if (!field) return '';
+  return `${field.system} • ${field.name}`;
+}
+
+function fieldRefValue(field) {
+  if (!field) return '';
+  return field.id || `${field.system}:${field.name}`;
+}
+
+function fieldRefMatches(field, value) {
+  if (!field || value == null) return false;
+  const needle = String(value).trim();
+  if (!needle) return false;
+  if (field.id && field.id === needle) return true;
+  if (`${field.system}:${field.name}` === needle) return true;
+  if (fieldRefLabel(field) === needle) return true;
+  return false;
+}
+
+function findFieldByFieldRef(value) {
+  if (value == null) return null;
+  const needle = String(value).trim();
+  if (!needle) return null;
+  return fields.find((f) => fieldRefMatches(f, needle)) || null;
+}
+
+function formatGlossaryDetail(term) {
+  if (!term) return '—';
+  const label = esc(term.term || '');
+  const definition = term.definition ? ` – ${esc(term.definition)}` : '';
+  const title = term.definition ? ` title="${esc(term.definition)}"` : '';
+  return `<span class="glossary-link" data-id="${esc(term.id)}"${title}>${label}</span>${definition}`;
+}
+
 function renderGlossaryTable() {
   if (!glossaryTable) return;
   glossaryTable.innerHTML = '';
 
-  // 1) Filtern nach Typ (wenn nicht ALL)
   const list = glossaryTerms.filter((g) => {
     if (!glossaryTypeFilter || glossaryTypeFilter === 'ALL') return true;
     return (g.type || 'Term') === glossaryTypeFilter;
   });
 
-  // 2) Sortieren NUR nach "Term" (A→Z, case-insensitiv)
   list.sort((a, b) =>
     (a.term || '').localeCompare(b.term || '', undefined, {
       sensitivity: 'base',
     })
   );
 
-  // 3) Rendern
   list.forEach((g, i) => {
+    const linkedField = findFieldByFieldRef(g.fieldRefId || g.fieldRef || '');
+    const linkedLabel = linkedField ? fieldRefLabel(linkedField) : g.fieldRef || '';
+    if (linkedField && g.fieldRef !== linkedLabel) {
+      g.fieldRef = linkedLabel;
+    }
+    if (!linkedField && g.fieldRefId) {
+      g.fieldRefId = '';
+    }
+    const termText = g.term ? esc(g.term) : '-';
+    const typeText = esc(g.type || 'Term');
+    const defText = g.definition ? esc(g.definition) : '-';
+    const infoText = g.info ? esc(g.info) : '-';
+    const ownerText = g.owner ? esc(g.owner) : '-';
+    const refText = linkedLabel ? esc(linkedLabel) : '-';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${g.term || '-'}</td>
-      <td>${g.type || 'Term'}</td>
-      <td>${g.definition || '-'}</td>
-      <td>${g.info || '-'}</td>
-      <td>${g.owner || '-'}</td>
-      <td>${g.fieldRef ? g.fieldRef : '-'}</td>
+      <td>${termText}</td>
+      <td>${typeText}</td>
+      <td>${defText}</td>
+      <td>${infoText}</td>
+      <td>${ownerText}</td>
+      <td>${refText}</td>
       <td class="table-actions">
         <button data-index="${i}" class="glsEdit" title="Edit">
           <svg class="icon-16" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="currentColor"/></svg>
@@ -1764,7 +1814,6 @@ function renderGlossaryTable() {
     glossaryTable.appendChild(tr);
   });
 
-  // Edit/Delete Handler
   $$('.glsEdit').forEach((btn) =>
     btn.addEventListener('click', () =>
       openGlossaryDialog(parseInt(btn.dataset.index, 10))
@@ -1783,56 +1832,106 @@ function renderGlossaryTable() {
     });
   });
 }
+
 function populateGlossaryFieldRefOptions(selected = '') {
   if (!glossaryFieldRef) return;
-  const options = ['<option value="">(none)</option>'].concat(
-    fields.map((f) => {
-      const label = `${f.system} • ${f.name}`;
-      const value = `${f.system}:${f.name}`;
-      const sel = value === selected ? 'selected' : '';
-      return `<option value="${value}" ${sel}>${label}</option>`;
-    })
-  );
+  const sorted = [...fields].sort((a, b) => {
+    const sysA = (a.system || '').toLowerCase();
+    const sysB = (b.system || '').toLowerCase();
+    if (sysA !== sysB) return sysA.localeCompare(sysB);
+    const nameA = (a.name || '').toLowerCase();
+    const nameB = (b.name || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+  const options = ['<option value="">(none)</option>'];
+  let hasMatch = false;
+  sorted.forEach((f) => {
+    const value = fieldRefValue(f);
+    const isSelected = fieldRefMatches(f, selected);
+    if (isSelected) hasMatch = true;
+    options.push(
+      `<option value="${esc(value)}"${isSelected ? ' selected' : ''}>${esc(
+        fieldRefLabel(f)
+      )}</option>`
+    );
+  });
+  if (selected && !hasMatch) {
+    options.push(
+      `<option value="${esc(selected)}" selected>${esc(selected)} (not found)</option>`
+    );
+  }
   glossaryFieldRef.innerHTML = options.join('');
 }
 function openGlossaryDialog(index = null) {
   editGlossaryIndex = index;
   state.editGlossaryIndex = editGlossaryIndex;
   glossaryForm?.reset();
-  populateGlossaryFieldRefOptions('');
+  const selectedRef =
+    index !== null
+      ? glossaryTerms[index].fieldRefId || glossaryTerms[index].fieldRef || ''
+      : '';
+  populateGlossaryFieldRefOptions(selectedRef);
   if (!glossaryForm) return;
   if (index !== null) {
-    // ... innerhalb von if (index !== null) { ... }
     const g = glossaryTerms[index];
     glossaryForm.elements.term.value = g.term || '';
     glossaryForm.elements.definition.value = g.definition || '';
     glossaryForm.elements.info.value = g.info || '';
     glossaryForm.elements.owner.value = g.owner || '';
-    populateGlossaryFieldRefOptions(g.fieldRef || '');
-    glossaryForm.elements.type.value = g.type || 'Term'; // <— NEU
-    populateGlossaryFieldRefOptions(g.fieldRef || '');
+    glossaryForm.elements.type.value = g.type || 'Term';
+    populateGlossaryFieldRefOptions(g.fieldRefId || g.fieldRef || '');
   }
   openDialog(glossaryDialog);
 }
 glossaryForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const data = Object.fromEntries(new FormData(glossaryForm).entries());
+  const formData = new FormData(glossaryForm);
+  const data = Object.fromEntries(formData.entries());
+  const glossaryId =
+    editGlossaryIndex !== null
+      ? glossaryTerms[editGlossaryIndex].id || uid('gls')
+      : uid('gls');
+
+  const linkedField = findFieldByFieldRef(data.fieldRef || '');
+
   const record = {
-    id:
-      editGlossaryIndex !== null
-        ? glossaryTerms[editGlossaryIndex].id || uid('gls')
-        : uid('gls'),
+    id: glossaryId,
     term: data.term?.trim() || '',
     definition: data.definition?.trim() || '',
     info: data.info?.trim() || '',
     owner: data.owner?.trim() || '',
-    fieldRef: data.fieldRef || '',
+    fieldRef: linkedField ? fieldRefLabel(linkedField) : '',
+    fieldRefId: linkedField ? linkedField.id : '',
     type: data.type && GLOSSARY_TYPES.includes(data.type) ? data.type : 'Term',
   };
+
+  fields.forEach((field) => {
+    if (field.glossaryId === glossaryId) {
+      if (!linkedField || field.id !== linkedField.id) {
+        delete field.glossaryId;
+      }
+    }
+  });
+
+  if (linkedField) {
+    if (linkedField.glossaryId && linkedField.glossaryId !== glossaryId) {
+      const other = glossaryTerms.find((g) => g.id === linkedField.glossaryId);
+      if (other) {
+        other.fieldRef = '';
+        other.fieldRefId = '';
+      }
+    }
+    linkedField.glossaryId = glossaryId;
+  }
+
   if (editGlossaryIndex !== null) glossaryTerms[editGlossaryIndex] = record;
   else glossaryTerms.push(record);
+
+  saveFields();
   saveGlossary();
   renderGlossaryTable();
+  renderFieldsTable();
+  if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
   closeDialog(glossaryDialog);
 });
 
@@ -2900,10 +2999,15 @@ function renderDataMap() {
 
       const details = document.createElement('div');
       details.className = 'map-field-details';
+      const glossaryTerm = fieldGlossaryTerm(f);
+      const glossaryMarkup = glossaryTerm
+        ? formatGlossaryDetail(glossaryTerm)
+        : '—';
       details.innerHTML = `
         <div><strong>Mandatory:</strong> ${f.mandatory ? 'Yes' : 'No'}</div>
         <div><strong>Mapping:</strong> ${f.mapping || '-'}</div>
         <div><strong>Data Object:</strong> ${foundationLabelForField(f)}</div>
+        <div><strong>Glossary:</strong> ${glossaryMarkup}</div>
         <div><strong>Source:</strong> ${
           f.source?.system
             ? `${f.source.system} • ${f.source.field || f.name}`
