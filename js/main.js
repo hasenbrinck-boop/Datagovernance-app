@@ -1216,6 +1216,9 @@ function renderLocalFieldsTables() {
     return;
   }
 
+  const sectionHead = localView.querySelector('.section-head');
+  const sectionTitleEl = sectionHead?.querySelector('.section-title');
+
   let host = document.getElementById('localTables');
   if (!host) {
     host = document.createElement('div');
@@ -1258,6 +1261,21 @@ function renderLocalFieldsTables() {
     getLENameByNumber(a).localeCompare(getLENameByNumber(b))
   );
   const orderedKeys = [...namedKeys, ...[''].filter((k) => groups.has(k))];
+  const hasMultipleGroups = orderedKeys.length > 1;
+
+  let sectionTitleText = 'Local Data Fields';
+  if (orderedKeys.length === 1) {
+    const firstKey = orderedKeys[0];
+    const firstName = firstKey ? getLENameByNumber(firstKey) : 'Unassigned';
+    sectionTitleText = `Local Data Fields - ${firstName}`;
+  } else if (orderedKeys.length === 0) {
+    sectionTitleText = 'Local Data Fields - Unassigned';
+  }
+
+  if (sectionTitleEl) {
+    sectionTitleEl.textContent = sectionTitleText;
+    sectionTitleEl.removeAttribute('aria-hidden');
+  }
 
   // Für jede Gruppe: Überschrift + Tabelle
   orderedKeys.forEach((leNumber) => {
@@ -1272,19 +1290,24 @@ function renderLocalFieldsTables() {
     const group = document.createElement('div');
     group.className = 'local-table-group';
 
-    const headerRow = document.createElement('div');
-    headerRow.className = 'local-table-header';
-
-    const title = document.createElement('h3');
     const titleName = leNumber ? getLENameByNumber(leNumber) : 'Unassigned';
-    title.textContent = `Local Data Fields - ${titleName}`;
-    headerRow.appendChild(title);
-    group.appendChild(headerRow);
+    const tableTitleText = `Local Data Fields - ${titleName}`;
+
+    if (hasMultipleGroups) {
+      const headerRow = document.createElement('div');
+      headerRow.className = 'local-table-header';
+
+      const title = document.createElement('h3');
+      title.textContent = tableTitleText;
+      headerRow.appendChild(title);
+      group.appendChild(headerRow);
+    }
 
     // Tabelle
     const table = document.createElement('table');
     table.className = 'table local-fields-table';
     table.dataset.leNumber = leNumber; // merken für individuelle Sortierung
+    table.setAttribute('aria-label', tableTitleText);
 
     const thead = document.createElement('thead');
 
@@ -1420,15 +1443,10 @@ function renderLocalFieldsTables() {
   if (!orderedKeys.length) {
     const group = document.createElement('div');
     group.className = 'local-table-group';
-    const headerRow = document.createElement('div');
-    headerRow.className = 'local-table-header';
-    const title = document.createElement('h3');
-    title.textContent = 'Local Data Fields - Unassigned';
-    headerRow.appendChild(title);
-    group.appendChild(headerRow);
 
     const table = document.createElement('table');
     table.className = 'table local-fields-table';
+    table.setAttribute('aria-label', 'Local Data Fields - Unassigned');
     const thead = document.createElement('thead');
     const trHead = document.createElement('tr');
     const headHtml =
