@@ -58,15 +58,15 @@
 <div class="section-head">
   <h2 class="section-title">Global Data Fields</h2>
   <div class="section-actions">
-    <button id="btnGlobalFilter" class="icon-btn" type="button" title="Filter">
+    <button id="btnGlobalFilter" class="btn btn--secondary" type="button" title="Filter">
       <!-- dein SVG -->
       <span>Filter</span>
     </button>
-    <button id="btnGlobalNew" class="icon-btn" type="button" title="New">
-      <!-- dein SVG -->
-      <span>New</span>
-    </button>
-    <button id="btnGlobalExport" class="icon-btn" type="button" title="Export">
+<!-- nachher -->
+<button id="btnGlobalNew" class="btn btn--primary" type="button" title="New">
+  <span class="plus"></span> New
+</button>
+    <button id="btnGlobalExport" class="btn btn--secondary" type="button" title="Export">
       <!-- dein SVG -->
       <span>Export</span>
     </button>
@@ -86,15 +86,15 @@
   <div class="section-head">
     <h2 class="section-title">Local Data Fields</h2>
     <div class="section-actions">
-      <button id="btnLocalFilter" class="icon-btn" type="button" title="Filter">
+      <button id="btnLocalFilter" class="btn btn--secondary" type="button" title="Filter">
         <!-- dein SVG -->
         <span>Filter</span>
       </button>
-      <button id="btnLocalNew" class="icon-btn" type="button" title="New">
+      <button id="btnLocalNew" class="btn btn--primary" type="button" title="New">
         <!-- dein SVG -->
         <span>New</span>
       </button>
-      <button id="btnLocalExport" class="icon-btn" type="button" title="Export">
+      <button id="btnLocalExport" class="btn btn--secondary" type="button" title="Export">
         <!-- dein SVG -->
         <span>Export</span>
       </button>
@@ -109,7 +109,7 @@
 <section id="glossaryView" class="panel" style="display:none">
   <div class="panel-head">
     <h3 class="panel-title">Global Glossary</h3>
-    <button id="addGlossaryBtn" class="btn-new"><span class="plus"></span> New</button>
+    <button id="addGlossaryBtn" class="btn btn--primary"><span class="plus"></span> New</button>
   </div>
   <div class="panel-body">
     <table class="table">
@@ -135,7 +135,7 @@
       <section id="admin-systems" class="panel admin-view" style="display:none">
         <div class="panel-head">
           <h3 class="panel-title">Systems</h3>
-          <button id="addSystemBtn" class="btn-new"><span class="plus"></span> New</button>
+          <button id="addSystemBtn" class="btn btn--primary"><span class="plus"></span> New</button>
         </div>
         <div class="panel-body">
           <table class="table">
@@ -154,7 +154,7 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Data Objects</div>
-            <button class="btn-new" onclick="addDataObject()">
+            <button class="btn btn--primary" onclick="addDataObject()">
               <span class="plus"></span> New
             </button>
           </div>
@@ -168,7 +168,7 @@
       <section id="admin-columns" class="panel admin-view" style="display:none">
         <div class="panel-head">
           <h3 class="panel-title">Field Information (Columns)</h3>
-          <button id="addColumnBtn" class="btn-new"><span class="plus"></span> New</button>
+          <button id="addColumnBtn" class="btn btn--primary"><span class="plus"></span> New</button>
         </div>
         <div class="panel-body">
           <table class="table">
@@ -186,7 +186,7 @@
       <section id="admin-domains" class="panel admin-view" style="display:none">
         <div class="panel-head">
           <h3 class="panel-title">Data Domains</h3>
-          <button id="addDomainBtn" class="btn-new"><span class="plus"></span> New</button>
+          <button id="addDomainBtn" class="btn btn--primary"><span class="plus"></span> New</button>
         </div>
         <div class="panel-body">
           <table class="table">
@@ -204,7 +204,7 @@
 <section id="admin-legal" class="panel admin-view" style="display:none">
   <div class="panel-head">
     <h3 class="panel-title">Legal Entities</h3>
-    <button id="addLegalBtn" class="btn-new"><span class="plus"></span> New</button>
+    <button id="addLegalBtn" class="btn btn--primary"><span class="plus"></span> New</button>
   </div>
   <div class="panel-body">
     <table class="table">
@@ -253,7 +253,7 @@ aria-hidden="true">
       <div class="overlay-card">
         <div class="overlay-head">
           <h3 class="panel-title">Set Filters</h3>
-          <button id="filterCloseBtn" class="btn-ghost">Close</button>
+          <button id="filterCloseBtn" class="btn btn--secondary">Close</button>
         </div>
         <div class="overlay-body">
           <div class="filters-grid">
@@ -274,8 +274,8 @@ aria-hidden="true">
           </div>
         </div>
         <div class="overlay-foot">
-          <button id="filterClear" class="btn-clear">Clear all</button>
-          <button id="filterDone" class="btn-primary">Done</button>
+          <button id="filterClear" class="btn btn--secondary">Clear all</button>
+          <button id="filterDone" class="btn btn--secondary">Done</button>
         </div>
       </div>
     </div>
@@ -517,7 +517,7 @@ aria-hidden="true">
       </div>
       <div class="dialog-foot">
         <button class="btn-cancel" type="button">Cancel</button>
-        <button id="leSystemsSave" class="btn-primary" type="submit">Save</button>
+        <button id="leSystemsSave" class="btn btn--secondary" type="submit">Save</button>
       </div>
     </form>
   </div>
