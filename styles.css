@@ -390,6 +390,12 @@
   .dialog-grid input[type="text"], .dialog-grid input[type="number"], .dialog-grid select{
     width:100%; min-height:36px; padding:6px 10px; border-radius:8px; border:1px solid var(--divider); background:#fff; color:var(--text); font-size:13px;
   }
+  #fieldDialog .checkbox-inline{
+    display:inline-flex; align-items:center; gap:8px; color:var(--text); font-size:13px;
+  }
+  #fieldDialog .checkbox-inline input[type="checkbox"]{
+    width:16px; height:16px; margin:0;
+  }
   .dialog-foot{ display:flex; justify-content:flex-end; gap:8px; padding:10px 16px; border-top:1px solid var(--divider) }
   #fld-legal-entity-hint{ display:none !important }
   
