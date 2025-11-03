@@ -2358,26 +2358,13 @@ function fieldAnchor(systemName, fieldName, side = 'right') {
   if (!viewport || !row) return null; // ← verhindert "null is not an object"
 
   const node = row.closest('.map-node') || row;
-  const vpRect = viewport.getBoundingClientRect();
   const rowRect = row.getBoundingClientRect();
   const nodeRect = node.getBoundingClientRect();
   const nodeRectMap = rectToMap(nodeRect);
   const rowRectMap = rectToMap(rowRect);
 
-  const yAbs = rowRect.top + rowRect.height / 2;
-  const xAbs = side === 'right' ? nodeRect.right : nodeRect.left;
-
-  // mapTransformState defensiv (falls noch nicht initialisiert)
-  const mtsSource =
-    (mapTransformState && typeof mapTransformState === 'object'
-      ? mapTransformState
-      : null) ||
-    (typeof window !== 'undefined' ? window.mapTransformState : null) ||
-    { x: 0, y: 0, k: 1 };
-  const scale = mtsSource.k || 1;
-
-  const x = (xAbs - vpRect.left - mtsSource.x) / scale;
-  const y = (yAbs - vpRect.top - mtsSource.y) / scale;
+  const x = side === 'right' ? nodeRectMap.right : nodeRectMap.left;
+  const y = (rowRectMap.top + rowRectMap.bottom) / 2;
 
   return {
     x,
