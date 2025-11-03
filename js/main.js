@@ -1259,7 +1259,7 @@ function renderLocalFieldsTables() {
   );
   const orderedKeys = [...namedKeys, ...[''].filter((k) => groups.has(k))];
 
-  // Für jede Gruppe: Überschrift + Add-Button + Tabelle
+  // Für jede Gruppe: Überschrift + Tabelle
   orderedKeys.forEach((leNumber) => {
     // Filter + Sort je LE-Tabelle
     let recs = groups.get(leNumber) || [];
@@ -1269,28 +1269,17 @@ function renderLocalFieldsTables() {
       sortFieldsDefault(recs);
 
     // Headerzeile
+    const group = document.createElement('div');
+    group.className = 'local-table-group';
+
     const headerRow = document.createElement('div');
     headerRow.className = 'local-table-header';
 
     const title = document.createElement('h3');
     const titleName = leNumber ? getLENameByNumber(leNumber) : 'Unassigned';
-    title.textContent = `Local Data Fields — ${titleName}`;
+    title.textContent = `Local Data Fields - ${titleName}`;
     headerRow.appendChild(title);
-
-    // Add-Button (FIX: leNumber verwenden + an headerRow anhängen)
-    const addBtn = document.createElement('button');
-    addBtn.className = 'btn btn--sm btn--ghost addLocalForLeBtn';
-    addBtn.setAttribute('type', 'button');
-    addBtn.setAttribute('aria-label', 'Add Local Field');
-    addBtn.dataset.leNumber = leNumber; // <-- FIX
-    addBtn.innerHTML = `
-      <svg class="icon-16" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2h5z" fill="currentColor"/>
-      </svg>
-      <span>Add Local Field</span>
-    `;
-    headerRow.appendChild(addBtn); // <-- FIX
-    host.appendChild(headerRow);
+    group.appendChild(headerRow);
 
     // Tabelle
     const table = document.createElement('table');
@@ -1348,6 +1337,8 @@ function renderLocalFieldsTables() {
       });
     });
 
+    table.appendChild(thead);
+
     const tbody = document.createElement('tbody');
 
     // Sichtbare Liste -> globaler Index map
@@ -1396,14 +1387,8 @@ function renderLocalFieldsTables() {
     });
 
     table.appendChild(tbody);
-    host.appendChild(table);
-
-    // Add-Button Handler (pro Gruppe)
-    addBtn.addEventListener('click', () => {
-      const opts = { presetLocal: true };
-      if (leNumber) opts.presetLegalEntityNumber = leNumber;
-      openFieldDialog(null, opts);
-    });
+    group.appendChild(table);
+    host.appendChild(group);
 
     // Edit/Delete-Handler pro Tabelle
     tbody.querySelectorAll('.fieldEdit').forEach((btn) => {
@@ -1433,24 +1418,14 @@ function renderLocalFieldsTables() {
 
   // Edge-Case: Keine lokalen Felder -> trotzdem „Unassigned“-Block zeigen
   if (!orderedKeys.length) {
+    const group = document.createElement('div');
+    group.className = 'local-table-group';
     const headerRow = document.createElement('div');
     headerRow.className = 'local-table-header';
     const title = document.createElement('h3');
-    title.textContent = 'Local Data Fields — Unassigned';
-    const addBtn = document.createElement('button');
-    addBtn.className = 'btn btn--sm btn--ghost addLocalForLeBtn';
-    addBtn.setAttribute('type', 'button');
-    addBtn.setAttribute('aria-label', 'Add Local Field');
-    addBtn.dataset.leNumber = '';
-    addBtn.innerHTML = `
-      <svg class="icon-16" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2h5z" fill="currentColor"/>
-      </svg>
-      <span>Add Local Field</span>
-    `;
+    title.textContent = 'Local Data Fields - Unassigned';
     headerRow.appendChild(title);
-    headerRow.appendChild(addBtn);
-    host.appendChild(headerRow);
+    group.appendChild(headerRow);
 
     const table = document.createElement('table');
     table.className = 'table local-fields-table';
@@ -1463,11 +1438,8 @@ function renderLocalFieldsTables() {
     table.appendChild(thead);
     const tbody = document.createElement('tbody');
     table.appendChild(tbody);
-    host.appendChild(table);
-
-    addBtn.addEventListener('click', () => {
-      openFieldDialog(null, { presetLocal: true });
-    });
+    group.appendChild(table);
+    host.appendChild(group);
   }
 }
 /* Ende Teil 4*/

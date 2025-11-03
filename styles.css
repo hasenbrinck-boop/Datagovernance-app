@@ -472,14 +472,14 @@
      ========================= */
   .local-tables .le-section{ margin: 1.25rem 0 2rem }
   .local-tables .table-title{ font-size:1rem; font-weight:600; margin:0 0 .5rem }
+  .local-table-group{ margin:0 0 32px }
+  .local-table-group:last-child{ margin-bottom:0 }
   .local-table-header{
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    margin:16px 0 8px;
+    display:flex; align-items:center; gap:12px;
+    margin:0 0 8px;
   }
   .local-table-header h3{ margin:0; font-size:1rem; font-weight:600 }
-  #localTables > *{ margin:0 0 40px 0 }
-  #localTables > *:last-child{ margin-bottom:0 }
-  #localTables .panel{ margin-bottom:40px }
+  .local-table-group .table{ margin:0 }
   
   /* =========================
      Reduced Motion
