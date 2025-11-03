@@ -56,6 +56,8 @@ let showLocalFilters = state.showLocalFilters;
 let isPanning = state.isPanning;
 let panStart = state.panStart;
 
+let fieldDialogHandlersBound = false;
+
 // === Data Object Dialog / Form (können initial null sein, Guards sind unten eingebaut)
 const dataObjectDialog = document.getElementById('dataObjectDialog');
 const dataObjectForm = document.getElementById('dataObjectForm');
@@ -448,6 +450,22 @@ function populateLESelectForSystem(systemName, isLocal, selectedNumber = '') {
   } else {
     legalEntitySelect.value = '';
   }
+}
+
+function ensureFieldDialogHandlers() {
+  if (fieldDialogHandlersBound || !fieldForm) return;
+
+  const syncLegalOptions = () => {
+    const sysName = fieldForm.elements.system?.value || '';
+    const isLocal = !!fieldForm.elements.local?.checked;
+    const keepValue = legalEntitySelect?.value || '';
+    populateLESelectForSystem(sysName, isLocal, keepValue);
+  };
+
+  fieldForm.elements.system?.addEventListener('change', syncLegalOptions);
+  fieldForm.elements.local?.addEventListener('change', syncLegalOptions);
+
+  fieldDialogHandlersBound = true;
 }
 
 function refreshFoundationSelect() {
@@ -1202,11 +1220,10 @@ function renderLocalFieldsTables() {
   if (!host) {
     host = document.createElement('div');
     host.id = 'localTables';
-    localView.innerHTML = ''; // leeren und Host einhängen
+    host.className = 'local-tables';
     localView.appendChild(host);
-  } else {
-    host.innerHTML = '';
   }
+  host.innerHTML = '';
 
   // Hilfsfunktion
   const getLENameByNumber = (num) => {
@@ -1857,35 +1874,46 @@ function updateSourceFieldSelect() {
   const sys = sourceSystemSelect?.value;
   const list = sys ? fields.filter((f) => f.system === sys) : [];
   if (!sourceFieldSelect) return;
-  sourceFieldSelect.innerHTML = sys
-    ? `<option value="">(select field)</option>` +
-      list.map((f) => `<option value="${f.name}">${f.name}</option>`).join('')
-    : `<option value="">Select a system first</option>`;
-  sourceFieldSelect.disabled = !sys;
+  const applyUpdate = () => {
+    sourceFieldSelect.innerHTML = sys
+      ? `<option value="">(select field)</option>` +
+        list.map((f) => `<option value="${f.name}">${f.name}</option>`).join('')
+      : `<option value="">Select a system first</option>`;
+    sourceFieldSelect.disabled = !sys;
+  };
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(applyUpdate);
+  } else {
+    applyUpdate();
+  }
+}
+
+function installSelectFirstClickOpen(select) {
+  if (!select) return;
+  select.addEventListener('pointerdown', (event) => {
+    if (select.disabled) return;
+    if (
+      document.activeElement !== select &&
+      typeof select.showPicker === 'function'
+    ) {
+      event.preventDefault();
+      select.focus({ preventScroll: true });
+      try {
+        select.showPicker();
+      } catch (err) {
+        console.debug('[gdf] showPicker failed', err);
+      }
+    }
+  });
 }
 
 function openFieldDialog(index = null, opts = {}) {
   editFieldIndex = index;
   state.editFieldIndex = editFieldIndex;
-  fieldForm?.reset();
-
-  // Reaktives Nachladen der LE-Optionen bei System-/Local-Änderung
-  fieldForm?.elements.system?.addEventListener('change', () => {
-    const sysName = fieldForm.elements.system.value;
-    const isLocal = !!(
-      fieldForm.elements.local && fieldForm.elements.local.checked
-    );
-    populateLESelectForSystem(sysName, isLocal, legalEntitySelect?.value || '');
-  });
-  fieldForm?.elements.local?.addEventListener('change', () => {
-    const sysName = fieldForm.elements.system.value;
-    const isLocal = !!(
-      fieldForm.elements.local && fieldForm.elements.local.checked
-    );
-    populateLESelectForSystem(sysName, isLocal, legalEntitySelect?.value || '');
-  });
-
   if (!fieldForm) return;
+
+  fieldForm.reset();
+  ensureFieldDialogHandlers();
 
   // System-Select
   if (systemSelect) {
@@ -3014,6 +3042,8 @@ function initializeApp() {
     //  Field-Dialog: Source System -> Source Field
     // =============================
     sourceSystemSelect?.addEventListener('change', updateSourceFieldSelect);
+    installSelectFirstClickOpen(sourceSystemSelect);
+    installSelectFirstClickOpen(sourceFieldSelect);
 
     // =============================
     //  Filter Overlay
