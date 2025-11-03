@@ -901,3 +901,126 @@ label.chip:focus-within{
   background: #fff;
   box-shadow: 0 0 0 2px rgba(46,109,246,.15);
 }
+
+/* === Unified Buttons === */
+:root{
+  /* Passe diese 3 Farben ggf. an den Glossary-NEW-Button an */
+  --btn-primary-bg: #0a84ff;    /* HINTERGRUND wie dein Glossary-New */
+  --btn-primary-text: #ffffff;  /* TEXTFARBE auf Primary */
+  --btn-primary-border: #0a84ff;
+
+  --btn-hover-mult: 0.9;        /* dunkelt bei Hover leicht ab */
+  --btn-active-mult: 0.82;
+
+  --btn-radius: 10px;           /* wie Glossary-New (ggf. anpassen) */
+  --btn-padding-y: 10px;
+  --btn-padding-x: 14px;
+  --btn-font-weight: 600;
+  --btn-font-size: 14px;
+  --btn-gap: 8px;               /* Abstand Icon-Text */
+  --btn-shadow: 0 1px 2px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.06);
+  --btn-shadow-focus: 0 0 0 3px rgba(10,132,255,.25);
+  --btn-border-width: 1px;
+
+  /* Neutrale Farben */
+  --btn-neutral-bg: #f5f6f7;
+  --btn-neutral-text: #111;
+  --btn-neutral-border: #d0d5dd;
+
+  /* Danger (für „Delete“, „Clear all“, ggf. „Cancel“) */
+  --btn-danger-bg: #e54848;
+  --btn-danger-text: #fff;
+  --btn-danger-border: #e54848;
+}
+
+/* Basis */
+button.btn {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btn-gap);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  border-radius: var(--btn-radius);
+  font-weight: var(--btn-font-weight);
+  font-size: var(--btn-font-size);
+  line-height: 1.2;
+  border: var(--btn-border-width) solid transparent;
+  box-shadow: var(--btn-shadow);
+  cursor: pointer;
+  user-select: none;
+  transition: transform .04s ease, box-shadow .2s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+  text-decoration: none;
+}
+
+/* Primary (wie Glossary-New) */
+button.btn.btn--primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-border);
+}
+
+/* Neutral/Secondary (z. B. „Filter“, „Done“, „Export“) */
+button.btn.btn--secondary {
+  background: var(--btn-neutral-bg);
+  color: var(--btn-neutral-text);
+  border-color: var(--btn-neutral-border);
+}
+
+/* Ghost (dezente Alternative: transparenter Hintergrund) */
+button.btn.btn--ghost {
+  background: transparent;
+  color: var(--btn-neutral-text);
+  border-color: var(--btn-neutral-border);
+}
+
+/* Danger (z. B. „Delete“, „Clear all“) */
+button.btn.btn--danger {
+  background: var(--btn-danger-bg);
+  color: var(--btn-danger-text);
+  border-color: var(--btn-danger-border);
+}
+
+/* Hover/Active (kleine Abdunklung) */
+button.btn:hover { transform: translateY(-1px); }
+button.btn:active { transform: translateY(0); }
+
+button.btn.btn--primary:hover    { filter: brightness(var(--btn-hover-mult)); }
+button.btn.btn--primary:active   { filter: brightness(var(--btn-active-mult)); }
+button.btn.btn--secondary:hover  { background: #eceff1; }
+button.btn.btn--secondary:active { background: #e6eaed; }
+button.btn.btn--ghost:hover      { background: #f2f4f7; }
+button.btn.btn--ghost:active     { background: #eceff3; }
+button.btn.btn--danger:hover     { filter: brightness(var(--btn-hover-mult)); }
+button.btn.btn--danger:active    { filter: brightness(var(--btn-active-mult)); }
+
+/* Fokus-Ring */
+button.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--btn-shadow-focus);
+}
+
+/* Disabled */
+button.btn:disabled,
+button.btn[aria-disabled="true"] {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Icon-Unterstützung (SVG oder <span class="icon">…) */
+button.btn .icon {
+  display: inline-flex;
+  width: 1.1em;
+  height: 1.1em;
+  line-height: 1;
+}
+
+/* Volle Breite (falls benötigt) */
+button.btn.btn--block { width: 100%; }
+
+/* Klein/Groß (falls benötigt) */
+button.btn.btn--sm { --btn-padding-y: 6px; --btn-padding-x: 10px; --btn-font-size: 12px; }
+button.btn.btn--lg { --btn-padding-y: 12px; --btn-padding-x: 18px; --btn-font-size: 15px; }
