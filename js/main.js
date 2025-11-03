@@ -2008,6 +2008,10 @@ fieldForm?.addEventListener('submit', (e) => {
 
   // 1) Form auslesen
   const data = Object.fromEntries(new FormData(fieldForm).entries());
+  const pickedSourceSystem = (data.sourceSystem || '').trim();
+  const pickedSourceField = (data.sourceField || '').trim();
+  delete data.sourceSystem;
+  delete data.sourceField;
   const pickedFoundationId = (
     fieldForm.elements.foundationObject?.value || ''
   ).trim();
@@ -2035,12 +2039,21 @@ fieldForm?.addEventListener('submit', (e) => {
     else delete next.glossaryId;
     if (pickedLENumber) next.legalEntityNumber = pickedLENumber;
     else delete next.legalEntityNumber;
+    if (pickedSourceSystem) {
+      next.source = { system: pickedSourceSystem, field: pickedSourceField };
+    } else {
+      delete next.source;
+    }
+
     fields[editFieldIndex] = next;
   } else {
     const rec = { id: uid('fld'), ...data };
     if (pickedFoundationId) rec.foundationObjectId = pickedFoundationId;
     if (pickedGlossaryId) rec.glossaryId = pickedGlossaryId;
     if (pickedLENumber) rec.legalEntityNumber = pickedLENumber;
+    if (pickedSourceSystem) {
+      rec.source = { system: pickedSourceSystem, field: pickedSourceField };
+    }
     fields.push(rec);
   }
 
