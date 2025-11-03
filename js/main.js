@@ -2244,10 +2244,10 @@ function hexWithAlpha(hex, a) {
 }
 function computeNodePositions(nodeEntries = []) {
   const positions = new Map();
-  const paddingY = 32;
-  const baseX = 40;
-  const baseY = 40;
-  const columnGap = 48;
+  const paddingY = 48;
+  const baseX = 60;
+  const baseY = 60;
+  const columnGap = 88;
 
   const fallbackHeight =
     typeof window !== 'undefined' && window.innerHeight
@@ -2361,11 +2361,11 @@ function fieldAnchor(systemName, fieldName, side = 'right') {
   const vpRect = viewport.getBoundingClientRect();
   const rowRect = row.getBoundingClientRect();
   const nodeRect = node.getBoundingClientRect();
+  const nodeRectMap = rectToMap(nodeRect);
+  const rowRectMap = rectToMap(rowRect);
 
-  const OUTSIDE = 14;
   const yAbs = rowRect.top + rowRect.height / 2;
-  const xAbs = side === 'right' ? (nodeRect.right + OUTSIDE)
-                                : (nodeRect.left  - OUTSIDE);
+  const xAbs = side === 'right' ? nodeRect.right : nodeRect.left;
 
   // mapTransformState defensiv (falls noch nicht initialisiert)
   const mtsSource =
@@ -2379,18 +2379,268 @@ function fieldAnchor(systemName, fieldName, side = 'right') {
   const x = (xAbs - vpRect.left - mtsSource.x) / scale;
   const y = (yAbs - vpRect.top - mtsSource.y) / scale;
 
-  return { x, y };
+  return {
+    x,
+    y,
+    side,
+    node,
+    row,
+    nodeRect: nodeRectMap,
+    rowRect: rowRectMap,
+  };
 }
-function orthoPath(p1, p2) {
-  const dx = p2.x - p1.x;
-  const sign = dx >= 0 ? 1 : -1;
-  const base = Math.abs(dx) * 0.4;
-  const offset = Math.min(Math.max(base, 40), 180);
-  const c1x = p1.x + sign * offset;
-  const c2x = p2.x - sign * offset;
-  const c1y = p1.y;
-  const c2y = p2.y;
-  return `M ${p1.x},${p1.y} C ${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`;
+const EDGE_ESCAPE = 28;
+const OBSTACLE_MARGIN = 24;
+const ROUTER_MARGIN = 24;
+const ESCAPE_STEP = 8;
+
+function inflateRect(rect, amount) {
+  return {
+    left: rect.left - amount,
+    right: rect.right + amount,
+    top: rect.top - amount,
+    bottom: rect.bottom + amount,
+  };
+}
+
+function pointInsideRect(point, rect) {
+  return (
+    point.x > rect.left &&
+    point.x < rect.right &&
+    point.y > rect.top &&
+    point.y < rect.bottom
+  );
+}
+
+function segmentIntersectsRect(p1, p2, rect) {
+  if (p1.x === p2.x) {
+    const x = p1.x;
+    const minY = Math.min(p1.y, p2.y);
+    const maxY = Math.max(p1.y, p2.y);
+    if (
+      x >= rect.left &&
+      x <= rect.right &&
+      maxY > rect.top &&
+      minY < rect.bottom
+    ) {
+      return true;
+    }
+  } else if (p1.y === p2.y) {
+    const y = p1.y;
+    const minX = Math.min(p1.x, p2.x);
+    const maxX = Math.max(p1.x, p2.x);
+    if (
+      y >= rect.top &&
+      y <= rect.bottom &&
+      maxX > rect.left &&
+      minX < rect.right
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function collectNodeObstacles(excludeNodes = []) {
+  if (!mapNodesLayer) return [];
+  const excludes = new Set(excludeNodes.filter(Boolean));
+  return Array.from(mapNodesLayer.querySelectorAll('.map-node') || [])
+    .filter((node) => !excludes.has(node))
+    .map((node) => inflateRect(rectToMap(node.getBoundingClientRect()), OBSTACLE_MARGIN));
+}
+
+function ensureEscapePoint(point, direction, obstacles) {
+  let safe = { ...point };
+  const dir = direction >= 0 ? 1 : -1;
+  let attempts = 0;
+  while (obstacles.some((rect) => pointInsideRect(safe, rect)) && attempts < 16) {
+    safe = { x: safe.x + dir * ESCAPE_STEP, y: safe.y };
+    attempts += 1;
+  }
+  return safe;
+}
+
+function computeRectilinearRoute(start, end, obstacles) {
+  const xs = new Set([start.x, end.x]);
+  const ys = new Set([start.y, end.y]);
+
+  obstacles.forEach((rect) => {
+    xs.add(rect.left - ROUTER_MARGIN);
+    xs.add(rect.left);
+    xs.add(rect.right);
+    xs.add(rect.right + ROUTER_MARGIN);
+    ys.add(rect.top - ROUTER_MARGIN);
+    ys.add(rect.top);
+    ys.add(rect.bottom);
+    ys.add(rect.bottom + ROUTER_MARGIN);
+  });
+
+  const xVals = Array.from(xs).sort((a, b) => a - b);
+  const yVals = Array.from(ys).sort((a, b) => a - b);
+
+  const nodeMap = new Map();
+  const keyFor = (ix, iy) => `${ix}:${iy}`;
+
+  for (let ix = 0; ix < xVals.length; ix += 1) {
+    for (let iy = 0; iy < yVals.length; iy += 1) {
+      const point = { x: xVals[ix], y: yVals[iy], ix, iy };
+      if (obstacles.some((rect) => pointInsideRect(point, rect))) continue;
+      nodeMap.set(keyFor(ix, iy), point);
+    }
+  }
+
+  const neighbors = new Map();
+  const registerNeighbor = (key, nKey) => {
+    if (!nodeMap.has(nKey)) return;
+    const list = neighbors.get(key) || [];
+    list.push(nKey);
+    neighbors.set(key, list);
+  };
+
+  nodeMap.forEach((point, key) => {
+    const { ix, iy } = point;
+    const tryNeighbor = (nx, ny) => {
+      const nKey = keyFor(nx, ny);
+      if (!nodeMap.has(nKey)) return;
+      const next = nodeMap.get(nKey);
+      if (obstacles.some((rect) => segmentIntersectsRect(point, next, rect))) return;
+      registerNeighbor(key, nKey);
+    };
+    tryNeighbor(ix + 1, iy);
+    tryNeighbor(ix - 1, iy);
+    tryNeighbor(ix, iy + 1);
+    tryNeighbor(ix, iy - 1);
+  });
+
+  const startKey = keyFor(xVals.indexOf(start.x), yVals.indexOf(start.y));
+  const endKey = keyFor(xVals.indexOf(end.x), yVals.indexOf(end.y));
+  if (!nodeMap.has(startKey) || !nodeMap.has(endKey)) return null;
+
+  const dist = new Map([[startKey, 0]]);
+  const prev = new Map();
+  const unvisited = new Set(nodeMap.keys());
+
+  while (unvisited.size) {
+    let current = null;
+    let minDist = Infinity;
+    unvisited.forEach((key) => {
+      const d = dist.has(key) ? dist.get(key) : Infinity;
+      if (d < minDist) {
+        minDist = d;
+        current = key;
+      }
+    });
+    if (current === null) break;
+    unvisited.delete(current);
+    if (current === endKey) break;
+
+    const point = nodeMap.get(current);
+    const nbs = neighbors.get(current) || [];
+    nbs.forEach((nKey) => {
+      if (!unvisited.has(nKey)) return;
+      const next = nodeMap.get(nKey);
+      const weight = Math.abs(next.x - point.x) + Math.abs(next.y - point.y);
+      const alt = minDist + weight;
+      if (alt < (dist.get(nKey) ?? Infinity)) {
+        dist.set(nKey, alt);
+        prev.set(nKey, current);
+      }
+    });
+  }
+
+  if (!dist.has(endKey)) return null;
+
+  const keys = [];
+  let cursor = endKey;
+  while (cursor) {
+    keys.push(cursor);
+    if (cursor === startKey) break;
+    cursor = prev.get(cursor);
+  }
+  if (keys[keys.length - 1] !== startKey) return null;
+  keys.reverse();
+  return keys.map((key) => ({ x: nodeMap.get(key).x, y: nodeMap.get(key).y }));
+}
+
+function simplifyOrthogonalPoints(points = []) {
+  if (points.length <= 2) return points.slice();
+
+  const deduped = [points[0]];
+  for (let i = 1; i < points.length; i += 1) {
+    const prev = deduped[deduped.length - 1];
+    const curr = points[i];
+    if (!prev) {
+      deduped.push(curr);
+      continue;
+    }
+    if (Math.abs(curr.x - prev.x) < 0.5 && Math.abs(curr.y - prev.y) < 0.5) {
+      continue;
+    }
+    deduped.push(curr);
+  }
+
+  if (deduped.length <= 2) return deduped;
+
+  const simplified = [deduped[0]];
+  for (let i = 1; i < deduped.length - 1; i += 1) {
+    const prev = simplified[simplified.length - 1];
+    const curr = deduped[i];
+    const next = deduped[i + 1];
+    const dx1 = curr.x - prev.x;
+    const dy1 = curr.y - prev.y;
+    const dx2 = next.x - curr.x;
+    const dy2 = next.y - curr.y;
+    if (
+      (Math.abs(dx1) < 1e-6 && Math.abs(dx2) < 1e-6) ||
+      (Math.abs(dy1) < 1e-6 && Math.abs(dy2) < 1e-6)
+    ) {
+      continue;
+    }
+    simplified.push(curr);
+  }
+  simplified.push(deduped[deduped.length - 1]);
+  return simplified;
+}
+
+function pointsToPath(points = []) {
+  if (!points.length) return '';
+  const format = (v) => Math.round(v * 100) / 100;
+  const commands = [`M ${format(points[0].x)},${format(points[0].y)}`];
+  for (let i = 1; i < points.length; i += 1) {
+    const p = points[i];
+    commands.push(`L ${format(p.x)},${format(p.y)}`);
+  }
+  return commands.join(' ');
+}
+
+function buildRoutedEdgePath(start, end, startSide = 'right', endSide = 'left') {
+  if (!start || !end) return '';
+
+  const startDir = startSide === 'right' ? 1 : -1;
+  const endDir = endSide === 'right' ? 1 : -1;
+
+  const excludeNodes = [];
+  if (start.node) excludeNodes.push(start.node);
+  if (end.node && end.node !== start.node) excludeNodes.push(end.node);
+  const obstacles = collectNodeObstacles(excludeNodes);
+
+  const rawStartEscape = { x: start.x + startDir * EDGE_ESCAPE, y: start.y };
+  const rawEndEscape = { x: end.x + endDir * EDGE_ESCAPE, y: end.y };
+
+  const startEscape = ensureEscapePoint(rawStartEscape, startDir, obstacles);
+  const endEscape = ensureEscapePoint(rawEndEscape, endDir, obstacles);
+
+  let route = computeRectilinearRoute(startEscape, endEscape, obstacles);
+  if (!route || route.length < 2) {
+    route = [
+      startEscape,
+      { x: startEscape.x, y: endEscape.y },
+      endEscape,
+    ];
+  }
+
+  const points = simplifyOrthogonalPoints([start, ...route, end]);
+  return pointsToPath(points);
 }
 function clearEdgesKeepDefs() {
   if (!mapEdgesSvg) return;
@@ -2488,7 +2738,15 @@ function drawSelectedFieldEdges() {
     const tgtEl = getFieldEl(tgt.system, targetName);
     tgtEl?.classList.add('is-highlight');
     if (p1 && p2) {
-      drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
+      const pathD = buildRoutedEdgePath(
+        p1,
+        p2,
+        p1.side || 'right',
+        p2.side || 'left'
+      );
+      if (pathD) {
+        drawEdgePath(pathD, true, 'edge-selected');
+      }
     }
   });
   incoming.forEach((src) => {
@@ -2501,7 +2759,15 @@ function drawSelectedFieldEdges() {
     const srcRow = getFieldEl(src.source.system, sourceName);
     srcRow?.classList.add('is-highlight');
     if (p1 && p2) {
-      drawEdgePath(orthoPath(p1, p2), true, 'edge-selected');
+      const pathD = buildRoutedEdgePath(
+        p1,
+        p2,
+        p1.side || 'right',
+        p2.side || 'left'
+      );
+      if (pathD) {
+        drawEdgePath(pathD, true, 'edge-selected');
+      }
     }
   });
 }
@@ -3637,7 +3903,15 @@ function drawSystemEdges() {
     if (start._invalid || end._invalid) return;
 
     drawn.add(key);
-    drawEdgePath(orthoPath(start, end), true);
+    const pathD = buildRoutedEdgePath(
+      start,
+      end,
+      start.side || 'right',
+      end.side || 'left'
+    );
+    if (pathD) {
+      drawEdgePath(pathD, true);
+    }
   });
 }
 
