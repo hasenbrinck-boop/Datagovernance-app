@@ -1959,16 +1959,24 @@ function closeDialog(dlg) {
 /* Ende Teil 5*/
 /* Teil 6 Zeilen 1803-2068*/
 /* ================= Dialog Logic: Fields/Systems/Data Objects/Columns/Domains ================= */
-function updateSourceFieldSelect() {
+function updateSourceFieldSelect(preselectValue = null) {
   const sys = sourceSystemSelect?.value;
   const list = sys ? fields.filter((f) => f.system === sys) : [];
   if (!sourceFieldSelect) return;
+  const desiredValue =
+    preselectValue !== null ? preselectValue : sourceFieldSelect.value;
   const applyUpdate = () => {
     sourceFieldSelect.innerHTML = sys
       ? `<option value="">(select field)</option>` +
         list.map((f) => `<option value="${f.name}">${f.name}</option>`).join('')
       : `<option value="">Select a system first</option>`;
-    sourceFieldSelect.disabled = !sys;
+    sourceFieldSelect.disabled = !sys || list.length === 0;
+    if (sys && desiredValue) {
+      const hasOption = list.some((f) => f.name === desiredValue);
+      sourceFieldSelect.value = hasOption ? desiredValue : '';
+    } else {
+      sourceFieldSelect.value = '';
+    }
   };
   if (typeof requestAnimationFrame === 'function') {
     requestAnimationFrame(applyUpdate);
@@ -2105,8 +2113,7 @@ function openFieldDialog(index = null, opts = {}) {
     // Source-System/-Feld
     if (f.source?.system) {
       if (sourceSystemSelect) sourceSystemSelect.value = f.source.system;
-      updateSourceFieldSelect();
-      if (sourceFieldSelect) sourceFieldSelect.value = f.source.field || '';
+      updateSourceFieldSelect(f.source.field || '');
     } else {
       if (sourceSystemSelect) sourceSystemSelect.value = '';
       updateSourceFieldSelect();
