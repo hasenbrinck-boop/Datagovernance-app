@@ -2568,11 +2568,11 @@ function openFilterOverlay() {
       saveFilters();
       renderDataMap();
     };
-  filterOverlay?.classList.remove('hidden');
+  filterOverlay?.classList.add('is-open');
   filterOverlay?.setAttribute('aria-hidden', 'false');
 }
 function closeFilterOverlay() {
-  filterOverlay?.classList.add('hidden');
+  filterOverlay?.classList.remove('is-open');
   filterOverlay?.setAttribute('aria-hidden', 'true');
 }
 
