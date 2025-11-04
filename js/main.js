@@ -16,8 +16,361 @@ import {
   saveGlossary,
   loadGlossary,
 } from './storage.js';
+import {
+  defaultPermissions,
+  loadPermissions,
+  savePermissions,
+  canViewTab,
+  canDo,
+} from './permissions.js';
 
 console.log('[main.js] Modul geladen');
+
+const permissions = loadPermissions();
+let currentUser =
+  (typeof window !== 'undefined' && window.currentUser) || { roles: ['public'] };
+if (!Array.isArray(currentUser.roles) || !currentUser.roles.length) {
+  currentUser.roles = ['public'];
+}
+if (typeof window !== 'undefined') {
+  window.currentUser = currentUser;
+  window.permissions = permissions;
+  window.defaultPermissions = defaultPermissions;
+}
+
+function toggleButton(id, section, action) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const allowed = canDo(permissions, section, action, currentUser);
+  el.style.display = allowed ? '' : 'none';
+  el.disabled = !allowed;
+}
+
+function applyActionPermissions() {
+  toggleButton('btnGlobalNew', 'global', 'create');
+  toggleButton('btnGlobalExport', 'global', 'export');
+  toggleButton('btnLocalNew', 'local', 'create');
+  toggleButton('btnLocalExport', 'local', 'export');
+  toggleButton('addGlossaryBtn', 'glossary', 'create');
+  toggleButton('addSystemBtn', 'systems', 'create');
+  toggleButton('addColumnBtn', 'admin', 'create');
+  toggleButton('addDomainBtn', 'admin', 'create');
+  toggleButton('addLegalBtn', 'admin', 'create');
+  toggleButton('addDataObjectBtn', 'admin', 'create');
+  toggleButton('permSaveBtn', 'admin', 'edit');
+}
+
+function applyTabVisibility() {
+  const tabMap = {
+    systems: document.getElementById('systemsNavItem'),
+    dataMap: document.getElementById('dataMapNavItem'),
+    glossary: document.getElementById('glossaryNavItem'),
+    admin: document.getElementById('adminNavItem'),
+  };
+  Object.entries(tabMap).forEach(([tab, el]) => {
+    if (!el) return;
+    el.style.display = canViewTab(permissions, tab, currentUser) ? '' : 'none';
+  });
+
+  document
+    .querySelectorAll('#adminTabs .tab')
+    .forEach((btn) => (btn.style.display = ''));
+}
+
+function ensureAccessibleMode() {
+  const body = document.body;
+  if (!body) return;
+  const modeMap = { systems: 'systems', map: 'dataMap', glossary: 'glossary', admin: 'admin' };
+  const currentMode = body.getAttribute('data-mode') || 'systems';
+  if (canViewTab(permissions, modeMap[currentMode] || currentMode, currentUser)) {
+    return;
+  }
+
+  const order = [
+    { id: 'systemsNavItem', tab: 'systems' },
+    { id: 'dataMapNavItem', tab: 'dataMap' },
+    { id: 'glossaryNavItem', tab: 'glossary' },
+    { id: 'adminNavItem', tab: 'admin' },
+  ];
+  for (const item of order) {
+    if (!canViewTab(permissions, item.tab, currentUser)) continue;
+    const el = document.getElementById(item.id);
+    if (el && el.style.display !== 'none') {
+      el.click();
+      return;
+    }
+  }
+}
+
+function refreshPermissionsUI() {
+  applyTabVisibility();
+  applyActionPermissions();
+  ensureAccessibleMode();
+  applyRowPermissions();
+}
+
+function applyRowPermissions() {
+  const globalView = document.getElementById('global');
+  if (globalView) {
+    const canEditGlobal = canDo(permissions, 'global', 'edit', currentUser);
+    const canDeleteGlobal = canDo(permissions, 'global', 'delete', currentUser);
+    globalView
+      .querySelectorAll('.fieldEdit')
+      .forEach((btn) => (btn.style.display = canEditGlobal ? '' : 'none'));
+    globalView
+      .querySelectorAll('.fieldDelete')
+      .forEach((btn) => (btn.style.display = canDeleteGlobal ? '' : 'none'));
+  }
+
+  const localView = document.getElementById('local');
+  if (localView) {
+    const canEditLocal = canDo(permissions, 'local', 'edit', currentUser);
+    const canDeleteLocal = canDo(permissions, 'local', 'delete', currentUser);
+    localView
+      .querySelectorAll('.fieldEdit')
+      .forEach((btn) => (btn.style.display = canEditLocal ? '' : 'none'));
+    localView
+      .querySelectorAll('.fieldDelete')
+      .forEach((btn) => (btn.style.display = canDeleteLocal ? '' : 'none'));
+  }
+
+  const systemsView = document.getElementById('admin-systems');
+  if (systemsView) {
+    const canEditSystems = canDo(permissions, 'systems', 'edit', currentUser);
+    const canDeleteSystems = canDo(permissions, 'systems', 'delete', currentUser);
+    systemsView
+      .querySelectorAll('.systemEdit')
+      .forEach((btn) => (btn.style.display = canEditSystems ? '' : 'none'));
+    systemsView
+      .querySelectorAll('.systemDelete')
+      .forEach((btn) => (btn.style.display = canDeleteSystems ? '' : 'none'));
+  }
+
+  const columnsView = document.getElementById('admin-columns');
+  if (columnsView) {
+    const canEditAdmin = canDo(permissions, 'admin', 'edit', currentUser);
+    const canDeleteAdmin = canDo(permissions, 'admin', 'delete', currentUser);
+    columnsView
+      .querySelectorAll('.columnEdit')
+      .forEach((btn) => (btn.style.display = canEditAdmin ? '' : 'none'));
+    columnsView
+      .querySelectorAll('.columnDelete')
+      .forEach((btn) => (btn.style.display = canDeleteAdmin ? '' : 'none'));
+  }
+
+  const domainsView = document.getElementById('admin-domains');
+  if (domainsView) {
+    const canEditAdmin = canDo(permissions, 'admin', 'edit', currentUser);
+    const canDeleteAdmin = canDo(permissions, 'admin', 'delete', currentUser);
+    domainsView
+      .querySelectorAll('.domainEdit')
+      .forEach((btn) => (btn.style.display = canEditAdmin ? '' : 'none'));
+    domainsView
+      .querySelectorAll('.domainDelete')
+      .forEach((btn) => (btn.style.display = canDeleteAdmin ? '' : 'none'));
+  }
+
+  const legalView = document.getElementById('admin-legal');
+  if (legalView) {
+    const canEditAdmin = canDo(permissions, 'admin', 'edit', currentUser);
+    const canDeleteAdmin = canDo(permissions, 'admin', 'delete', currentUser);
+    const canApproveAdmin = canDo(permissions, 'admin', 'approve', currentUser);
+    legalView
+      .querySelectorAll('.leEdit')
+      .forEach((btn) => (btn.style.display = canEditAdmin ? '' : 'none'));
+    legalView
+      .querySelectorAll('.leDelete')
+      .forEach((btn) => (btn.style.display = canDeleteAdmin ? '' : 'none'));
+    legalView
+      .querySelectorAll('.leManage')
+      .forEach((btn) => (btn.style.display = canApproveAdmin ? '' : 'none'));
+  }
+
+  const glossaryView = document.getElementById('glossaryView');
+  if (glossaryView) {
+    const canEditGlossary = canDo(permissions, 'glossary', 'edit', currentUser);
+    const canDeleteGlossary = canDo(permissions, 'glossary', 'delete', currentUser);
+    glossaryView
+      .querySelectorAll('.glsEdit')
+      .forEach((btn) => (btn.style.display = canEditGlossary ? '' : 'none'));
+    glossaryView
+      .querySelectorAll('.glsDelete')
+      .forEach((btn) => (btn.style.display = canDeleteGlossary ? '' : 'none'));
+  }
+
+  const dataObjectsTable = document.getElementById('dataObjectsTable');
+  if (dataObjectsTable) {
+    const canEditAdmin = canDo(permissions, 'admin', 'edit', currentUser);
+    const canDeleteAdmin = canDo(permissions, 'admin', 'delete', currentUser);
+    dataObjectsTable
+      .querySelectorAll('.dbo-edit')
+      .forEach((btn) => (btn.style.display = canEditAdmin ? '' : 'none'));
+    dataObjectsTable
+      .querySelectorAll('.dbo-delete')
+      .forEach((btn) => (btn.style.display = canDeleteAdmin ? '' : 'none'));
+  }
+}
+
+let permEventsBound = false;
+
+function renderPermTabsMatrix() {
+  const table = document.getElementById('permTabsMatrix');
+  if (!table) return;
+  const roles = Array.isArray(permissions.roles) ? permissions.roles : [];
+  const tabs = permissions.tabs || {};
+  const canModify = canDo(permissions, 'admin', 'edit', currentUser);
+
+  const rows = Object.keys(tabs)
+    .map((tabKey) => {
+      const cells = roles
+        .map((role) => {
+          const allowed = !!tabs[tabKey]?.[role];
+          return `<td><input type="checkbox" data-kind="tab" data-tab="${tabKey}" data-role="${role}"${
+            allowed ? ' checked' : ''
+          }${canModify ? '' : ' disabled'}></td>`;
+        })
+        .join('');
+      return `<tr><th>${tabKey}</th>${cells}</tr>`;
+    })
+    .join('');
+
+  table.innerHTML = `
+    <thead>
+      <tr><th>Tab</th>${roles.map((role) => `<th>${role}</th>`).join('')}</tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  `;
+}
+
+function renderPermActionsMatrix() {
+  const table = document.getElementById('permActionsMatrix');
+  if (!table) return;
+  const roles = Array.isArray(permissions.roles) ? permissions.roles : [];
+  const sections = Object.keys(permissions.actions || {});
+  const actions = ['create', 'edit', 'delete', 'approve', 'export'];
+  const canModify = canDo(permissions, 'admin', 'edit', currentUser);
+
+  const body = sections
+    .map((section) =>
+      actions
+        .map((action) => {
+          const base = !!permissions.actions?.[section]?.[action];
+          const rowCells = roles
+            .map((role) => {
+              const star = permissions.roleOverrides?.[role]?.['*'];
+              const starValue =
+                star && typeof star === 'object' && typeof star[action] === 'boolean'
+                  ? star[action]
+                  : undefined;
+              const override =
+                permissions.roleOverrides?.[role]?.[section]?.[action];
+              const effective =
+                typeof starValue === 'boolean'
+                  ? starValue
+                  : typeof override === 'boolean'
+                  ? override
+                  : base;
+              const disabled = !canModify || typeof starValue === 'boolean';
+              return `<td><input type="checkbox" data-kind="action" data-sec="${section}" data-action="${action}" data-role="${role}"${
+                effective ? ' checked' : ''
+              }${disabled ? ' disabled' : ''}></td>`;
+            })
+            .join('');
+          return `<tr><th>${section} · ${action}</th>${rowCells}</tr>`;
+        })
+        .join('')
+    )
+    .join('');
+
+  table.innerHTML = `
+    <thead>
+      <tr><th>Section · Action</th>${roles.map((role) => `<th>${role}</th>`).join('')}</tr>
+    </thead>
+    <tbody>${body}</tbody>
+  `;
+}
+
+function bindPermMatrixEvents() {
+  if (permEventsBound) return;
+  const root = document.getElementById('admin-permissions');
+  if (!root) return;
+
+  root.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.disabled) return;
+    if (!canDo(permissions, 'admin', 'edit', currentUser)) {
+      event.preventDefault();
+      renderPermTabsMatrix();
+      renderPermActionsMatrix();
+      return;
+    }
+
+    if (target.dataset.kind === 'tab') {
+      const tab = target.dataset.tab;
+      const role = target.dataset.role;
+      if (!tab || !role) return;
+      permissions.tabs = permissions.tabs || {};
+      permissions.tabs[tab] = permissions.tabs[tab] || {};
+      permissions.tabs[tab][role] = target.checked;
+    } else if (target.dataset.kind === 'action') {
+      const role = target.dataset.role;
+      const section = target.dataset.sec;
+      const action = target.dataset.action;
+      if (!role || !section || !action) return;
+
+      const star = permissions.roleOverrides?.[role]?.['*'];
+      if (star && typeof star === 'object' && typeof star[action] === 'boolean') {
+        target.checked = star[action];
+        return;
+      }
+
+      const base = !!permissions.actions?.[section]?.[action];
+      permissions.roleOverrides = permissions.roleOverrides || {};
+      permissions.roleOverrides[role] = permissions.roleOverrides[role] || {};
+      permissions.roleOverrides[role][section] =
+        permissions.roleOverrides[role][section] || {};
+
+      if (target.checked === base) {
+        delete permissions.roleOverrides[role][section][action];
+        if (!Object.keys(permissions.roleOverrides[role][section]).length) {
+          delete permissions.roleOverrides[role][section];
+        }
+        if (!Object.keys(permissions.roleOverrides[role]).length) {
+          delete permissions.roleOverrides[role];
+        }
+      } else {
+        permissions.roleOverrides[role][section][action] = target.checked;
+      }
+    }
+  });
+
+  const saveBtn = document.getElementById('permSaveBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
+      savePermissions(permissions);
+      refreshPermissionsUI();
+      renderPermTabsMatrix();
+      renderPermActionsMatrix();
+    });
+  }
+
+  permEventsBound = true;
+}
+
+function detectFieldSection(index = null, opts = {}) {
+  if (opts?.presetLocal) return 'local';
+  if (typeof index === 'number' && index >= 0) {
+    const field = fields[index];
+    if (!field) return 'global';
+    if (field.local) return 'local';
+    const sys = systems.find((s) => s.name === field.system);
+    return sys?.scope === 'local' ? 'local' : 'global';
+  }
+  const activeTab = document.querySelector('#topTabs .tab.is-active')?.dataset.tab;
+  return activeTab === 'local' ? 'local' : 'global';
+}
 
 const dataDomains = state.dataDomains;
 const systems = state.systems;
@@ -147,6 +500,9 @@ function openDataObjectDialog(index = null) {
     return;
   }
 
+  const action = index !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'admin', action, currentUser)) return;
+
   editDataObjectIndex = index;
   state.editDataObjectIndex = editDataObjectIndex;
   dataObjectForm.reset();
@@ -177,6 +533,8 @@ function openDataObjectDialog(index = null) {
 
 dataObjectForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  const action = editDataObjectIndex !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'admin', action, currentUser)) return;
   const fd = new FormData(dataObjectForm);
   const rec = {
     id: Number(fd.get('id')),
@@ -205,15 +563,18 @@ dataObjectForm?.addEventListener('submit', (e) => {
 
 /* Alte CRUD-Funktionen, jetzt auf Dialog geführt */
 function addDataObject() {
+  if (!canDo(permissions, 'admin', 'create', currentUser)) return;
   openDataObjectDialog(null);
 }
 window.addDataObject = addDataObject; // optional global
 function editDataObject(i) {
+  if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
   openDataObjectDialog(i);
 }
 function deleteDataObject(i) {
   const obj = dataObjects[i];
   if (!obj) return;
+  if (!canDo(permissions, 'admin', 'delete', currentUser)) return;
   if (!confirm(`Delete data object "${obj.name}" (ID ${obj.id})?`)) return;
   dataObjects.splice(i, 1);
   refreshFoundationSelect();
@@ -944,15 +1305,36 @@ function showMainView(id) {
 }
 
 /* ================= Admin Tabs ================= */
-function showAdminSubview(id) {
+function openAdminTab(id) {
   $$('.admin-view').forEach((v) => (v.style.display = 'none'));
   const view = byId(id);
   if (view) view.style.display = 'block';
-  if (id === 'admin-systems') renderSystemsTable();
-  if (id === 'admin-columns') renderColumnsTable();
-  if (id === 'admin-domains') renderDomainsTable();
-  if (id === 'admin-legal') renderLegalEntities();
-  if (id === 'admin-dataobjects') renderDataObjects();
+  switch (id) {
+    case 'admin-systems':
+      renderSystemsTable();
+      break;
+    case 'admin-columns':
+      renderColumnsTable();
+      break;
+    case 'admin-domains':
+      renderDomainsTable();
+      break;
+    case 'admin-legal':
+      renderLegalEntities();
+      break;
+    case 'admin-dataObjects':
+      renderDataObjects();
+      break;
+    case 'admin-permissions':
+      renderPermTabsMatrix();
+      renderPermActionsMatrix();
+      applyActionPermissions();
+      bindPermMatrixEvents();
+      break;
+    default:
+      break;
+  }
+  applyRowPermissions();
 }
 
 /* Sortierfunktion */
@@ -1114,6 +1496,8 @@ function renderFieldsTable() {
     btn.addEventListener('click', () => {
       const v = visible[parseInt(btn.dataset.index, 10)];
       const gi = indexMap.get(v);
+      const section = detectFieldSection(gi);
+      if (!canDo(permissions, section, 'delete', currentUser)) return;
       if (confirm(`Delete field "${fields[gi].name}"?`)) {
         fields.splice(gi, 1);
         renderFieldsTable();
@@ -1200,6 +1584,8 @@ function updateGlobalTableBodyOnly() {
       const v = visible[parseInt(btn.dataset.index, 10)];
       const gi = indexMap.get(v);
       if (gi == null) return;
+      const section = detectFieldSection(gi);
+      if (!canDo(permissions, section, 'delete', currentUser)) return;
       if (confirm(`Delete field "${fields[gi].name}"?`)) {
         fields.splice(gi, 1);
         saveFields?.();
@@ -1432,6 +1818,8 @@ function renderLocalFieldsTables() {
         const v = recs[i];
         const gi = indexMap.get(v);
         if (gi == null) return;
+        const section = detectFieldSection(gi);
+        if (!canDo(permissions, section, 'delete', currentUser)) return;
         if (confirm(`Delete field "${fields[gi].name}"?`)) {
           fields.splice(gi, 1);
           saveFields?.();
@@ -1483,12 +1871,14 @@ function renderSystemsTable() {
     systemsTable.appendChild(tr);
   });
   $$('.systemEdit').forEach((btn) =>
-    btn.addEventListener('click', () =>
-      openSystemDialog(parseInt(btn.dataset.index, 10))
-    )
+    btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'systems', 'edit', currentUser)) return;
+      openSystemDialog(parseInt(btn.dataset.index, 10));
+    })
   );
   $$('.systemDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'systems', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       const name = systems[i].name;
       const deletedId = systems[i].id;
@@ -1539,12 +1929,14 @@ function renderColumnsTable() {
     columnsTable.appendChild(tr);
   });
   $$('.columnEdit').forEach((btn) =>
-    btn.addEventListener('click', () =>
-      openColumnDialog(parseInt(btn.dataset.index, 10))
-    )
+    btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
+      openColumnDialog(parseInt(btn.dataset.index, 10));
+    })
   );
   $$('.columnDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'admin', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       if (!confirm(`Delete column "${fieldColumns[i].name}"?`)) return;
       fieldColumns.splice(i, 1);
@@ -1574,12 +1966,14 @@ function renderDomainsTable() {
     domainsTable.appendChild(tr);
   });
   $$('.domainEdit').forEach((btn) =>
-    btn.addEventListener('click', () =>
-      openDomainDialog(parseInt(btn.dataset.index, 10))
-    )
+    btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
+      openDomainDialog(parseInt(btn.dataset.index, 10));
+    })
   );
   $$('.domainDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'admin', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       const name = dataDomains[i].name;
       if (!confirm(`Delete data domain "${name}"?`)) return;
@@ -1628,12 +2022,14 @@ function renderLegalEntities() {
 
   $$('.leEdit').forEach((btn) =>
     btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       openLegalDialog(i);
     })
   );
   $$('.leDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'admin', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       const le = legalEntities[i];
       if (!confirm(`Delete legal entity "${le.name}"?`)) return;
@@ -1645,6 +2041,7 @@ function renderLegalEntities() {
   });
   $$('.leManage').forEach((btn) =>
     btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'admin', 'approve', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       openLeSystemsDialog(i);
     })
@@ -1656,6 +2053,8 @@ function openLegalDialog(index = null) {
   state.editLegalIndex = editLegalIndex;
   legalForm?.reset();
   if (!legalForm) return;
+  const action = index !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'admin', action, currentUser)) return;
   if (index !== null) {
     const le = legalEntities[index];
     legalForm.elements.number.value = le.number;
@@ -1666,6 +2065,8 @@ function openLegalDialog(index = null) {
 }
 legalForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  const action = editLegalIndex !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'admin', action, currentUser)) return;
   const data = Object.fromEntries(new FormData(legalForm).entries());
   if (editLegalIndex !== null) {
     legalEntities[editLegalIndex] = {
@@ -1703,6 +2104,7 @@ function buildSystemChipList(container, sysList, selectedSet) {
 function openLeSystemsDialog(index) {
   editingLeIndexForSystems = index;
   state.editingLeIndexForSystems = editingLeIndexForSystems;
+  if (!canDo(permissions, 'admin', 'approve', currentUser)) return;
   const le = legalEntities[index];
   const allowed = eligibleLocalOrBothSystems();
   const selected = new Set(leSystemMap[le.number] || []);
@@ -1713,6 +2115,7 @@ function openLeSystemsDialog(index) {
 }
 leSystemsForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  if (!canDo(permissions, 'admin', 'approve', currentUser)) return;
   if (editingLeIndexForSystems == null) {
     closeDialog(leSystemsDialog);
     return;
@@ -1821,6 +2224,7 @@ function renderGlossaryTable() {
   );
   $$('.glsDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (!canDo(permissions, 'glossary', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       const name = list[i]?.term || 'term';
       if (confirm(`Delete glossary term "${name}"?`)) {
@@ -1832,6 +2236,62 @@ function renderGlossaryTable() {
     });
   });
 }
+
+const _renderFieldsTable = renderFieldsTable;
+renderFieldsTable = function (...args) {
+  const result = _renderFieldsTable.apply(this, args);
+  applyRowPermissions();
+  return result;
+};
+
+const _renderLocalFieldsTables = renderLocalFieldsTables;
+renderLocalFieldsTables = function (...args) {
+  const result = _renderLocalFieldsTables.apply(this, args);
+  applyRowPermissions();
+  return result;
+};
+
+const _renderSystemsTable = renderSystemsTable;
+renderSystemsTable = function (...args) {
+  const result = _renderSystemsTable.apply(this, args);
+  applyRowPermissions();
+  return result;
+};
+
+const _renderColumnsTable = renderColumnsTable;
+renderColumnsTable = function (...args) {
+  const result = _renderColumnsTable.apply(this, args);
+  applyRowPermissions();
+  return result;
+};
+
+const _renderDomainsTable = renderDomainsTable;
+renderDomainsTable = function (...args) {
+  const result = _renderDomainsTable.apply(this, args);
+  applyRowPermissions();
+  return result;
+};
+
+const _renderLegalEntities = renderLegalEntities;
+renderLegalEntities = function (...args) {
+  const result = _renderLegalEntities.apply(this, args);
+  applyRowPermissions();
+  return result;
+};
+
+const _renderDataObjects = renderDataObjects;
+renderDataObjects = function (...args) {
+  const result = _renderDataObjects.apply(this, args);
+  applyRowPermissions();
+  return result;
+};
+
+const _renderGlossaryTable = renderGlossaryTable;
+renderGlossaryTable = function (...args) {
+  const result = _renderGlossaryTable.apply(this, args);
+  applyRowPermissions();
+  return result;
+};
 
 function populateGlossaryFieldRefOptions(selected = '') {
   if (!glossaryFieldRef) return;
@@ -1866,6 +2326,8 @@ function openGlossaryDialog(index = null) {
   editGlossaryIndex = index;
   state.editGlossaryIndex = editGlossaryIndex;
   glossaryForm?.reset();
+  const action = index !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'glossary', action, currentUser)) return;
   const selectedRef =
     index !== null
       ? glossaryTerms[index].fieldRefId || glossaryTerms[index].fieldRef || ''
@@ -1885,6 +2347,8 @@ function openGlossaryDialog(index = null) {
 }
 glossaryForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  const action = editGlossaryIndex !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'glossary', action, currentUser)) return;
   const formData = new FormData(glossaryForm);
   const data = Object.fromEntries(formData.entries());
   const glossaryId =
@@ -2009,6 +2473,10 @@ function openFieldDialog(index = null, opts = {}) {
   state.editFieldIndex = editFieldIndex;
   if (!fieldForm) return;
 
+  const section = detectFieldSection(index, opts);
+  const action = index !== null ? 'edit' : 'create';
+  if (!canDo(permissions, section, action, currentUser)) return;
+
   fieldForm.reset();
   ensureFieldDialogHandlers();
 
@@ -2129,6 +2597,11 @@ function openFieldDialog(index = null, opts = {}) {
 
 fieldForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  const section = detectFieldSection(editFieldIndex, {
+    presetLocal: !!fieldForm.elements.local?.checked,
+  });
+  const action = editFieldIndex !== null ? 'edit' : 'create';
+  if (!canDo(permissions, section, action, currentUser)) return;
 
   // 1) Form auslesen
   const data = Object.fromEntries(new FormData(fieldForm).entries());
@@ -2194,6 +2667,9 @@ function openSystemDialog(index = null) {
   systemForm?.reset();
   if (!systemForm) return;
 
+  const action = index !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'systems', action, currentUser)) return;
+
   if (systemDomainSelect) {
     systemDomainSelect.innerHTML =
       `<option value="">(unassigned)</option>` +
@@ -2215,6 +2691,8 @@ function openSystemDialog(index = null) {
 }
 systemForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  const action = editSystemIndex !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'systems', action, currentUser)) return;
   const data = Object.fromEntries(new FormData(systemForm).entries());
   if (editSystemIndex !== null) {
     const old = systems[editSystemIndex];
@@ -2253,6 +2731,8 @@ function openColumnDialog(index = null) {
   state.editColumnIndex = editColumnIndex;
   columnForm?.reset();
   if (!columnForm) return;
+  const action = index !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'admin', action, currentUser)) return;
   if (index !== null) {
     const c = fieldColumns[index];
     columnForm.elements.name.value = c.name;
@@ -2263,6 +2743,8 @@ function openColumnDialog(index = null) {
 }
 columnForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  const action = editColumnIndex !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'admin', action, currentUser)) return;
   const data = Object.fromEntries(new FormData(columnForm).entries());
   data.visible = columnForm.elements.visible.checked;
   data.order = data.order ? Number(data.order) : 1;
@@ -2279,6 +2761,8 @@ function openDomainDialog(index = null) {
   state.editDomainIndex = editDomainIndex;
   domainForm?.reset();
   if (!domainForm) return;
+  const action = index !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'admin', action, currentUser)) return;
   if (index !== null) {
     const d = dataDomains[index];
     domainForm.elements.name.value = d.name;
@@ -2293,6 +2777,8 @@ function openDomainDialog(index = null) {
 }
 domainForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  const action = editDomainIndex !== null ? 'edit' : 'create';
+  if (!canDo(permissions, 'admin', action, currentUser)) return;
   const data = Object.fromEntries(new FormData(domainForm).entries());
   data.active = domainForm.elements.active.checked;
   if (editDomainIndex !== null) dataDomains[editDomainIndex] = data;
@@ -3320,12 +3806,14 @@ function initializeApp() {
             .querySelectorAll('#adminTabs .tab')
             .forEach((t) => t.classList.remove('is-active'));
           firstTab.classList.add('is-active');
-          showAdminSubview(firstTab.dataset.adminTab || 'admin-domains');
+          openAdminTab(firstTab.dataset.adminTab || 'admin-domains');
         }
       } catch (e) {
         console.error(e);
       }
     });
+
+    refreshPermissionsUI();
 
     // =============================
     //  Top-Tabs (Systems-Ansicht)
@@ -3362,7 +3850,7 @@ function initializeApp() {
           .forEach((t) => t.classList.remove('is-active'));
         tab.classList.add('is-active');
         const target = tab.dataset.adminTab;
-        if (target) showAdminSubview(target);
+        if (target) openAdminTab(target);
       });
     });
 
@@ -3371,15 +3859,38 @@ function initializeApp() {
     // =============================
     document.addEventListener('click', (e) => {
       const t = e.target;
-      if (t.closest('#addFieldBtn')) openFieldDialog(null);
-      if (t.closest('#addLocalFieldBtn'))
+      if (t.closest('#addFieldBtn')) {
+        if (!canDo(permissions, 'global', 'create', currentUser)) return;
+        openFieldDialog(null);
+      }
+      if (t.closest('#addLocalFieldBtn')) {
+        if (!canDo(permissions, 'local', 'create', currentUser)) return;
         openFieldDialog(null, { presetLocal: true });
-      if (t.closest('#addSystemBtn')) openSystemDialog(null);
-      if (t.closest('#addColumnBtn')) openColumnDialog(null);
-      if (t.closest('#addDomainBtn')) openDomainDialog(null);
-      if (t.closest('#addLegalBtn')) openLegalDialog(null);
-      if (t.closest('#addGlossaryBtn')) openGlossaryDialog(null);
-      if (t.closest('#addDataObjectBtn')) openDataObjectDialog(null);
+      }
+      if (t.closest('#addSystemBtn')) {
+        if (!canDo(permissions, 'systems', 'create', currentUser)) return;
+        openSystemDialog(null);
+      }
+      if (t.closest('#addColumnBtn')) {
+        if (!canDo(permissions, 'admin', 'create', currentUser)) return;
+        openColumnDialog(null);
+      }
+      if (t.closest('#addDomainBtn')) {
+        if (!canDo(permissions, 'admin', 'create', currentUser)) return;
+        openDomainDialog(null);
+      }
+      if (t.closest('#addLegalBtn')) {
+        if (!canDo(permissions, 'admin', 'create', currentUser)) return;
+        openLegalDialog(null);
+      }
+      if (t.closest('#addGlossaryBtn')) {
+        if (!canDo(permissions, 'glossary', 'create', currentUser)) return;
+        openGlossaryDialog(null);
+      }
+      if (t.closest('#addDataObjectBtn')) {
+        if (!canDo(permissions, 'admin', 'create', currentUser)) return;
+        openDataObjectDialog(null);
+      }
     });
 
     // =============================
@@ -3450,13 +3961,14 @@ function initializeApp() {
       });
 
     document.getElementById('btnGlobalNew')?.addEventListener('click', () => {
-      openFieldDialog(null); // neues Feld (global)
+      if (!canDo(permissions, 'global', 'create', currentUser)) return;
+      openFieldDialog(null);
     });
 
     document
       .getElementById('btnGlobalExport')
       ?.addEventListener('click', () => {
-        // Exportiert die Global-Tabelle
+        if (!canDo(permissions, 'global', 'export', currentUser)) return;
         exportSingleTableAsXlsx('#global .table', 'Global_DataFields.xlsx');
       });
 
@@ -3467,11 +3979,12 @@ function initializeApp() {
     });
 
     document.getElementById('btnLocalNew')?.addEventListener('click', () => {
+      if (!canDo(permissions, 'local', 'create', currentUser)) return;
       openFieldDialog(null, { presetLocal: true });
     });
 
     document.getElementById('btnLocalExport')?.addEventListener('click', () => {
-      // Exportiert alle lokalen Tabellen zusammenhängend
+      if (!canDo(permissions, 'local', 'export', currentUser)) return;
       const tables = Array.from(
         document.querySelectorAll('#localTables table.table')
       );
@@ -3682,6 +4195,8 @@ function initializeApp() {
         // Hinweis: später kann hier statt alert() ein eigenes Overlay kommen
       }
     });
+
+    refreshPermissionsUI();
 
     console.log('[gdf] Init complete.');
   } catch (e) {

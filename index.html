@@ -129,7 +129,8 @@
         <button class="tab" data-admin-tab="admin-legal">Legal Entities</button>
         <button class="tab" data-admin-tab="admin-dataObjects">Data Objects</button>
         <button class="tab" data-admin-tab="admin-columns">Field Information</button>
-        
+        <button class="tab" data-admin-tab="admin-permissions">Permissions</button>
+
       </div>
 
       <!-- Admin: Systems -->
@@ -155,7 +156,7 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Data Objects</div>
-            <button class="btn btn--primary" onclick="addDataObject()">
+            <button id="addDataObjectBtn" class="btn btn--primary">
               <span class="plus"></span> New
             </button>
           </div>
@@ -201,7 +202,7 @@
         </div>
       </section>
 
-<!-- Admin: Legal Entities -->
+      <!-- Admin: Legal Entities -->
 <section id="admin-legal" class="panel admin-view" style="display:none">
   <div class="panel-head">
     <h3 class="panel-title">Legal Entities</h3>
@@ -218,6 +219,27 @@
     </table>
   </div>
 </section>
+
+     <section id="admin-permissions" class="panel admin-view" style="display:none">
+       <div class="panel-head">
+         <h3 class="panel-title">Permissions</h3>
+         <button id="permSaveBtn" class="btn btn--primary">Save</button>
+       </div>
+       <div class="panel-body">
+         <div class="local-table-group">
+           <h3 class="table-title">Tabs visibility</h3>
+           <div class="table-wrap">
+             <table id="permTabsMatrix" class="table"></table>
+           </div>
+         </div>
+         <div class="local-table-group">
+           <h3 class="table-title">Actions per role</h3>
+           <div class="table-wrap">
+             <table id="permActionsMatrix" class="table"></table>
+           </div>
+         </div>
+       </div>
+     </section>
 
       <!-- Data Map -->
       <section id="mapView" class="panel" style="display:none">
