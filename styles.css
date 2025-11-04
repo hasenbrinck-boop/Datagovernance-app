@@ -101,7 +101,7 @@
     border-bottom: 1px solid rgba(255,255,255,0.06);
   }
   .topbar-inner{
-    max-width: 1200px;
+    max-width: 1920px;
     margin: 0 auto;
     padding: 0 12px;
     height: var(--topbar-h);
@@ -120,6 +120,7 @@
     flex:1 1 auto; height:100%;
     display:flex; justify-content:center; align-items:center; gap:20px;
   }
+
   .topnav-item{
     color:#b8c6e0; padding:0 12px; line-height: var(--topbar-h);
     font-size:15px; font-weight:500; letter-spacing:.2px; position:relative;
@@ -129,10 +130,10 @@
   .topnav-item.is-active{ color:#ffffff }
   /* animierte Unterstreichung */
   .topnav-item::after{
-    content:""; position:absolute; left:12px; bottom:5px; height:2px; width:0; opacity:0;
+    content:""; position:absolute; left:12px; bottom:10px; height:2px; width:0; opacity:0;
     background: linear-gradient(90deg, #2e6df6 0%, #7ca3ff 100%);
     border-radius:2px; transform-origin:left center;
-    transition: width .28s ease-in-out, opacity .20s ease, background .25s ease;
+    transition: width .36s ease-in-out, opacity .30s ease, background .25s ease;
     will-change: width, opacity;
   }
   .topnav-item.is-active::after{ width: calc(100% - 24px); opacity:1 }
@@ -400,7 +401,7 @@
   #fld-legal-entity-hint{ display:none !important }
   
   /* iPad/Safari Touch-Höhen */
-  #fieldDialog input, #fieldDialog select, #fieldDialog textarea{ font-size:16px; line-height:1.4 }
+  #fieldDialog input, #fieldDialog select, #fieldDialog textarea{ font-size:12.5px; line-height:1.4 }
   #fieldDialog .stack{ display:flex; flex-direction:column; gap:6px; align-self:start }
   @supports (-webkit-touch-callout: none){ #fieldDialog select{ padding-right:30px } }
   
