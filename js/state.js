@@ -24,18 +24,15 @@ export const state = {
     { id: 'f4', name: 'Position ID', system: '4Plan', type: 'Number', length: 9, mandatory: true, local: false, mapping: '', foundationObjectId: '114', source: { system: 'Employee Central', field: 'PositionID' } },
     { id: 'f5', name: 'Global ID', system: '4Plan', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135', source: { system: 'Employee Central', field: 'EmployeeID' } },
     { id: 'f6', name: 'Location', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '114' },
-    { id: 'f7', name: 'Status', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135' },
-    { id: 'f8', name: 'Status', system: '4Plan', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135' },
+    { id: 'f7', name: 'Status', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135', allowedValues: ['Active','Passive'] },
     { id: 'f9', name: 'Last Name', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135' },
     { id: 'f10', name: 'First Name', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135' },
     { id: 'f11', name: 'First Name', system: '4Plan', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135' },
     { id: 'f12', name: 'Last Name', system: '4Plan', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135' },
-    { id: 'f13', name: 'Number of active Employees', system: 'SAP SEM', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '' },
-    { id: 'f14', name: 'All Leavers', system: 'SAP SEM', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '' },
     { id: 'f15', name: 'Master Cost Center', system: 'P01', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135' },
     { id: 'f16', name: 'Job Code', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '159' },
-    { id: 'le7010_f17', name: 'Vaccination status', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: true, mapping: '', foundationObjectId: '135', legalEntityNumber: '7010' },
-    { id: 'le6006_f18', name: 'Medical Status', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: true, mapping: '', foundationObjectId: '135', legalEntityNumber: '6006' },
+    { id: 'le7010_f17', name: 'Local Status', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: true, mapping: '', foundationObjectId: '135', legalEntityNumber: '7010', allowedValues: ['Short term Absence','Long-term-absend','Military service','active'] },
+    { id: 'le6006_f18', name: 'Local Contract Type', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: true, mapping: '', foundationObjectId: '135', legalEntityNumber: '6006', allowedValues: ['Short term contract','Limited','Permanent contract','Unlimited'] },
   ],
   fieldColumns: [
     { name: 'Field Name', visible: true, order: 1 },
@@ -105,4 +102,68 @@ export function resetSelectionState() {
   state.editGlossaryIndex = null;
   state.selectedFieldRef = null;
   state.editingLeIndexForSystems = null;
+}
+// === MAPPINGS STATE HELPERS (replace) ===
+// WICHTIG: KEIN erneutes "export const state = …" hier!
+// Oben existiert bereits: export const state = { … }
+
+if (!state.mappings) state.mappings = [];
+if (!state.valueMaps) state.valueMaps = [];
+
+/** Felderzugriff zentralisieren (deine Felder liegen in state.fields) */
+export function getAllFields() {
+  return Array.isArray(state.fields) ? state.fields : [];
+}
+
+/**
+ * Deine Datenstruktur:
+ * - Lokale Felder: f.local === true
+ * - System steht als NAME in f.system (z.B. "Employee Central")
+ * - Legal Entity steht in f.legalEntityNumber (z.B. "7010")
+ * - Data Object steht in f.foundationObjectId (z.B. "135")
+ */
+export function getLocalFields({ legalEntityId, systemId, dataObjectId } = {}) {
+  const list = getAllFields().filter(f => f.local === true);
+  return list.filter(f =>
+    (legalEntityId ? String(f.legalEntityNumber || '') === String(legalEntityId) : true) &&
+    (systemId ? String(f.system || '') === String(systemId) : true) &&
+    (dataObjectId ? String(f.foundationObjectId || '') === String(dataObjectId) : true)
+  );
+}
+
+export function getGlobalFields({ dataObjectId } = {}) {
+  const list = getAllFields().filter(f => f.local !== true);
+  return list.filter(f =>
+    (dataObjectId ? String(f.foundationObjectId || '') === String(dataObjectId) : true)
+  );
+}
+
+export function findFieldById(id) {
+  return getAllFields().find(f => f.id === id);
+}
+
+export function getAllowedValues(fieldId) {
+  const f = findFieldById(fieldId);
+  return Array.isArray(f?.allowedValues) ? f.allowedValues : [];
+}
+
+/** Mapping-Helpers
+ * Hinweis: Wir speichern im Mapping später:
+ *  - legalEntityId  (bei dir entspricht das der number, z.B. "7010")
+ *  - systemId       (bei dir verwenden wir den System-NAMEN, z.B. "Employee Central")
+ *  - dataObjectId   (entspricht foundationObjectId des Local Fields)
+ */
+export function findMappings(filter = {}) {
+  const { legalEntityId, systemId, dataObjectId } = filter;
+  const list = Array.isArray(state.mappings) ? state.mappings : [];
+  return list.filter(m =>
+    (legalEntityId ? String(m.legalEntityId || '') === String(legalEntityId) : true) &&
+    (systemId ? String(m.systemId || '') === String(systemId) : true) &&
+    (dataObjectId ? String(m.dataObjectId || '') === String(dataObjectId) : true)
+  );
+}
+
+export function findValueMapByMappingId(fieldMappingId) {
+  const list = Array.isArray(state.valueMaps) ? state.valueMaps : [];
+  return list.find(vm => vm.fieldMappingId === fieldMappingId);
 }
