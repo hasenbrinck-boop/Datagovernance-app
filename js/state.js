@@ -65,6 +65,8 @@ export const state = {
     { id: 'gls-005', term: 'Working Hours', definition: 'Contractual working hours of the employee', info: '', owner: 'HR Analytics', fieldRef: '', type: 'Term' },
     { id: 'gls-006', term: 'Time to recruit', definition: 'Time from final approval of PR until contract signed', info: '', owner: 'HR Analytics', fieldRef: '', type: 'KPI' },
   ],
+  glossaryVersion: { major: 1, minor: 0 },
+  glossaryChanges: [],
   currentSystem: 'All Systems',
   currentDomain: null,
   editFieldIndex: null,

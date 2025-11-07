@@ -303,15 +303,44 @@
       <!-- ===== Glossary ===== -->
       <section id="glossaryView" class="panel" style="display:none">
         <div class="panel-head">
-          <h3 class="panel-title">Global Glossary</h3>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <h3 class="panel-title">Global Glossary</h3>
+            <span id="glossaryVersionDisplay" style="font-size: 0.9rem; color: var(--text-dim); font-weight: 500;">Version 1.0</span>
+          </div>
           <button id="addGlossaryBtn" class="btn btn--primary"><span class="plus"></span> New</button>
         </div>
-        <div class="panel-body">
+        
+        <!-- Glossary Tabs -->
+        <div class="glossary-tabs" style="display: flex; gap: 4px; padding: 12px 16px; border-bottom: 1px solid var(--divider); background: rgba(246, 247, 249, 0.5);">
+          <button class="glossary-tab is-active" data-glossary-tab="current" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--divider); background: #fff; color: var(--text); font-size: 14px; font-weight: 500; transition: all 0.2s;">Glossary</button>
+          <button class="glossary-tab" data-glossary-tab="changes" style="padding: 8px 16px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--text-dim); font-size: 14px; font-weight: 500; transition: all 0.2s;">Changes</button>
+        </div>
+        
+        <!-- Current Glossary View -->
+        <div id="glossaryCurrentView" class="panel-body">
           <table class="table">
             <thead>
               <tr id="glossaryHeadRow"></tr>
             </thead>
             <tbody id="glossaryTable"></tbody>
+          </table>
+        </div>
+        
+        <!-- Changes View -->
+        <div id="glossaryChangesView" class="panel-body" style="display: none;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Version</th>
+                <th>Date</th>
+                <th>Term</th>
+                <th>Change Type</th>
+                <th>Field</th>
+                <th>Old Value</th>
+                <th>New Value</th>
+              </tr>
+            </thead>
+            <tbody id="glossaryChangesTable"></tbody>
           </table>
         </div>
       </section>
