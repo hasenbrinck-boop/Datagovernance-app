@@ -1034,15 +1034,28 @@
 }
 
 .metric-value {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
   transition: all 0.3s ease;
 }
 
+.metric-value.metric-clickable {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.metric-value.metric-clickable:hover {
+  background: rgba(46, 109, 246, 0.1);
+  color: var(--accent-1);
+  transform: scale(1.05);
+}
+
 .metric-value--primary {
-  font-size: 1.5rem;
+  font-size: 0.875rem;
   color: var(--accent-1);
   font-weight: 700;
 }
@@ -1060,7 +1073,7 @@
 /* Charts Section */
 .dashboard-charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   padding: 0 20px 20px;
   max-width: 1400px;
@@ -1229,8 +1242,8 @@
 
 .details-overlay-card {
   position: relative;
-  width: min(600px, 90vw);
-  max-height: min(700px, 85vh);
+  width: min(500px, 90vw);
+  max-height: min(600px, 80vh);
   background: rgba(255, 255, 255, 0.98);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -1250,14 +1263,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   background: linear-gradient(180deg, rgba(249, 250, 251, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
 }
 
 .details-overlay-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.02em;
@@ -1289,8 +1302,8 @@
 }
 
 .details-overlay-body {
-  padding: 20px 24px;
-  max-height: calc(85vh - 80px);
+  padding: 16px 20px;
+  max-height: calc(80vh - 70px);
   overflow-y: auto;
 }
 

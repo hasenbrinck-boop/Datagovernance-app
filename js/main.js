@@ -4988,7 +4988,7 @@ function renderDataObjectsChart() {
     }
   });
   
-  renderSimpleBarChart(ctx, dataObjectCounts, 'Data Objects');
+  render3DPieChart(ctx, dataObjectCounts);
 }
 
 function renderDefinitionsChart() {
@@ -5006,7 +5006,7 @@ function renderDefinitionsChart() {
     'Without Definition': withoutDef
   };
   
-  renderSimplePieChart(ctx, data);
+  render3DPieChart(ctx, data);
 }
 
 function renderDomainsChart() {
@@ -5023,7 +5023,7 @@ function renderDomainsChart() {
     domainCounts[domain] = (domainCounts[domain] || 0) + 1;
   });
   
-  renderSimpleBarChart(ctx, domainCounts, 'Domains');
+  render3DPieChart(ctx, domainCounts);
 }
 
 function renderSimpleBarChart(ctx, data, title) {
@@ -5114,7 +5114,7 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function renderSimplePieChart(ctx, data) {
+function render3DPieChart(ctx, data) {
   const CHART_HEIGHT = 340;
   
   const canvas = ctx.canvas;
@@ -5128,7 +5128,7 @@ function renderSimplePieChart(ctx, data) {
   if (total === 0) {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = '#86868B';
-    ctx.font = '500 22px -apple-system, system-ui, sans-serif';
+    ctx.font = '300 18px -apple-system, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('No data', width / 2, height / 2);
     return;
@@ -5137,65 +5137,130 @@ function renderSimplePieChart(ctx, data) {
   ctx.clearRect(0, 0, width, height);
   
   const centerX = width / 2;
-  const centerY = height / 2 - 20;
-  const radius = Math.min(width, height) * 0.32;
+  const centerY = height / 2 - 50;
+  const radius = Math.min(width, height) * 0.28;
+  const depth = 20; // 3D depth effect
   
-  // Apple-style colors
-  const colors = ['#007AFF', '#E5E5EA'];
+  // Apple-style vibrant colors with variety
+  const baseColors = [
+    '#007AFF', // Blue
+    '#34C759', // Green
+    '#FF9500', // Orange
+    '#FF3B30', // Red
+    '#AF52DE', // Purple
+    '#5856D6', // Indigo
+    '#FF2D55', // Pink
+    '#FFCC00', // Yellow
+  ];
+  
+  // Generate darker shades for 3D effect
+  const darkenColor = (color, amount = 0.3) => {
+    const hex = color.replace('#', '');
+    const r = Math.max(0, parseInt(hex.substr(0, 2), 16) * (1 - amount));
+    const g = Math.max(0, parseInt(hex.substr(2, 2), 16) * (1 - amount));
+    const b = Math.max(0, parseInt(hex.substr(4, 2), 16) * (1 - amount));
+    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+  };
   
   let startAngle = -Math.PI / 2;
   
+  // Draw 3D depth (bottom layer)
   labels.forEach((label, i) => {
     const value = values[i];
     const sliceAngle = (value / total) * 2 * Math.PI;
     const endAngle = startAngle + sliceAngle;
     
-    // Draw slice
-    ctx.fillStyle = colors[i % colors.length];
+    // Draw depth
+    ctx.fillStyle = darkenColor(baseColors[i % baseColors.length]);
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY + depth);
+    ctx.arc(centerX, centerY + depth, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fill();
+    
+    startAngle = endAngle;
+  });
+  
+  // Draw top layer (main pie)
+  startAngle = -Math.PI / 2;
+  labels.forEach((label, i) => {
+    const value = values[i];
+    const sliceAngle = (value / total) * 2 * Math.PI;
+    const endAngle = startAngle + sliceAngle;
+    
+    // Draw slice with gradient for 3D effect
+    const gradient = ctx.createRadialGradient(
+      centerX - radius * 0.3, centerY - radius * 0.3, 0,
+      centerX, centerY, radius
+    );
+    gradient.addColorStop(0, baseColors[i % baseColors.length]);
+    gradient.addColorStop(1, darkenColor(baseColors[i % baseColors.length], 0.15));
+    
+    ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, radius, startAngle, endAngle);
     ctx.closePath();
     ctx.fill();
     
-    // Draw percentage in the middle of slice
-    const midAngle = startAngle + sliceAngle / 2;
-    const textX = centerX + Math.cos(midAngle) * radius * 0.65;
-    const textY = centerY + Math.sin(midAngle) * radius * 0.65;
-    
-    const percentage = Math.round((value / total) * 100);
-    if (percentage > 5) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '600 26px -apple-system, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(percentage + '%', textX, textY);
-    }
+    // Add subtle stroke
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
     
     startAngle = endAngle;
   });
   
-  // Draw legend with better Apple-style
-  const legendX = width / 2 - 120;
-  let legendY = height - 70;
+  // Draw labels outside with light font
+  startAngle = -Math.PI / 2;
+  labels.forEach((label, i) => {
+    const value = values[i];
+    const sliceAngle = (value / total) * 2 * Math.PI;
+    const midAngle = startAngle + sliceAngle / 2;
+    const percentage = Math.round((value / total) * 100);
+    
+    // Position label outside the pie
+    const labelDistance = radius + 40;
+    const textX = centerX + Math.cos(midAngle) * labelDistance;
+    const textY = centerY + Math.sin(midAngle) * labelDistance;
+    
+    // Draw percentage with color matching slice
+    ctx.fillStyle = baseColors[i % baseColors.length];
+    ctx.font = '300 16px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${percentage}%`, textX, textY);
+    
+    startAngle += sliceAngle;
+  });
+  
+  // Draw elegant legend at bottom
+  const legendY = height - 50;
+  const totalLegendWidth = labels.reduce((sum, label) => {
+    ctx.font = '300 16px -apple-system, system-ui, sans-serif';
+    return sum + ctx.measureText(label).width + 40;
+  }, 0);
+  
+  let legendX = (width - totalLegendWidth) / 2;
   
   labels.forEach((label, i) => {
     const value = values[i];
-    const percentage = Math.round((value / total) * 100);
     
-    // Color box with rounded corners
-    ctx.fillStyle = colors[i % colors.length];
-    roundRect(ctx, legendX, legendY, 28, 28, 6);
+    // Color indicator (small circle)
+    ctx.fillStyle = baseColors[i % baseColors.length];
+    ctx.beginPath();
+    ctx.arc(legendX + 6, legendY, 6, 0, 2 * Math.PI);
     ctx.fill();
     
-    // Label
-    ctx.fillStyle = '#1D1D1F';
-    ctx.font = '500 22px -apple-system, system-ui, sans-serif';
+    // Label text
+    ctx.fillStyle = '#86868B';
+    ctx.font = '300 16px -apple-system, system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${label}: ${value} (${percentage}%)`, legendX + 42, legendY + 14);
+    const text = `${label}`;
+    ctx.fillText(text, legendX + 18, legendY);
     
-    legendY += 38;
+    legendX += ctx.measureText(text).width + 40;
   });
 }
 
@@ -5225,14 +5290,17 @@ function setupDashboardHandlers() {
   
   refreshBtn?.addEventListener('click', updateDashboard);
   
-  // Metric card click handlers (show details in overlay)
-  document.querySelectorAll('.metric-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const metric = card.dataset.metric;
-      showDetailsOverlay(metric);
+  // Individual metric value click handlers (show filtered details)
+  document.querySelectorAll('.metric-value.metric-clickable').forEach(value => {
+    value.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const filter = value.dataset.filter;
+      const rect = value.getBoundingClientRect();
+      showDetailsOverlay(filter, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
     });
   });
   
+  // Metric card click handlers (show general details) - removed to avoid conflicts
   // Chart details buttons
   document.querySelectorAll('.chart-details-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -5269,10 +5337,11 @@ function setupDashboardHandlers() {
   });
 }
 
-function showDetailsOverlay(type) {
+function showDetailsOverlay(type, position = null) {
   const overlay = document.getElementById('detailsOverlay');
   const title = document.getElementById('detailsOverlayTitle');
   const body = document.getElementById('detailsOverlayBody');
+  const card = overlay?.querySelector('.details-overlay-card');
   
   if (!overlay || !title || !body) return;
   
@@ -5280,8 +5349,68 @@ function showDetailsOverlay(type) {
   
   let titleText = 'Details';
   let content = '';
+  let dataToShow = [];
   
   switch (type) {
+    // New specific metric filters
+    case 'global-systems':
+      titleText = 'Global Systems';
+      dataToShow = filteredSystems.filter(s => s.scope === 'global' || s.scope === 'both');
+      content = renderSystemsDetails(dataToShow);
+      break;
+      
+    case 'local-systems':
+      titleText = 'Local Systems';
+      dataToShow = filteredSystems.filter(s => s.scope === 'local' || s.scope === 'both');
+      content = renderSystemsDetails(dataToShow);
+      break;
+      
+    case 'all-systems':
+      titleText = 'All Systems';
+      content = renderSystemsDetails(filteredSystems);
+      break;
+      
+    case 'global-fields':
+      titleText = 'Global Fields';
+      dataToShow = filteredFields.filter(f => !f.local);
+      content = renderFieldsDetails(dataToShow);
+      break;
+      
+    case 'local-fields':
+      titleText = 'Local Fields';
+      dataToShow = filteredFields.filter(f => f.local);
+      content = renderFieldsDetails(dataToShow);
+      break;
+      
+    case 'all-fields':
+      titleText = 'All Fields';
+      content = renderFieldsDetails(filteredFields);
+      break;
+      
+    case 'with-definition':
+      titleText = 'Fields With Definition';
+      dataToShow = filteredFields.filter(f => f.glossaryRef);
+      content = renderFieldsDetails(dataToShow);
+      break;
+      
+    case 'without-definition':
+      titleText = 'Fields Without Definition';
+      dataToShow = filteredFields.filter(f => !f.glossaryRef);
+      content = renderFieldsDetails(dataToShow);
+      break;
+      
+    case 'all-glossary':
+      titleText = 'All Glossary Terms';
+      content = renderGlossaryDetails();
+      break;
+      
+    case 'linked-fields':
+      titleText = 'Fields with Glossary Links';
+      dataToShow = filteredFields.filter(f => f.glossaryRef && f.glossaryRef !== '');
+      content = renderFieldsDetails(dataToShow);
+      break;
+    
+    // Original general categories
     case 'systems':
       titleText = 'Systems';
       content = renderSystemsDetails(filteredSystems);
@@ -5318,6 +5447,23 @@ function showDetailsOverlay(type) {
   
   title.textContent = titleText;
   body.innerHTML = content;
+  
+  // Position overlay near click if position provided
+  if (position && card) {
+    // Remove centering and position near click
+    card.style.position = 'fixed';
+    card.style.left = `${Math.min(position.x, window.innerWidth - 320)}px`;
+    card.style.top = `${Math.min(position.y, window.innerHeight - 400)}px`;
+    card.style.transform = 'translate(-50%, -50%)';
+    card.style.maxWidth = '500px';
+  } else if (card) {
+    // Reset to default centering
+    card.style.position = 'relative';
+    card.style.left = '';
+    card.style.top = '';
+    card.style.transform = '';
+    card.style.maxWidth = '';
+  }
   
   overlay.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
