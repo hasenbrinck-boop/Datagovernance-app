@@ -88,7 +88,6 @@
             <div class="metric-card" data-metric="systems">
               <div class="metric-header">
                 <h3 class="metric-title">Systems</h3>
-                <span class="metric-icon">⚙️</span>
               </div>
               <div class="metric-content">
                 <div class="metric-row">
@@ -110,7 +109,6 @@
             <div class="metric-card" data-metric="fields">
               <div class="metric-header">
                 <h3 class="metric-title">Data Fields</h3>
-                <span class="metric-icon">📋</span>
               </div>
               <div class="metric-content">
                 <div class="metric-row">
@@ -132,7 +130,6 @@
             <div class="metric-card" data-metric="definitions">
               <div class="metric-header">
                 <h3 class="metric-title">Definitions</h3>
-                <span class="metric-icon">📖</span>
               </div>
               <div class="metric-content">
                 <div class="metric-row">
@@ -154,7 +151,6 @@
             <div class="metric-card" data-metric="glossary">
               <div class="metric-header">
                 <h3 class="metric-title">Glossary</h3>
-                <span class="metric-icon">📚</span>
               </div>
               <div class="metric-content">
                 <div class="metric-row">
@@ -756,6 +752,26 @@ Passive" style="width:100%;"></textarea>
 
   <div id="appError" class="app-error" style="display: none;"></div>
 
+<!-- ===== Apple-Style Details Overlay ===== -->
+<div id="detailsOverlay" class="details-overlay" aria-hidden="true">
+  <div class="details-overlay-backdrop">
+    <div class="details-overlay-card">
+      <div class="details-overlay-header">
+        <h3 id="detailsOverlayTitle" class="details-overlay-title">Details</h3>
+        <button id="detailsOverlayClose" class="details-overlay-close" aria-label="Close">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="details-overlay-body" id="detailsOverlayBody">
+        <!-- Content will be injected here -->
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Mapping-Editor (Modal) ===== -->
 <div id="mappingEditorModal" class="modal" role="dialog" aria-modal="true" hidden>
   <div class="modal-dialog">
@@ -875,7 +891,8 @@ Passive" style="width:100%;"></textarea>
 
     function onMainViewChanged(){
       // Wenn die Systems-Untertabs (TopTabs) nicht sichtbar sind -> alles verstecken
-      const systemsTabsVisible = !!document.getElementById('topTabs')?.offsetParent;
+      const topTabs = document.getElementById('topTabs');
+      const systemsTabsVisible = !!(topTabs && topTabs.offsetParent);
       if (!systemsTabsVisible) hideSystemsPanels();
     }
 

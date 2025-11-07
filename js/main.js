@@ -784,8 +784,11 @@ function renderSystemsSidebar() {
   const liAll = document.createElement('li');
   liAll.textContent = 'All Systems';
   liAll.dataset.all = 'true';
-  if (currentSystem === 'All Systems') liAll.classList.add('is-active');
-  liAll.addEventListener('click', () => setModeSystems('All Systems'));
+  if (currentSystem === 'All Systems' && !state.currentDomain) liAll.classList.add('is-active');
+  liAll.addEventListener('click', () => {
+    state.currentDomain = null;
+    setModeSystems('All Systems');
+  });
   systemListEl.appendChild(liAll);
 
   const names = getDomainNames();
@@ -795,13 +798,15 @@ function renderSystemsSidebar() {
     const head = document.createElement('div');
     head.className = 'cluster-head';
     const color = domainByName(dn)?.color || '#6a6a6a';
-    head.innerHTML = `<span><span class="domain-icon" style="background:${color}"></span>${dn}</span><span>▾</span>`;
+    // Highlight domain header if it's the active domain filter
+    const isDomainActive = state.currentDomain === dn;
+    head.innerHTML = `<span class="${isDomainActive ? 'is-active' : ''}"><span class="domain-icon" style="background:${color}"></span>${dn}</span><span>▾</span>`;
     const body = document.createElement('div');
     body.className = 'cluster-body';
     getSystemsByDomain(dn).forEach((sys) => {
       const li = document.createElement('li');
       li.textContent = sys.name;
-      if (currentSystem === sys.name) li.classList.add('is-active');
+      if (currentSystem === sys.name && !state.currentDomain) li.classList.add('is-active');
       li.addEventListener('click', (e) => {
         e.stopPropagation();
         setModeSystems(sys.name);
@@ -810,12 +815,26 @@ function renderSystemsSidebar() {
     });
     head.addEventListener('click', (e) => {
       e.stopPropagation();
-      cluster.classList.toggle('is-open');
-      head.querySelector('span:last-child').textContent =
-        cluster.classList.contains('is-open') ? '▾' : '▸';
-      body.style.display = cluster.classList.contains('is-open')
-        ? 'block'
-        : 'none';
+      // Check if clicking on the domain name (left side) or toggle icon (right side)
+      const clickedOnName = e.target.classList.contains('domain-icon') || 
+                            (e.target.tagName === 'SPAN' && e.target.querySelector('.domain-icon'));
+      
+      if (clickedOnName || e.target === head.querySelector('span:first-child')) {
+        // Click on domain name - filter by domain
+        setModeSystemsByDomain(dn);
+      } else {
+        // Click on toggle icon - collapse/expand
+        cluster.classList.toggle('is-open');
+        head.querySelector('span:last-child').textContent =
+          cluster.classList.contains('is-open') ? '▾' : '▸';
+        body.style.display = cluster.classList.contains('is-open')
+          ? 'block'
+          : 'none';
+      }
+    });
+          ? 'block'
+          : 'none';
+      }
     });
     cluster.appendChild(head);
     cluster.appendChild(body);
@@ -1031,6 +1050,7 @@ function showMainView(tabId) {
 function setModeSystems(name) {
   // State übernehmen
   state.currentSystem = name;
+  state.currentDomain = null; // Clear domain filter when selecting specific system
   state.selectedFieldRef = null;
   clearSelectionVisuals?.();
   document.body.setAttribute('data-mode', 'systems');
@@ -1079,6 +1099,42 @@ function setModeSystems(name) {
 
   // anzeigen
   showMainView(target);
+}
+
+/**
+ * Filter systems view by domain - shows all fields from systems in the specified domain
+ */
+function setModeSystemsByDomain(domainName) {
+  // State übernehmen
+  state.currentSystem = 'All Systems'; // Not filtering by specific system
+  state.currentDomain = domainName; // Set domain filter
+  state.selectedFieldRef = null;
+  clearSelectionVisuals?.();
+  document.body.setAttribute('data-mode', 'systems');
+  showOnly?.('systems');
+
+  // All tabs should be visible when filtering by domain
+  const tabGlobal   = document.querySelector('#topTabs .tab[data-tab="global"]');
+  const tabLocal    = document.querySelector('#topTabs .tab[data-tab="local"]');
+  const tabMappings = document.querySelector('#topTabs .tab[data-tab="mappings"]');
+
+  if (tabGlobal)   tabGlobal.style.display   = 'inline-flex';
+  if (tabLocal)    tabLocal.style.display    = 'inline-flex';
+  if (tabMappings) tabMappings.style.display = 'inline-flex';
+
+  // Update sidebar to show active domain
+  updateSystemsSidebar();
+
+  // Determine which tab to show
+  const activeBtn = document.querySelector('#topTabs .tab.is-active');
+  const activeId  = activeBtn?.dataset?.tab || 'global';
+  
+  // Mark active tab
+  document.querySelectorAll('#topTabs .tab')
+    .forEach(t => t.classList.toggle('is-active', t.dataset.tab === activeId));
+
+  // Show the view
+  showMainView(activeId);
 }
 
 // beim App-Start einmalig aufrufen (falls noch nicht):
@@ -1198,9 +1254,18 @@ function renderFieldsTable() {
 
   let visible = fields
     .filter((f) => isValidSystemName(f.system))
-    .filter(
-      (f) => currentSystem === 'All Systems' || f.system === currentSystem
-    )
+    .filter((f) => {
+      // Filter by specific system
+      if (currentSystem !== 'All Systems') {
+        return f.system === currentSystem;
+      }
+      // Filter by domain
+      if (state.currentDomain) {
+        const sys = systems.find((s) => s.name === f.system);
+        return sys && sys.dataDomain === state.currentDomain;
+      }
+      return true;
+    })
     .filter((f) => {
       const sys = systems.find((s) => s.name === f.system);
       return !f.local && (sys?.scope || 'both') !== 'local';
@@ -1396,9 +1461,18 @@ function renderLocalFieldsTables() {
   // Lokale Felder filtern (nur state.*)
   const localCandidates = (state.fields || [])
     .filter((f) => isValidSystemName(f.system))
-    .filter(
-      (f) => (state.currentSystem === 'All Systems') || f.system === state.currentSystem
-    )
+    .filter((f) => {
+      // Filter by specific system
+      if (state.currentSystem !== 'All Systems') {
+        return f.system === state.currentSystem;
+      }
+      // Filter by domain
+      if (state.currentDomain) {
+        const sys = (state.systems || []).find((s) => s.name === f.system);
+        return sys && sys.dataDomain === state.currentDomain;
+      }
+      return true;
+    })
     .filter((f) => {
       const sys = (state.systems || []).find((s) => s.name === f.system);
       return f.local === true || sys?.scope === 'local';
@@ -4955,12 +5029,12 @@ function renderDomainsChart() {
 }
 
 function renderSimpleBarChart(ctx, data, title) {
-  // Chart constants
-  const CHART_HEIGHT = 400;
-  const CHART_PADDING = 60;
-  const BAR_WIDTH_RATIO = 0.7;
-  const GAP_WIDTH_RATIO = 0.3;
-  const LABEL_ROTATION = -Math.PI / 6; // 30 degrees
+  // Chart constants - adjusted for more Apple-like appearance
+  const CHART_HEIGHT = 340;
+  const CHART_PADDING = 50;
+  const CHART_PADDING_BOTTOM = 80; // More space for straight labels
+  const BAR_WIDTH_RATIO = 0.65;
+  const GAP_WIDTH_RATIO = 0.35;
   const MAX_LABEL_LENGTH = 15;
   const TRUNCATED_LABEL_LENGTH = 12;
   
@@ -4975,15 +5049,15 @@ function renderSimpleBarChart(ctx, data, title) {
   // Clear canvas
   ctx.clearRect(0, 0, width, height);
   
-  // Colors (Apple-inspired blue gradient)
+  // Apple-inspired blue gradient colors with better progression
   const colors = [
-    '#2e6df6', '#4b83ff', '#7ca3ff', '#5d9cff', '#3d7fff',
-    '#6ba5ff', '#8bb5ff', '#4878ff', '#5a90ff', '#7aacff'
+    '#007AFF', '#0A84FF', '#5AC8FA', '#30B0C7', '#0071E3',
+    '#4A90E2', '#64B5F6', '#42A5F5', '#1E88E5', '#1976D2'
   ];
   
   // Chart dimensions
   const chartWidth = width - CHART_PADDING * 2;
-  const chartHeight = height - CHART_PADDING * 2;
+  const chartHeight = height - CHART_PADDING - CHART_PADDING_BOTTOM;
   const barWidth = chartWidth / labels.length * BAR_WIDTH_RATIO;
   const gap = chartWidth / labels.length * GAP_WIDTH_RATIO;
   
@@ -4994,42 +5068,56 @@ function renderSimpleBarChart(ctx, data, title) {
     const value = values[i];
     const barHeight = (value / maxValue) * chartHeight;
     const x = CHART_PADDING + i * (barWidth + gap) + gap / 2;
-    const y = height - CHART_PADDING - barHeight;
+    const y = height - CHART_PADDING_BOTTOM - barHeight;
     
-    // Draw bar with gradient
-    const gradient = ctx.createLinearGradient(0, y, 0, height - CHART_PADDING);
+    // Draw bar with smoother gradient
+    const gradient = ctx.createLinearGradient(0, y, 0, height - CHART_PADDING_BOTTOM);
     const baseColor = colors[i % colors.length];
     gradient.addColorStop(0, baseColor);
-    // Convert hex to rgba for proper alpha handling
+    gradient.addColorStop(0.5, baseColor);
+    // Convert hex to rgba for smoother fade
     const r = parseInt(baseColor.slice(1, 3), 16);
     const g = parseInt(baseColor.slice(3, 5), 16);
     const b = parseInt(baseColor.slice(5, 7), 16);
-    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.5)`);
+    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.6)`);
     
     ctx.fillStyle = gradient;
-    ctx.fillRect(x, y, barWidth, barHeight);
+    // Add rounded corners to bars
+    roundRect(ctx, x, y, barWidth, barHeight, 6);
+    ctx.fill();
     
     // Draw value on top of bar
-    ctx.fillStyle = '#334155';
-    ctx.font = 'bold 28px -apple-system, system-ui, sans-serif';
-    ctx.fillText(value, x + barWidth / 2, y - 10);
+    ctx.fillStyle = '#1D1D1F';
+    ctx.font = '600 26px -apple-system, system-ui, sans-serif';
+    ctx.fillText(value, x + barWidth / 2, y - 12);
     
-    // Draw label
-    ctx.fillStyle = '#64748b';
-    ctx.font = '22px -apple-system, system-ui, sans-serif';
-    ctx.save();
-    ctx.translate(x + barWidth / 2, height - CHART_PADDING + 20);
-    ctx.rotate(LABEL_ROTATION);
+    // Draw label straight (no rotation) - Apple style
+    ctx.fillStyle = '#86868B';
+    ctx.font = '500 20px -apple-system, system-ui, sans-serif';
     const displayLabel = label.length > MAX_LABEL_LENGTH 
       ? label.substring(0, TRUNCATED_LABEL_LENGTH) + '...' 
       : label;
-    ctx.fillText(displayLabel, 0, 0);
-    ctx.restore();
+    ctx.fillText(displayLabel, x + barWidth / 2, height - CHART_PADDING_BOTTOM + 30);
   });
 }
 
+// Helper function to draw rounded rectangles
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
 function renderSimplePieChart(ctx, data) {
-  const CHART_HEIGHT = 400;
+  const CHART_HEIGHT = 340;
   
   const canvas = ctx.canvas;
   const width = canvas.width = canvas.offsetWidth * 2;
@@ -5041,8 +5129,8 @@ function renderSimplePieChart(ctx, data) {
   
   if (total === 0) {
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#64748b';
-    ctx.font = '24px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#86868B';
+    ctx.font = '500 22px -apple-system, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('No data', width / 2, height / 2);
     return;
@@ -5051,10 +5139,11 @@ function renderSimplePieChart(ctx, data) {
   ctx.clearRect(0, 0, width, height);
   
   const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = Math.min(width, height) * 0.35;
+  const centerY = height / 2 - 20;
+  const radius = Math.min(width, height) * 0.32;
   
-  const colors = ['#2e6df6', '#e5e7eb'];
+  // Apple-style colors
+  const colors = ['#007AFF', '#E5E5EA'];
   
   let startAngle = -Math.PI / 2;
   
@@ -5073,13 +5162,13 @@ function renderSimplePieChart(ctx, data) {
     
     // Draw percentage in the middle of slice
     const midAngle = startAngle + sliceAngle / 2;
-    const textX = centerX + Math.cos(midAngle) * radius * 0.7;
-    const textY = centerY + Math.sin(midAngle) * radius * 0.7;
+    const textX = centerX + Math.cos(midAngle) * radius * 0.65;
+    const textY = centerY + Math.sin(midAngle) * radius * 0.65;
     
     const percentage = Math.round((value / total) * 100);
     if (percentage > 5) {
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 28px -apple-system, system-ui, sans-serif';
+      ctx.font = '600 26px -apple-system, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(percentage + '%', textX, textY);
@@ -5088,26 +5177,27 @@ function renderSimplePieChart(ctx, data) {
     startAngle = endAngle;
   });
   
-  // Draw legend
-  const legendX = 40;
-  let legendY = height - 80;
+  // Draw legend with better Apple-style
+  const legendX = width / 2 - 120;
+  let legendY = height - 70;
   
   labels.forEach((label, i) => {
     const value = values[i];
     const percentage = Math.round((value / total) * 100);
     
-    // Color box
+    // Color box with rounded corners
     ctx.fillStyle = colors[i % colors.length];
-    ctx.fillRect(legendX, legendY, 30, 30);
+    roundRect(ctx, legendX, legendY, 28, 28, 6);
+    ctx.fill();
     
     // Label
-    ctx.fillStyle = '#334155';
-    ctx.font = '24px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#1D1D1F';
+    ctx.font = '500 22px -apple-system, system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${label}: ${value} (${percentage}%)`, legendX + 45, legendY + 15);
+    ctx.fillText(`${label}: ${value} (${percentage}%)`, legendX + 42, legendY + 14);
     
-    legendY += 45;
+    legendY += 38;
   });
 }
 
@@ -5137,11 +5227,11 @@ function setupDashboardHandlers() {
   
   refreshBtn?.addEventListener('click', updateDashboard);
   
-  // Metric card click handlers (show details)
+  // Metric card click handlers (show details in overlay)
   document.querySelectorAll('.metric-card').forEach(card => {
     card.addEventListener('click', () => {
       const metric = card.dataset.metric;
-      showDashboardDetails(metric);
+      showDetailsOverlay(metric);
     });
   });
   
@@ -5150,14 +5240,304 @@ function setupDashboardHandlers() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const chart = btn.dataset.chart;
-      showDashboardDetails(chart);
+      showDetailsOverlay(chart);
     });
   });
   
-  // Close details button
+  // Setup overlay close handlers
+  const overlay = document.getElementById('detailsOverlay');
+  const closeBtn = document.getElementById('detailsOverlayClose');
+  
+  closeBtn?.addEventListener('click', () => {
+    hideDetailsOverlay();
+  });
+  
+  overlay?.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.classList.contains('details-overlay-backdrop')) {
+      hideDetailsOverlay();
+    }
+  });
+  
+  // ESC key to close overlay
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay?.getAttribute('aria-hidden') === 'false') {
+      hideDetailsOverlay();
+    }
+  });
+  
+  // Old close details button (keeping for backward compatibility)
   document.getElementById('closeDetails')?.addEventListener('click', () => {
     document.getElementById('dashboardDetails').style.display = 'none';
   });
+}
+
+function showDetailsOverlay(type) {
+  const overlay = document.getElementById('detailsOverlay');
+  const title = document.getElementById('detailsOverlayTitle');
+  const body = document.getElementById('detailsOverlayBody');
+  
+  if (!overlay || !title || !body) return;
+  
+  const { filteredFields, filteredSystems } = getFilteredData();
+  
+  let titleText = 'Details';
+  let content = '';
+  
+  switch (type) {
+    case 'systems':
+      titleText = 'Systems';
+      content = renderSystemsDetails(filteredSystems);
+      break;
+      
+    case 'fields':
+      titleText = 'Data Fields';
+      content = renderFieldsDetails(filteredFields);
+      break;
+      
+    case 'definitions':
+      titleText = 'Field Definitions';
+      content = renderDefinitionsDetails(filteredFields);
+      break;
+      
+    case 'dataObjects':
+      titleText = 'Data Objects';
+      content = renderDataObjectsDetails(filteredFields);
+      break;
+      
+    case 'glossary':
+      titleText = 'Glossary Terms';
+      content = renderGlossaryDetails();
+      break;
+      
+    case 'domains':
+      titleText = 'Systems by Domain';
+      content = renderDomainsDetails(filteredSystems);
+      break;
+      
+    default:
+      content = '<div class="details-empty">No details available</div>';
+  }
+  
+  title.textContent = titleText;
+  body.innerHTML = content;
+  
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideDetailsOverlay() {
+  const overlay = document.getElementById('detailsOverlay');
+  if (!overlay) return;
+  
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function renderSystemsDetails(systems) {
+  if (systems.length === 0) {
+    return '<div class="details-empty">No systems to display</div>';
+  }
+  
+  return `
+    <div class="details-list">
+      ${systems.map(sys => `
+        <div class="details-item">
+          <div class="details-item-name">${escapeHtml(sys.name)}</div>
+          <div class="details-item-info">
+            <div class="details-item-info-row">
+              <span class="details-item-info-label">Owner:</span>
+              <span class="details-item-info-value">${escapeHtml(sys.owner || '—')}</span>
+            </div>
+            <div class="details-item-info-row">
+              <span class="details-item-info-label">Scope:</span>
+              <span class="details-item-info-value">${escapeHtml(sys.scope || '—')}</span>
+            </div>
+            <div class="details-item-info-row">
+              <span class="details-item-info-label">Domain:</span>
+              <span class="details-item-info-value">${escapeHtml(sys.dataDomain || '—')}</span>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderFieldsDetails(fields) {
+  if (fields.length === 0) {
+    return '<div class="details-empty">No fields to display</div>';
+  }
+  
+  return `
+    <div class="details-list">
+      ${fields.map(f => {
+        const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
+        return `
+          <div class="details-item">
+            <div class="details-item-name">${escapeHtml(f.name)}</div>
+            <div class="details-item-info">
+              <div class="details-item-info-row">
+                <span class="details-item-info-label">System:</span>
+                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
+              </div>
+              <div class="details-item-info-row">
+                <span class="details-item-info-label">Type:</span>
+                <span class="details-item-info-value">${f.local ? 'Local' : 'Global'}</span>
+              </div>
+              ${glossaryTerm ? `
+                <div class="details-item-info-row">
+                  <span class="details-item-info-label">Definition:</span>
+                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.definition || '—')}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderDefinitionsDetails(fields) {
+  if (fields.length === 0) {
+    return '<div class="details-empty">No fields to display</div>';
+  }
+  
+  return `
+    <div class="details-list">
+      ${fields.map(f => {
+        const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
+        return `
+          <div class="details-item">
+            <div class="details-item-name">${escapeHtml(f.name)}</div>
+            <div class="details-item-info">
+              <div class="details-item-info-row">
+                <span class="details-item-info-label">System:</span>
+                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
+              </div>
+              <div class="details-item-info-row">
+                <span class="details-item-info-label">Has Definition:</span>
+                <span class="details-item-info-value">${f.glossaryRef ? 'Yes' : 'No'}</span>
+              </div>
+              ${glossaryTerm ? `
+                <div class="details-item-info-row">
+                  <span class="details-item-info-label">Term:</span>
+                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.term)}</span>
+                </div>
+                <div class="details-item-info-row">
+                  <span class="details-item-info-label">Definition:</span>
+                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.definition || '—')}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderDataObjectsDetails(fields) {
+  if (fields.length === 0) {
+    return '<div class="details-empty">No fields to display</div>';
+  }
+  
+  return `
+    <div class="details-list">
+      ${fields.map(f => {
+        const obj = dataObjects.find(o => String(o.id) === String(f.foundationObjectId));
+        return `
+          <div class="details-item">
+            <div class="details-item-name">${escapeHtml(f.name)}</div>
+            <div class="details-item-info">
+              <div class="details-item-info-row">
+                <span class="details-item-info-label">Data Object:</span>
+                <span class="details-item-info-value">${escapeHtml(obj?.name || '—')}</span>
+              </div>
+              <div class="details-item-info-row">
+                <span class="details-item-info-label">System:</span>
+                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
+              </div>
+              <div class="details-item-info-row">
+                <span class="details-item-info-label">Type:</span>
+                <span class="details-item-info-value">${f.local ? 'Local' : 'Global'}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderGlossaryDetails() {
+  if (glossaryTerms.length === 0) {
+    return '<div class="details-empty">No glossary terms to display</div>';
+  }
+  
+  return `
+    <div class="details-list">
+      ${glossaryTerms.map(t => `
+        <div class="details-item">
+          <div class="details-item-name">${escapeHtml(t.term)}</div>
+          <div class="details-item-info">
+            <div class="details-item-info-row">
+              <span class="details-item-info-label">Type:</span>
+              <span class="details-item-info-value">${escapeHtml(t.type || '—')}</span>
+            </div>
+            <div class="details-item-info-row">
+              <span class="details-item-info-label">Definition:</span>
+              <span class="details-item-info-value">${escapeHtml(t.definition || '—')}</span>
+            </div>
+            ${t.owner ? `
+              <div class="details-item-info-row">
+                <span class="details-item-info-label">Owner:</span>
+                <span class="details-item-info-value">${escapeHtml(t.owner)}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderDomainsDetails(systems) {
+  if (systems.length === 0) {
+    return '<div class="details-empty">No systems to display</div>';
+  }
+  
+  return `
+    <div class="details-list">
+      ${systems.map(sys => `
+        <div class="details-item">
+          <div class="details-item-name">${escapeHtml(sys.name)}</div>
+          <div class="details-item-info">
+            <div class="details-item-info-row">
+              <span class="details-item-info-label">Domain:</span>
+              <span class="details-item-info-value">${escapeHtml(sys.dataDomain || 'Unassigned')}</span>
+            </div>
+            <div class="details-item-info-row">
+              <span class="details-item-info-label">Owner:</span>
+              <span class="details-item-info-value">${escapeHtml(sys.owner || '—')}</span>
+            </div>
+            <div class="details-item-info-row">
+              <span class="details-item-info-label">Scope:</span>
+              <span class="details-item-info-value">${escapeHtml(sys.scope || '—')}</span>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Helper function to escape HTML (if not already defined)
+function escapeHtml(text) {
+  if (text == null) return '';
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
 }
 
 function showDashboardDetails(type) {
