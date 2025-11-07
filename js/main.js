@@ -759,6 +759,7 @@ function pickGlossaryForField(fieldIndex) {
 /* ================= Sidebar ================= */
 function renderSystemsSidebar() {
   // IDs hier frisch auflösen, damit keine Scope-Probleme mit lokalen Variablen entstehen
+  const dashboardNavItem = byId('dashboardNavItem');
   const systemsNavItem = byId('systemsNavItem');
   const dataMapNavItem = byId('dataMapNavItem');
   const glossaryNavItem = byId('glossaryNavItem');
@@ -766,6 +767,7 @@ function renderSystemsSidebar() {
 
   // Nav-Buttons (oben) aktiv setzen
   const mode = document.body.getAttribute('data-mode');
+  dashboardNavItem?.classList.toggle('is-active', mode === 'dashboard');
   systemsNavItem?.classList.toggle('is-active', mode === 'systems');
   dataMapNavItem?.classList.toggle('is-active', mode === 'map');
   glossaryNavItem?.classList.toggle('is-active', mode === 'glossary');
@@ -902,12 +904,14 @@ function renderGlossary() {
 }
 /* ================= Ansichtsumschaltung (mit Guards) ================= */
 function showOnly(mode) {
-  // 'systems' | 'admin' | 'map' | 'glossary'
+  // 'dashboard' | 'systems' | 'admin' | 'map' | 'glossary'
+  const showDashboard = mode === 'dashboard';
   const showSystems = mode === 'systems';
   const showAdmin = mode === 'admin';
   const showMap = mode === 'map';
   const showGlossary = mode === 'glossary';
 
+  const dashboardEl = byId('dashboardView');
   const topTabsEl = byId('topTabs');
   const globalEl = byId('global');
   const localEl = byId('local');
@@ -915,6 +919,7 @@ function showOnly(mode) {
   const mapViewEl = byId('mapView');
   const glossaryEl = byId('glossaryView');
 
+  if (dashboardEl) dashboardEl.style.display = showDashboard ? 'block' : 'none';
   if (topTabsEl) topTabsEl.style.display = showSystems ? 'flex' : 'none';
   if (globalEl) globalEl.style.display = showSystems ? 'block' : 'none';
   if (localEl) localEl.style.display = showSystems ? 'block' : 'none';
@@ -3436,6 +3441,7 @@ function initializeApp() {
     // =============================
     //  Element-Referenzen (lokal)
     // =============================
+    const dashboardNavItem = document.getElementById('dashboardNavItem');
     const systemsNavItem = document.getElementById('systemsNavItem');
     const dataMapNavItem = document.getElementById('dataMapNavItem');
     const glossaryNavItem = document.getElementById('glossaryNavItem');
@@ -3444,6 +3450,19 @@ function initializeApp() {
     // =============================
     //  Navigation: Klick-Handler
     // =============================
+
+    // Dashboard
+    dashboardNavItem?.addEventListener('click', () => {
+      document.body.setAttribute('data-mode', 'dashboard');
+      showOnly('dashboard');
+      showGlossarySubnav(false);
+      try {
+        renderDashboard();
+      } catch (e) {
+        console.error(e);
+        showErrorBanner(`Dashboard konnte nicht gerendert werden: ${e.message}`);
+      }
+    });
 
     // Systems (Hauptansicht)
     systemsNavItem?.addEventListener('click', () => {
@@ -4734,6 +4753,485 @@ renderList();
 
 // exportieren, ohne sofort auszuführen
 window.setupMappingsFeature = setupMappingsFeature;
+
+// ===== Dashboard Rendering Functions =====
+function renderDashboard() {
+  console.log('[Dashboard] Rendering dashboard...');
+  
+  // Update active nav state
+  const dashboardNavItem = document.getElementById('dashboardNavItem');
+  if (dashboardNavItem) {
+    dashboardNavItem.classList.add('is-active');
+  }
+  
+  // Initialize filters
+  initializeDashboardFilters();
+  
+  // Calculate and display metrics
+  updateDashboardMetrics();
+  
+  // Render charts
+  renderDashboardCharts();
+  
+  // Setup event handlers
+  setupDashboardHandlers();
+}
+
+function initializeDashboardFilters() {
+  const systemSelect = document.getElementById('dashFilterSystem');
+  const domainSelect = document.getElementById('dashFilterDomain');
+  const dataObjectSelect = document.getElementById('dashFilterDataObject');
+  
+  if (!systemSelect || !domainSelect || !dataObjectSelect) return;
+  
+  // Populate systems
+  systemSelect.innerHTML = '<option value="">All Systems</option>';
+  systems.forEach(sys => {
+    const opt = document.createElement('option');
+    opt.value = sys.name;
+    opt.textContent = sys.name;
+    systemSelect.appendChild(opt);
+  });
+  
+  // Populate domains
+  domainSelect.innerHTML = '<option value="">All Domains</option>';
+  dataDomains.forEach(domain => {
+    const opt = document.createElement('option');
+    opt.value = domain.name;
+    opt.textContent = domain.name;
+    domainSelect.appendChild(opt);
+  });
+  
+  // Populate data objects
+  dataObjectSelect.innerHTML = '<option value="">All Data Objects</option>';
+  dataObjects.forEach(obj => {
+    const opt = document.createElement('option');
+    opt.value = obj.id;
+    opt.textContent = obj.name;
+    dataObjectSelect.appendChild(opt);
+  });
+}
+
+function getFilteredData() {
+  const systemFilter = document.getElementById('dashFilterSystem')?.value || '';
+  const domainFilter = document.getElementById('dashFilterDomain')?.value || '';
+  const dataObjectFilter = document.getElementById('dashFilterDataObject')?.value || '';
+  
+  let filteredSystems = systems;
+  let filteredFields = fields;
+  
+  if (systemFilter) {
+    filteredSystems = filteredSystems.filter(s => s.name === systemFilter);
+    filteredFields = filteredFields.filter(f => f.system === systemFilter);
+  }
+  
+  if (domainFilter) {
+    filteredSystems = filteredSystems.filter(s => s.dataDomain === domainFilter);
+    const systemNames = filteredSystems.map(s => s.name);
+    filteredFields = filteredFields.filter(f => systemNames.includes(f.system));
+  }
+  
+  if (dataObjectFilter) {
+    filteredFields = filteredFields.filter(f => String(f.foundationObjectId) === String(dataObjectFilter));
+  }
+  
+  return { filteredSystems, filteredFields };
+}
+
+function updateDashboardMetrics() {
+  const { filteredSystems, filteredFields } = getFilteredData();
+  
+  // Systems metrics - Note: Systems with scope 'both' are counted in both categories
+  const globalSystems = filteredSystems.filter(s => s.scope === 'global' || s.scope === 'both').length;
+  const localSystems = filteredSystems.filter(s => s.scope === 'local' || s.scope === 'both').length;
+  const totalSystems = filteredSystems.length;
+  
+  updateMetricValue('metricGlobalSystems', globalSystems);
+  updateMetricValue('metricLocalSystems', localSystems);
+  updateMetricValue('metricTotalSystems', totalSystems);
+  
+  // Fields metrics
+  const globalFields = filteredFields.filter(f => !f.local).length;
+  const localFields = filteredFields.filter(f => f.local).length;
+  const totalFields = filteredFields.length;
+  
+  updateMetricValue('metricGlobalFields', globalFields);
+  updateMetricValue('metricLocalFields', localFields);
+  updateMetricValue('metricTotalFields', totalFields);
+  
+  // Definitions metrics
+  const fieldsWithDef = filteredFields.filter(f => f.glossaryRef).length;
+  const fieldsWithoutDef = totalFields - fieldsWithDef;
+  const defCoverage = totalFields > 0 ? Math.round((fieldsWithDef / totalFields) * 100) : 0;
+  
+  updateMetricValue('metricWithDef', fieldsWithDef);
+  updateMetricValue('metricWithoutDef', fieldsWithoutDef);
+  updateMetricValue('metricDefCoverage', defCoverage + '%');
+  
+  // Glossary metrics - Count fields that reference glossary terms
+  const totalGlossaryTerms = glossaryTerms.length;
+  const linkedFields = filteredFields.filter(f => f.glossaryRef && f.glossaryRef !== '').length;
+  
+  updateMetricValue('metricGlossaryTerms', totalGlossaryTerms);
+  updateMetricValue('metricLinkedFields', linkedFields);
+}
+
+function updateMetricValue(elementId, value) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  
+  const oldValue = el.textContent;
+  el.textContent = value;
+  
+  // Add pulse animation if value changed
+  if (oldValue !== String(value)) {
+    el.classList.remove('updated');
+    void el.offsetWidth; // Force reflow
+    el.classList.add('updated');
+    setTimeout(() => el.classList.remove('updated'), 400);
+  }
+}
+
+function renderDashboardCharts() {
+  renderDataObjectsChart();
+  renderDefinitionsChart();
+  renderDomainsChart();
+}
+
+function renderDataObjectsChart() {
+  const canvas = document.getElementById('chartDataObjects');
+  if (!canvas) return;
+  
+  const { filteredFields } = getFilteredData();
+  const ctx = canvas.getContext('2d');
+  
+  // Count fields per data object
+  const dataObjectCounts = {};
+  filteredFields.forEach(f => {
+    const objId = f.foundationObjectId;
+    if (objId) {
+      const obj = dataObjects.find(o => String(o.id) === String(objId));
+      const name = obj ? obj.name : `Object ${objId}`;
+      dataObjectCounts[name] = (dataObjectCounts[name] || 0) + 1;
+    }
+  });
+  
+  renderSimpleBarChart(ctx, dataObjectCounts, 'Data Objects');
+}
+
+function renderDefinitionsChart() {
+  const canvas = document.getElementById('chartDefinitions');
+  if (!canvas) return;
+  
+  const { filteredFields } = getFilteredData();
+  const ctx = canvas.getContext('2d');
+  
+  const withDef = filteredFields.filter(f => f.glossaryRef).length;
+  const withoutDef = filteredFields.length - withDef;
+  
+  const data = {
+    'With Definition': withDef,
+    'Without Definition': withoutDef
+  };
+  
+  renderSimplePieChart(ctx, data);
+}
+
+function renderDomainsChart() {
+  const canvas = document.getElementById('chartDomains');
+  if (!canvas) return;
+  
+  const { filteredSystems } = getFilteredData();
+  const ctx = canvas.getContext('2d');
+  
+  // Count systems per domain
+  const domainCounts = {};
+  filteredSystems.forEach(s => {
+    const domain = s.dataDomain || 'Unassigned';
+    domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+  });
+  
+  renderSimpleBarChart(ctx, domainCounts, 'Domains');
+}
+
+function renderSimpleBarChart(ctx, data, title) {
+  // Chart constants
+  const CHART_HEIGHT = 400;
+  const CHART_PADDING = 60;
+  const BAR_WIDTH_RATIO = 0.7;
+  const GAP_WIDTH_RATIO = 0.3;
+  const LABEL_ROTATION = -Math.PI / 6; // 30 degrees
+  const MAX_LABEL_LENGTH = 15;
+  const TRUNCATED_LABEL_LENGTH = 12;
+  
+  const canvas = ctx.canvas;
+  const width = canvas.width = canvas.offsetWidth * 2;
+  const height = canvas.height = CHART_HEIGHT;
+  
+  const labels = Object.keys(data);
+  const values = Object.values(data);
+  const maxValue = Math.max(...values, 1);
+  
+  // Clear canvas
+  ctx.clearRect(0, 0, width, height);
+  
+  // Colors (Apple-inspired blue gradient)
+  const colors = [
+    '#2e6df6', '#4b83ff', '#7ca3ff', '#5d9cff', '#3d7fff',
+    '#6ba5ff', '#8bb5ff', '#4878ff', '#5a90ff', '#7aacff'
+  ];
+  
+  // Chart dimensions
+  const chartWidth = width - CHART_PADDING * 2;
+  const chartHeight = height - CHART_PADDING * 2;
+  const barWidth = chartWidth / labels.length * BAR_WIDTH_RATIO;
+  const gap = chartWidth / labels.length * GAP_WIDTH_RATIO;
+  
+  ctx.font = '24px -apple-system, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  
+  labels.forEach((label, i) => {
+    const value = values[i];
+    const barHeight = (value / maxValue) * chartHeight;
+    const x = CHART_PADDING + i * (barWidth + gap) + gap / 2;
+    const y = height - CHART_PADDING - barHeight;
+    
+    // Draw bar with gradient
+    const gradient = ctx.createLinearGradient(0, y, 0, height - CHART_PADDING);
+    const baseColor = colors[i % colors.length];
+    gradient.addColorStop(0, baseColor);
+    // Convert hex to rgba for proper alpha handling
+    const r = parseInt(baseColor.slice(1, 3), 16);
+    const g = parseInt(baseColor.slice(3, 5), 16);
+    const b = parseInt(baseColor.slice(5, 7), 16);
+    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.5)`);
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, y, barWidth, barHeight);
+    
+    // Draw value on top of bar
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 28px -apple-system, system-ui, sans-serif';
+    ctx.fillText(value, x + barWidth / 2, y - 10);
+    
+    // Draw label
+    ctx.fillStyle = '#64748b';
+    ctx.font = '22px -apple-system, system-ui, sans-serif';
+    ctx.save();
+    ctx.translate(x + barWidth / 2, height - CHART_PADDING + 20);
+    ctx.rotate(LABEL_ROTATION);
+    const displayLabel = label.length > MAX_LABEL_LENGTH 
+      ? label.substring(0, TRUNCATED_LABEL_LENGTH) + '...' 
+      : label;
+    ctx.fillText(displayLabel, 0, 0);
+    ctx.restore();
+  });
+}
+
+function renderSimplePieChart(ctx, data) {
+  const CHART_HEIGHT = 400;
+  
+  const canvas = ctx.canvas;
+  const width = canvas.width = canvas.offsetWidth * 2;
+  const height = canvas.height = CHART_HEIGHT;
+  
+  const labels = Object.keys(data);
+  const values = Object.values(data);
+  const total = values.reduce((sum, v) => sum + v, 0);
+  
+  if (total === 0) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '24px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data', width / 2, height / 2);
+    return;
+  }
+  
+  ctx.clearRect(0, 0, width, height);
+  
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = Math.min(width, height) * 0.35;
+  
+  const colors = ['#2e6df6', '#e5e7eb'];
+  
+  let startAngle = -Math.PI / 2;
+  
+  labels.forEach((label, i) => {
+    const value = values[i];
+    const sliceAngle = (value / total) * 2 * Math.PI;
+    const endAngle = startAngle + sliceAngle;
+    
+    // Draw slice
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw percentage in the middle of slice
+    const midAngle = startAngle + sliceAngle / 2;
+    const textX = centerX + Math.cos(midAngle) * radius * 0.7;
+    const textY = centerY + Math.sin(midAngle) * radius * 0.7;
+    
+    const percentage = Math.round((value / total) * 100);
+    if (percentage > 5) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px -apple-system, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(percentage + '%', textX, textY);
+    }
+    
+    startAngle = endAngle;
+  });
+  
+  // Draw legend
+  const legendX = 40;
+  let legendY = height - 80;
+  
+  labels.forEach((label, i) => {
+    const value = values[i];
+    const percentage = Math.round((value / total) * 100);
+    
+    // Color box
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillRect(legendX, legendY, 30, 30);
+    
+    // Label
+    ctx.fillStyle = '#334155';
+    ctx.font = '24px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${label}: ${value} (${percentage}%)`, legendX + 45, legendY + 15);
+    
+    legendY += 45;
+  });
+}
+
+function setupDashboardHandlers() {
+  // Filter change handlers
+  const systemFilter = document.getElementById('dashFilterSystem');
+  const domainFilter = document.getElementById('dashFilterDomain');
+  const dataObjectFilter = document.getElementById('dashFilterDataObject');
+  const resetFilters = document.getElementById('dashResetFilters');
+  const refreshBtn = document.getElementById('dashboardRefresh');
+  
+  const updateDashboard = () => {
+    updateDashboardMetrics();
+    renderDashboardCharts();
+  };
+  
+  systemFilter?.addEventListener('change', updateDashboard);
+  domainFilter?.addEventListener('change', updateDashboard);
+  dataObjectFilter?.addEventListener('change', updateDashboard);
+  
+  resetFilters?.addEventListener('click', () => {
+    if (systemFilter) systemFilter.value = '';
+    if (domainFilter) domainFilter.value = '';
+    if (dataObjectFilter) dataObjectFilter.value = '';
+    updateDashboard();
+  });
+  
+  refreshBtn?.addEventListener('click', updateDashboard);
+  
+  // Metric card click handlers (show details)
+  document.querySelectorAll('.metric-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const metric = card.dataset.metric;
+      showDashboardDetails(metric);
+    });
+  });
+  
+  // Chart details buttons
+  document.querySelectorAll('.chart-details-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const chart = btn.dataset.chart;
+      showDashboardDetails(chart);
+    });
+  });
+  
+  // Close details button
+  document.getElementById('closeDetails')?.addEventListener('click', () => {
+    document.getElementById('dashboardDetails').style.display = 'none';
+  });
+}
+
+function showDashboardDetails(type) {
+  const detailsSection = document.getElementById('dashboardDetails');
+  const detailsTitle = document.getElementById('detailsTitle');
+  const tableHead = document.getElementById('detailsTableHead');
+  const tableBody = document.getElementById('detailsTableBody');
+  
+  if (!detailsSection || !detailsTitle || !tableHead || !tableBody) return;
+  
+  const { filteredFields, filteredSystems } = getFilteredData();
+  
+  let title = 'Details';
+  let headers = [];
+  let rows = [];
+  
+  switch (type) {
+    case 'systems':
+      title = 'Systems Details';
+      headers = ['System', 'Owner', 'Scope', 'Domain'];
+      rows = filteredSystems.map(s => [s.name, s.owner || '-', s.scope, s.dataDomain || '-']);
+      break;
+      
+    case 'fields':
+      title = 'Fields Details';
+      headers = ['Field Name', 'System', 'Type', 'Mandatory'];
+      rows = filteredFields.map(f => [f.name, f.system, f.local ? 'Local' : 'Global', f.mandatory ? 'Yes' : 'No']);
+      break;
+      
+    case 'definitions':
+      title = 'Fields by Definition Status';
+      headers = ['Field Name', 'System', 'Has Definition', 'Glossary Term'];
+      rows = filteredFields.map(f => {
+        const term = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
+        return [f.name, f.system, f.glossaryRef ? 'Yes' : 'No', term?.term || '-'];
+      });
+      break;
+      
+    case 'dataObjects':
+      title = 'Fields by Data Object';
+      headers = ['Data Object', 'Field Name', 'System', 'Type'];
+      rows = filteredFields.map(f => {
+        const obj = dataObjects.find(o => String(o.id) === String(f.foundationObjectId));
+        return [obj?.name || '-', f.name, f.system, f.local ? 'Local' : 'Global'];
+      });
+      break;
+      
+    case 'glossary':
+      title = 'Glossary Terms';
+      headers = ['Term', 'Type', 'Definition', 'Owner'];
+      rows = glossaryTerms.map(t => [t.term, t.type, t.definition || '-', t.owner || '-']);
+      break;
+      
+    case 'domains':
+      title = 'Systems by Domain';
+      headers = ['Domain', 'System', 'Owner', 'Scope'];
+      rows = filteredSystems.map(s => [s.dataDomain || 'Unassigned', s.name, s.owner || '-', s.scope]);
+      break;
+  }
+  
+  // Render table
+  detailsTitle.textContent = title;
+  
+  tableHead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  tableBody.innerHTML = rows.map(row => 
+    '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>'
+  ).join('');
+  
+  detailsSection.style.display = 'block';
+  detailsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Export dashboard function
+window.renderDashboard = renderDashboard;
 
 // ===== Allowed Values Spalte – robust (erstellt fehlendes THEAD/TR, wartet auf Zeilen) =====
 (function addAllowedValuesColumnRobust() {

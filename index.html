@@ -14,6 +14,7 @@
       <div class="topbar-inner floating rounded">
         <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
         <nav class="topnav" aria-label="Primary">
+          <button id="dashboardNavItem" class="topnav-item" type="button">Dashboard</button>
           <button id="systemsNavItem" class="topnav-item" type="button">Systems</button>
           <button id="dataMapNavItem" class="topnav-item" type="button">Data Map</button>
           <button id="glossaryNavItem" class="topnav-item" type="button">Glossary</button>
@@ -44,6 +45,181 @@
 
     <!-- ===== Main ===== -->
     <main class="main">
+
+      <!-- ===== Dashboard View ===== -->
+      <section id="dashboardView" class="panel" style="display:none">
+        <div class="dashboard-container">
+          <!-- Dashboard Header -->
+          <div class="dashboard-header">
+            <h2 class="dashboard-title">Dashboard</h2>
+            <div class="dashboard-actions">
+              <button id="dashboardRefresh" class="btn btn--secondary" title="Refresh Data">
+                <span>↻ Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="dashboard-filters">
+            <div class="filter-group">
+              <label for="dashFilterSystem">System:</label>
+              <select id="dashFilterSystem" class="filter-select">
+                <option value="">All Systems</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="dashFilterDomain">Domain:</label>
+              <select id="dashFilterDomain" class="filter-select">
+                <option value="">All Domains</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="dashFilterDataObject">Data Object:</label>
+              <select id="dashFilterDataObject" class="filter-select">
+                <option value="">All Data Objects</option>
+              </select>
+            </div>
+            <button id="dashResetFilters" class="btn btn--ghost btn--sm">Clear Filters</button>
+          </div>
+
+          <!-- Metrics Grid -->
+          <div class="dashboard-metrics">
+            <!-- Systems Metrics -->
+            <div class="metric-card" data-metric="systems">
+              <div class="metric-header">
+                <h3 class="metric-title">Systems</h3>
+                <span class="metric-icon">⚙️</span>
+              </div>
+              <div class="metric-content">
+                <div class="metric-row">
+                  <span class="metric-label">Global Tools</span>
+                  <span class="metric-value" id="metricGlobalSystems">0</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Local Tools</span>
+                  <span class="metric-value" id="metricLocalSystems">0</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Total Systems</span>
+                  <span class="metric-value metric-value--primary" id="metricTotalSystems">0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fields Metrics -->
+            <div class="metric-card" data-metric="fields">
+              <div class="metric-header">
+                <h3 class="metric-title">Data Fields</h3>
+                <span class="metric-icon">📋</span>
+              </div>
+              <div class="metric-content">
+                <div class="metric-row">
+                  <span class="metric-label">Global Fields</span>
+                  <span class="metric-value" id="metricGlobalFields">0</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Local Fields</span>
+                  <span class="metric-value" id="metricLocalFields">0</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Total Fields</span>
+                  <span class="metric-value metric-value--primary" id="metricTotalFields">0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Definitions Metrics -->
+            <div class="metric-card" data-metric="definitions">
+              <div class="metric-header">
+                <h3 class="metric-title">Definitions</h3>
+                <span class="metric-icon">📖</span>
+              </div>
+              <div class="metric-content">
+                <div class="metric-row">
+                  <span class="metric-label">With Definition</span>
+                  <span class="metric-value" id="metricWithDef">0</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Without Definition</span>
+                  <span class="metric-value" id="metricWithoutDef">0</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Coverage</span>
+                  <span class="metric-value metric-value--primary" id="metricDefCoverage">0%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Glossary Metrics -->
+            <div class="metric-card" data-metric="glossary">
+              <div class="metric-header">
+                <h3 class="metric-title">Glossary</h3>
+                <span class="metric-icon">📚</span>
+              </div>
+              <div class="metric-content">
+                <div class="metric-row">
+                  <span class="metric-label">Total Terms</span>
+                  <span class="metric-value metric-value--primary" id="metricGlossaryTerms">0</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Linked Fields</span>
+                  <span class="metric-value" id="metricLinkedFields">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Section -->
+          <div class="dashboard-charts">
+            <!-- Data Objects Chart -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">Data Objects Distribution</h3>
+                <button class="chart-details-btn" data-chart="dataObjects">Details ›</button>
+              </div>
+              <div class="chart-body">
+                <canvas id="chartDataObjects"></canvas>
+              </div>
+            </div>
+
+            <!-- Field Definitions Chart -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">Field Definitions Coverage</h3>
+                <button class="chart-details-btn" data-chart="definitions">Details ›</button>
+              </div>
+              <div class="chart-body">
+                <canvas id="chartDefinitions"></canvas>
+              </div>
+            </div>
+
+            <!-- Systems by Domain Chart -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title">Systems by Domain</h3>
+                <button class="chart-details-btn" data-chart="domains">Details ›</button>
+              </div>
+              <div class="chart-body">
+                <canvas id="chartDomains"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Details Table (initially hidden) -->
+          <div id="dashboardDetails" class="dashboard-details" style="display:none">
+            <div class="details-header">
+              <h3 id="detailsTitle" class="details-title">Details</h3>
+              <button id="closeDetails" class="btn btn--ghost btn--sm">Close</button>
+            </div>
+            <div class="details-body">
+              <table class="table">
+                <thead id="detailsTableHead"></thead>
+                <tbody id="detailsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- ===== Top Tabs for Systems view ===== -->
       <div id="topTabs" class="top-tabs">
