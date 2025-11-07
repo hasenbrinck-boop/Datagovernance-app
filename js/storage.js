@@ -182,6 +182,9 @@ export function loadFields() {
   }
 }
 /* ---------------------------- Glossary ---------------------------- */
+const STORAGE_KEY_GLOSSARY_VERSION = 'gdf_glossary_version';
+const STORAGE_KEY_GLOSSARY_CHANGES = 'gdf_glossary_changes';
+
 export function saveGlossary() {
   try {
     storage.setItem(STORAGE_KEY_GLOSSARY, JSON.stringify(state.glossary || []));
@@ -201,6 +204,42 @@ export function loadGlossary() {
   } catch (err) {
     console.error('loadGlossary() failed', err);
     state.glossary = state.glossary || [];
+  }
+}
+
+export function saveGlossaryVersion(version) {
+  try {
+    storage.setItem(STORAGE_KEY_GLOSSARY_VERSION, JSON.stringify(version));
+  } catch (err) {
+    console.error('saveGlossaryVersion() failed', err);
+  }
+}
+
+export function loadGlossaryVersion() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_GLOSSARY_VERSION);
+    return raw ? JSON.parse(raw) : { major: 1, minor: 0 };
+  } catch (err) {
+    console.error('loadGlossaryVersion() failed', err);
+    return { major: 1, minor: 0 };
+  }
+}
+
+export function saveGlossaryChanges(changes) {
+  try {
+    storage.setItem(STORAGE_KEY_GLOSSARY_CHANGES, JSON.stringify(changes || []));
+  } catch (err) {
+    console.error('saveGlossaryChanges() failed', err);
+  }
+}
+
+export function loadGlossaryChanges() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_GLOSSARY_CHANGES);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.error('loadGlossaryChanges() failed', err);
+    return [];
   }
 }
 
