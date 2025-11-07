@@ -5156,9 +5156,9 @@ function render3DPieChart(ctx, data) {
   // Generate darker shades for 3D effect
   const darkenColor = (color, amount = 0.3) => {
     const hex = color.replace('#', '');
-    const r = Math.max(0, parseInt(hex.substr(0, 2), 16) * (1 - amount));
-    const g = Math.max(0, parseInt(hex.substr(2, 2), 16) * (1 - amount));
-    const b = Math.max(0, parseInt(hex.substr(4, 2), 16) * (1 - amount));
+    const r = Math.max(0, parseInt(hex.substring(0, 2), 16) * (1 - amount));
+    const g = Math.max(0, parseInt(hex.substring(2, 4), 16) * (1 - amount));
+    const b = Math.max(0, parseInt(hex.substring(4, 6), 16) * (1 - amount));
     return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
   };
   
@@ -5450,10 +5450,14 @@ function showDetailsOverlay(type, position = null) {
   
   // Position overlay near click if position provided
   if (position && card) {
+    // Constants for overlay sizing
+    const OVERLAY_MIN_WIDTH = 320;
+    const OVERLAY_MIN_HEIGHT = 400;
+    
     // Remove centering and position near click
     card.style.position = 'fixed';
-    card.style.left = `${Math.min(position.x, window.innerWidth - 320)}px`;
-    card.style.top = `${Math.min(position.y, window.innerHeight - 400)}px`;
+    card.style.left = `${Math.min(position.x, window.innerWidth - OVERLAY_MIN_WIDTH)}px`;
+    card.style.top = `${Math.min(position.y, window.innerHeight - OVERLAY_MIN_HEIGHT)}px`;
     card.style.transform = 'translate(-50%, -50%)';
     card.style.maxWidth = '500px';
   } else if (card) {
