@@ -1046,6 +1046,7 @@ function showMainView(tabId) {
 function setModeSystems(name) {
   // State übernehmen
   state.currentSystem = name;
+  currentSystem = name; // Update local variable as well
   state.currentDomain = null; // Clear domain filter when selecting specific system
   state.selectedFieldRef = null;
   clearSelectionVisuals?.();
@@ -1103,6 +1104,7 @@ function setModeSystems(name) {
 function setModeSystemsByDomain(domainName) {
   // State übernehmen
   state.currentSystem = 'All Systems'; // Not filtering by specific system
+  currentSystem = 'All Systems'; // Update local variable as well
   state.currentDomain = domainName; // Set domain filter
   state.selectedFieldRef = null;
   clearSelectionVisuals?.();
