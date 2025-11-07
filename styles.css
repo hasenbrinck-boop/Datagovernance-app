@@ -11,7 +11,7 @@
   
     /* Abstand zum Rand */
     --content-pad: 12px;
-
+  
     /* Text & Linien */
     --text: #0f172a;
     --text-dim: #475569;
@@ -48,6 +48,28 @@
     /* Sidebar Motion */
     --sb-dur: .48s;
     --sb-ease: cubic-bezier(.22,.61,.36,1);
+  
+    /* Buttons (vereinheitlicht) */
+    --btn-primary-bg: linear-gradient(135deg, #2e6df6 0%, #7ca3ff 100%);
+    --btn-primary-text: #ffffff;
+    --btn-primary-border: #0a84ff;
+    --btn-hover-mult: 0.9;
+    --btn-active-mult: 0.82;
+    --btn-radius: 10px;
+    --btn-padding-y: 6px;
+    --btn-padding-x: 14px;
+    --btn-font-weight: 600;
+    --btn-font-size: 14px;
+    --btn-gap: 8px;
+    --btn-shadow: 0 1px 2px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.06);
+    --btn-shadow-focus: 0 0 0 3px rgba(10,132,255,.25);
+    --btn-border-width: 1px;
+    --btn-neutral-bg: #f5f6f7;
+    --btn-neutral-text: #111;
+    --btn-neutral-border: #d0d5dd;
+    --btn-danger-bg: #e54848;
+    --btn-danger-text: #fff;
+    --btn-danger-border: #e54848;
   }
   
   /* =========================
@@ -73,23 +95,23 @@
   }
   
   /* =========================
-     App-Grid (einziger .app-Block)
+     App-Grid
      ========================= */
   .app{
     display:grid;
-    grid-template-columns: auto 1fr;              /* Sidebar-Breite kommt von .sidebar (width) */
+    grid-template-columns: auto 1fr;
     grid-template-rows: var(--topbar-h) 1fr !important;
     grid-template-areas:
       "top top"
       "nav main" !important;
     height:100vh;
     gap:0;
-    background: var(--panel);                     /* verhindert sichtbare Farbkanten */
+    background: var(--panel);
     overflow:hidden;
   }
   
   /* =========================
-     Topbar (Apple-like)
+     Topbar
      ========================= */
   .topbar{
     grid-area: top;
@@ -120,7 +142,6 @@
     flex:1 1 auto; height:100%;
     display:flex; justify-content:center; align-items:center; gap:20px;
   }
-
   .topnav-item{
     color:#b8c6e0; padding:0 12px; line-height: var(--topbar-h);
     font-size:15px; font-weight:500; letter-spacing:.2px; position:relative;
@@ -147,69 +168,60 @@
   }
   
   /* =========================
-     Sidebar – Slide-In/Out (breitenbasiert)
+     Sidebar
      ========================= */
-/* Sidebar steuert das Layout nur über die BREITE, ohne Padding */
-.sidebar{
-  grid-area: nav;
-  /* kein padding hier! */
-  overflow: hidden;
-  width: var(--nav-w);
-  background: transparent;
-
-  will-change: width, transform, opacity;
-  transform: translateX(0);
-  transition:
-    width     var(--sb-dur) var(--sb-ease),
-    transform var(--sb-dur) var(--sb-ease),
-    opacity   var(--sb-dur) linear;
-  opacity: 1;
-  z-index: 2;
-}
-.app.is-sliding .sidebar{ pointer-events:none }
-
-/* Collapsing/Collapsed: Breite 0 + wirklich keine Reste */
-.app.sidebar-collapsing .sidebar,
-.app.sidebar-collapsed.prep-expand .sidebar{
-  width: 0;
-  transform: translateX(-110%);
-  opacity: 0;
-}
-.app.sidebar-collapsed .sidebar{
-  width: 0;
-}
-
-/* Expand: erst Breite herstellen, dann reinsliden */
-.app.sidebar-expanding .sidebar{
-  width: var(--nav-w);
-  transform: translateX(-110%);
-  opacity: 0;
-}
-.app.sidebar-expanding.run-in .sidebar{
-  transform: translateX(0);
-  opacity: 1;
-  box-shadow: var(--shadow-1);
-}
-
-/* Karte in der Sidebar bekommt das Padding */
-.sidebar-inner{
-  margin: var(--content-top) 16px 16px 16px;   /* vorher padding der Sidebar */
-  height: calc(100vh - var(--topbar-h) - 32px);
-  background: var(--panel);
-  border: 1px solid var(--divider);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-1);
-  display:flex; flex-direction:column; overflow:hidden;
-}
-
-/* Beim Collapsen auch die Karte „unsichtbar“ machen, damit GAR nichts stehen bleibt */
-.app.sidebar-collapsing .sidebar-inner,
-.app.sidebar-collapsed .sidebar-inner{
-  border: 0 !important;
-  box-shadow: none !important;
-  margin: 0 !important;
-}
-
+  .sidebar{
+    grid-area: nav;
+    overflow: hidden;
+    width: var(--nav-w);
+    background: transparent;
+    will-change: width, transform, opacity;
+    transform: translateX(0);
+    transition:
+      width     var(--sb-dur) var(--sb-ease),
+      transform var(--sb-dur) var(--sb-ease),
+      opacity   var(--sb-dur) linear;
+    opacity: 1;
+    z-index: 2;
+  }
+  .app.is-sliding .sidebar{ pointer-events:none }
+  
+  .app.sidebar-collapsing .sidebar,
+  .app.sidebar-collapsed.prep-expand .sidebar{
+    width: 0;
+    transform: translateX(-110%);
+    opacity: 0;
+  }
+  .app.sidebar-collapsed .sidebar{ width: 0; }
+  
+  .app.sidebar-expanding .sidebar{
+    width: var(--nav-w);
+    transform: translateX(-110%);
+    opacity: 0;
+  }
+  .app.sidebar-expanding.run-in .sidebar{
+    transform: translateX(0);
+    opacity: 1;
+    box-shadow: var(--shadow-1);
+  }
+  
+  .sidebar-inner{
+    margin: var(--content-top) 16px 16px 16px;
+    height: calc(100vh - var(--topbar-h) - 32px);
+    background: var(--panel);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-1);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  
+  .app.sidebar-collapsing .sidebar-inner,
+  .app.sidebar-collapsed .sidebar-inner{
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+  
   .sidebar-head{
     padding:16px; display:flex; align-items:center; justify-content:space-between;
     border-bottom: 1px solid var(--divider);
@@ -246,12 +258,12 @@
      ========================= */
   .main{
     grid-area: main;
-    padding: var(--content-top) 16px 16px 16px;   /* kein Springen */
+    padding: var(--content-top) 16px 16px 16px;
     height: calc(100vh - var(--topbar-h));
     min-height:0;
     display:flex; flex-direction:column; gap:8px;
     overflow:hidden;
-    background: var(--panel);                    /* gleiche Fläche wie .app/.sidebar-inner */
+    background: var(--panel);
     contain: paint;
     transform: translateZ(0);
   }
@@ -263,7 +275,9 @@
   .main > * { min-width: 0 }
   .muted { opacity:.75; font-size:.9em }
   
-  /* Tabs */
+  /* =========================
+     Tabs & Panels
+     ========================= */
   .top-tabs, .admin-tabs{ display:flex; gap:12px; align-items:center }
   #topTabs{ margin:0; align-items:center; height:42px; position:relative; z-index:2 }
   .tab{
@@ -274,7 +288,6 @@
   .tab:hover{ border-color:#dfe7ea }
   .tab.is-active{ color:var(--accent-1); border-color:#d5ddff; background:#f7faff }
   
-  /* Panels */
   .panel{
     background: var(--panel);
     border:1px solid var(--divider);
@@ -291,7 +304,6 @@
   .panel-title{ font-weight:600 }
   
   .panel-body{
-    /* oben/unten frei wählbar, links/rechts strikt am Raster */
     padding: 12px var(--content-pad);
     max-height: calc(100vh - 250px);
     overflow: auto;
@@ -303,19 +315,50 @@
   .panel-body::-webkit-scrollbar-thumb:hover{ background: rgba(0,0,0,.25) }
   
   /* =========================
-     Buttons
+     Buttons (vereinheitlicht)
      ========================= */
-  .btn-primary{
-    background: var(--accent-grad); color:#fff;
-    padding:9px 8px; border-radius:12px; border:1px solid rgba(0,0,0,.04);
-    font-weight:600; box-shadow:0 4px 10px rgba(46,109,246,.12);
+  button.btn {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--btn-gap);
+    padding: var(--btn-padding-y) var(--btn-padding-x);
+    border-radius: var(--btn-radius);
+    font-weight: var(--btn-font-weight);
+    font-size: var(--btn-font-size);
+    line-height: 1.2;
+    border: var(--btn-border-width) solid transparent;
+    box-shadow: var(--btn-shadow);
+    cursor: pointer;
+    user-select: none;
+    transition: transform .04s ease, box-shadow .2s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+    text-decoration: none;
   }
-  .btn-primary:hover{ filter:brightness(1.06) }
-  .btn-ghost{
-    padding:9px 8px; border-radius:12px; border:1px solid var(--divider); color:var(--text); background:#fff;
-  }
+  button.btn.btn--primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); border-color: var(--btn-primary-border); }
+  button.btn.btn--secondary { background: var(--btn-neutral-bg); color: var(--btn-neutral-text); border-color: var(--btn-neutral-border); }
+  button.btn.btn--ghost { background: transparent; color: var(--btn-neutral-text); border-color: var(--btn-neutral-border); }
+  button.btn.btn--danger { background: var(--btn-danger-bg); color: var(--btn-danger-text); border-color: var(--btn-danger-border); }
+  button.btn:hover { transform: translateY(-1px); }
+  button.btn:active { transform: translateY(0); }
+  button.btn.btn--primary:hover    { filter: brightness(var(--btn-hover-mult)); }
+  button.btn.btn--primary:active   { filter: brightness(var(--btn-active-mult)); }
+  button.btn.btn--secondary:hover  { background: #eceff1; }
+  button.btn.btn--secondary:active { background: #e6eaed; }
+  button.btn.btn--ghost:hover      { background: #f2f4f7; }
+  button.btn.btn--ghost:active     { background: #eceff3; }
+  button.btn.btn--danger:hover     { filter: brightness(var(--btn-hover-mult)); }
+  button.btn.btn--danger:active    { filter: brightness(var(--btn-active-mult)); }
+  button.btn:focus-visible { outline: none; box-shadow: var(--btn-shadow-focus); }
+  button.btn:disabled,
+  button.btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+  button.btn .icon { display: inline-flex; width: 1.1em; height: 1.1em; line-height: 1; }
+  button.btn.btn--block { width: 100%; }
+  button.btn.btn--sm { --btn-padding-y: 6px; --btn-padding-x: 10px; --btn-font-size: 12px; }
+  button.btn.btn--lg { --btn-padding-y: 8px; --btn-padding-x: 18px; --btn-font-size: 15px; }
   
-  /* „New“-Button – reduziert */
+  /* „New“-Button – (Kompat) */
   .btn-new{
     display:inline-flex; align-items:center; gap:10px; white-space:nowrap;
     padding:10px 8px; border-radius:999px;
@@ -331,21 +374,15 @@
   .btn-new .plus::before{ width:10px; height:2px; top:8px; left:4px }
   .btn-new .plus::after { width:2px; height:10px; top:4px; left:8px }
   
-  /* Minimalistische Buttons */
-  .btn{
-    display:inline-flex; align-items:center; gap:8px; font:inherit; line-height:1;
-    border:1px solid rgba(0,0,0,.12); background: linear-gradient(#fff, #f7f7f7);
-    color:inherit; border-radius:8px; padding:8px 10px; cursor:pointer;
-    transition: box-shadow .15s ease, transform .02s ease, background .15s ease, border-color .15s ease;
-    user-select:none;
+  /* Minimalistische Icon-Buttons (für Tabellen-Action: Stift/Müll) */
+  .icon-btn{
+    display:inline-grid; place-items:center;
+    width:28px; height:28px; padding:0; margin:0;
+    border:1px solid var(--divider); background:#fff; border-radius:8px;
+    transition: background .15s ease, border-color .15s ease;
   }
-  .btn:hover{ background: linear-gradient(#fff, #f2f2f2); box-shadow:0 1px 0 rgba(0,0,0,.06) }
-  .btn:active{ transform: translateY(1px) }
-  .btn:disabled{ opacity:.6; cursor:not-allowed }
-  .btn--sm{ padding:6px 8px; border-radius:7px; font-size:.95rem }
-  .btn--ghost{ background:#fff; border-color: rgba(0,0,0,.10) }
-  .btn--ghost:hover{ background:#fafafa; border-color: rgba(0,0,0,.16) }
-  .btn svg.icon-16{ width:16px; height:16px; display:inline-block }
+  .icon-btn:hover{ background:#fafafa; border-color:#dfe3ea; }
+  .icon-16{ width:16px; height:16px; display:block }
   
   /* =========================
      Tabellen
@@ -366,11 +403,51 @@
     width:80px !important; text-align:right !important; white-space:nowrap !important; padding-right:10px !important;
   }
   .table .table-actions{ display:inline-flex; gap:8px; align-items:center; line-height:0 }
-  .table .table-actions button{ display:inline-grid; place-items:center; width:28px; height:28px; padding:0; margin:0; border:0; background:transparent; border-radius:8px }
-  .table .table-actions svg{ display:block; width:16px; height:16px }
+  
+  /* Filterfelder im thead */
+  .table thead input[type="text"] {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--divider);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text);
+    background: #f9fafb;
+  }
+  .table thead input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent-1);
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(46,109,246,.15);
+  }
+  
+  /* ===== Mappings-Liste – Spaltenklassen ===== */
+  .table--mappings th.col-le,         .table--mappings td.col-le         { width: 10ch; }
+  .table--mappings th.col-system,     .table--mappings td.col-system     { width: 22ch; }
+  .table--mappings th.col-local,      .table--mappings td.col-local      { width: 22ch; }
+  .table--mappings th.col-global,     .table--mappings td.col-global     { width: 22ch; }
+  .table--mappings th.col-local-val,  .table--mappings td.col-local-val  { width: 26ch; }
+  .table--mappings th.col-global-val, .table--mappings td.col-global-val { width: 20ch; }
+  .table--mappings th.col-status,     .table--mappings td.col-status     { width: 12ch; text-align:center; }
+  .table--mappings th.col-actions,    .table--mappings td.col-actions    { width: 110px !important; text-align:right !important; }
+  
+  .table--mappings .dim { color: var(--text-dim); font-weight: 500; }
+  .table--mappings .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .2px; }
+  
+  /* Badge für Status */
+  .badge {
+    display:inline-flex; align-items:center;
+    height: 22px; padding: 0 8px;
+    border-radius: 999px; font-size: 12px; font-weight: 600;
+    border:1px solid var(--divider);
+    background:#f5f7fb; color:#334155;
+  }
+  .badge--draft   { background:#fff6e6; color:#7a5200; border-color:#f6e0b8; }
+  .badge--active  { background:#eaf4ff; color:#0c4a8a; border-color:#cfe4ff; }
+  .badge--paused  { background:#fff0f0; color:#7a1f1f; border-color:#f2c9c9; }
   
   /* =========================
-     Dialoge
+     Dialoge & Modals
      ========================= */
   dialog{ border:0; padding:0; background:transparent; position:fixed; inset:0 }
   dialog::backdrop{ background: rgba(15,23,42,.35) }
@@ -391,19 +468,218 @@
   .dialog-grid input[type="text"], .dialog-grid input[type="number"], .dialog-grid select{
     width:100%; min-height:36px; padding:6px 10px; border-radius:8px; border:1px solid var(--divider); background:#fff; color:var(--text); font-size:13px;
   }
-  #fieldDialog .checkbox-inline{
-    display:inline-flex; align-items:center; gap:8px; color:var(--text); font-size:13px;
-  }
-  #fieldDialog .checkbox-inline input[type="checkbox"]{
-    width:16px; height:16px; margin:0;
-  }
+  #fieldDialog .checkbox-inline{ display:inline-flex; align-items:center; gap:8px; color:var(--text); font-size:13px; }
+  #fieldDialog .checkbox-inline input[type="checkbox"]{ width:16px; height:16px; margin:0; }
   .dialog-foot{ display:flex; justify-content:flex-end; gap:8px; padding:10px 16px; border-top:1px solid var(--divider) }
   #fld-legal-entity-hint{ display:none !important }
-  
-  /* iPad/Safari Touch-Höhen */
   #fieldDialog input, #fieldDialog select, #fieldDialog textarea{ font-size:12.5px; line-height:1.4 }
   #fieldDialog .stack{ display:flex; flex-direction:column; gap:6px; align-self:start }
   @supports (-webkit-touch-callout: none){ #fieldDialog select{ padding-right:30px } }
+  
+  /* ===== Mapping-Editor (Modal) ===== */
+  .modal {
+    position: fixed; inset: 0;
+    display: none; /* via JS sichtbar */
+    align-items: center; justify-content: center;
+    background: rgba(15,23,42,.35);
+    z-index: 140; /* über Panels, unter Topbar-Blur */
+  }
+  .modal[hidden] { display: none !important; }
+  .modal.is-open { display: flex; }
+  .modal-dialog{
+    width: min(900px, 96vw);
+    max-height: calc(100vh - 72px);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    background: var(--panel-elev);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+    transform: translateY(-4px);
+  }
+  .modal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--divider);
+    background: linear-gradient(180deg, rgba(248,250,255,.9) 0%, rgba(255,255,255,1) 100%);
+  }
+  .modal-body{
+    padding: 14px 16px 6px 16px;
+    overflow: auto;
+  }
+  .modal-footer{
+    display:flex; gap:8px; justify-content:flex-end;
+    padding: 12px 16px;
+    border-top: 1px solid var(--divider);
+    background: rgba(248,250,255,.85);
+  }
+  
+  /* Formular-Baukasten (auch im Mapping-Modal verwendet) */
+  .form-grid{ display:grid; gap:12px; margin-bottom: 8px; }
+  .form-grid.grid-2{ grid-template-columns: 1fr 1fr; }
+  @media (max-width: 700px){ .form-grid.grid-2{ grid-template-columns: 1fr; } }
+  
+  .form-field{ display:flex; flex-direction:column; gap:6px; }
+  .form-label{ font-size:12.5px; color:var(--text-dim); letter-spacing:.2px; }
+  .form-control{
+    width:100%; min-height:36px; padding:6px 10px;
+    border-radius:8px; border:1px solid var(--divider);
+    background:#fff; color:var(--text); font-size:13px;
+  }
+  .form-control:focus{
+    outline:none; border-color: rgba(46,109,246,.35);
+    box-shadow: 0 0 0 3px rgba(46,109,246,.12);
+  }
+  
+  /* ===== Mapping-Editor – Wert-Zuordnungen ===== */
+  .map-editor { padding-top: .75rem; }
+  .map-pairs-title {
+    margin: .25rem 0 .5rem !important;
+    font-size: .95rem;
+    font-weight: 700;
+    letter-spacing: .2px;
+    color: var(--text);
+  }
+  .table.map-pairs {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    background: #fff;
+    border: 1px solid var(--divider);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .table.map-pairs thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f7f9ff;
+    color: var(--text-dim);
+    font-weight: 600;
+    border-bottom: 1px solid var(--divider);
+    padding: 10px 12px !important;
+  }
+  .table.map-pairs tbody td {
+    padding: 8px 12px !important;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--divider);
+    background: #fff !important;
+  }
+  .table.map-pairs tbody tr:last-child td { border-bottom: none !important; }
+  .table.map-pairs .av-left { width: 50%; color: var(--text); font-variant-ligatures: none; }
+  .table.map-pairs .av-right { width: 50%; }
+  .table.map-pairs .value-select{
+    width:100%; min-height:34px; font-size:13px; color:var(--text);
+    border:1px solid var(--divider); border-radius:8px; background:#fff; padding:6px 10px;
+    -webkit-appearance: none; background-clip: padding-box;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .table.map-pairs .value-select:focus{
+    outline:none; border-color: rgba(46,109,246,.35);
+    box-shadow: 0 0 0 3px rgba(46,109,246,.12);
+  }
+  .table.map-pairs tbody tr:hover td { background: #fafbff !important; }
+  @supports (-webkit-touch-callout: none) {
+    .table.map-pairs .value-select { font-size: 16px; }
+  }
+  
+  /* Hinweis-Reihe unter der Pairs-Tabelle */
+  .hint-row{
+    margin-top:.5rem; display:flex; align-items:center; gap:.5rem;
+    color: var(--text-dim); font-size:.92rem;
+  }
+  
+  /* =========================
+     Filter Overlay (Bottom Sheet)
+     ========================= */
+  #filterOverlay{
+    inset: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 20px;
+    background: rgba(15, 23, 42, .32);
+    backdrop-filter: blur(6px);
+    border-top: 0;
+    box-shadow: none;
+    transform: none;
+    transition: opacity .24s ease;
+    z-index: 160;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #filterOverlay.is-open,
+  #filterOverlay[aria-hidden="false"]{ opacity: 1; pointer-events: auto; }
+  #filterOverlay .overlay-backdrop{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+  #filterOverlay .overlay-card{
+    width: min(720px, 100%);
+    max-height: calc(100vh - 120px);
+    background: var(--panel-elev);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(16px);
+    opacity: 0;
+    transition: transform .28s ease, opacity .28s ease;
+  }
+  #filterOverlay.is-open .overlay-card,
+  #filterOverlay[aria-hidden="false"] .overlay-card{ transform: translateY(0); opacity: 1; }
+  
+  .overlay-head{
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 18px 22px 16px; border-bottom: 1px solid var(--divider);
+    background: linear-gradient(180deg, rgba(248,250,255,.9) 0%, rgba(255,255,255,1) 100%);
+  }
+  .overlay-head .panel-title{ margin: 0; font-size: 1.05rem; }
+  .overlay-body{ padding: 22px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+  .filters-grid{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; }
+  .filter-block h4{
+    margin: 0 0 12px; font-size: .85rem; font-weight: 600; color: var(--text-dim);
+    letter-spacing: .4px; text-transform: uppercase;
+  }
+  .chips{ display: flex; flex-wrap: wrap; gap: 10px; }
+  label.chip{
+    position: relative; display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--divider);
+    background: rgba(242,244,251,.7); color: var(--muted);
+    font-size: .85rem; font-weight: 600;
+    transition: border-color .2s ease, background .2s ease, color .2s ease, box-shadow .2s ease;
+    cursor: pointer;
+  }
+  label.chip input{
+    appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(46,109,246,.35); box-shadow: inset 0 0 0 2px #fff; margin: 0; position: relative;
+    transition: background .2s ease, border-color .2s ease;
+  }
+  label.chip input:checked{ background: var(--accent-grad); border-color: transparent; box-shadow: inset 0 0 0 2px rgba(255,255,255,.9); }
+  label.chip span{ white-space: nowrap; }
+  label.chip:has(input:checked){
+    background: var(--accent-grad); color: #fff; border-color: transparent; box-shadow: 0 8px 18px rgba(46,109,246,.18);
+  }
+  label.chip:focus-within{ outline: 2px solid rgba(46,109,246,.28); outline-offset: 2px; }
+  
+  .filter-row{ display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .filter-row label{ font-size: .85rem; color: var(--text-dim); }
+  .filter-row input[type="text"]{
+    flex: 1 1 220px; min-height: 38px; border-radius: 10px; border: 1px solid var(--divider);
+    padding: 6px 12px; font-size: .95rem; background: #fff; color: var(--text);
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .filter-row input[type="text"]:focus{
+    outline: none; border-color: rgba(46,109,246,.35);
+    box-shadow: 0 0 0 3px rgba(46,109,246,.12);
+  }
+  .overlay-foot{
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 16px 22px 20px; border-top: 1px solid var(--divider);
+    background: rgba(248,250,255,.85);
+  }
   
   /* =========================
      Data Map
@@ -420,6 +696,7 @@
   }
   #mapView .panel-head{ padding:10px 16px; border-bottom:1px solid var(--divider) }
   #mapView .panel-body{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; padding:12px; overflow:hidden }
+  
   #mapCanvas{
     position:relative; flex:1 1 auto; min-height:420px;
     background: transparent !important; border:0 !important; border-radius:10px; box-shadow:none !important;
@@ -445,42 +722,21 @@
     padding:10px 12px; border-bottom:1px solid var(--divider); user-select:none;
   }
   .map-node-title{ font-weight:600 }
-  .map-node-fields{ display:block; max-height:none; overflow:visible }
+  .map-node-fields{ display:block; max-height:360px; overflow:auto }
   .map-node.is-collapsed .map-node-fields{ display:none }
-  .map-node-fields.is-scroll{ max-height:360px; overflow:auto }
   .map-field{
     display:grid; grid-template-columns: 18px 1fr auto; gap:8px;
     align-items:center; padding:10px 12px; border-bottom:1px dashed #e5e7eb;
   }
-  .map-field.is-selectable{
-    transition: background .2s ease, box-shadow .2s ease;
-  }
   .map-field:hover{ background:#f9fafb }
-  .map-field.is-selectable:hover{ box-shadow: inset 0 0 0 1px rgba(76,131,255,.16) }
   .map-field .chev{ width:14px; height:14px; border-radius:3px; border:1px solid var(--divider); position:relative; background:#fff }
   .map-field .chev::before{ content:""; position:absolute; left:3px; right:3px; top:6px; height:2px; background:#64748b; border-radius:2px }
   .map-field.is-open .chev::after{ content:""; position:absolute; top:3px; bottom:3px; left:6px; width:2px; background:#64748b; border-radius:2px; opacity:.0 }
   .map-field-name{ font-weight:500 }
-  .map-field.is-selectable .map-field-name{ cursor:pointer }
-  .map-field-badges .badge{ display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; background:#f3f6f8; color:#334155; border:1px solid #e2e8f0; font-size:12px }
   .map-field-details{ display:none; padding:8px 12px 12px 30px; color:var(--text-dim); background:#fafafa }
   .map-field.is-open + .map-field-details{ display:block }
   .map-field.is-highlight{ background:#eff4ff; outline:1px solid #d9e2ff }
   .map-field.is-highlight .map-field-name{ font-weight:600 }
-  
-  /* =========================
-     Admin/Local Tables Feinheiten
-     ========================= */
-  .local-tables .le-section{ margin: 1.25rem 0 2rem }
-  .local-tables .table-title{ font-size:1rem; font-weight:600; margin:0 0 .5rem }
-  .local-table-group{ margin:0 0 32px }
-  .local-table-group:last-child{ margin-bottom:0 }
-  .local-table-header{
-    display:flex; align-items:center; gap:12px;
-    margin:0 0 8px;
-  }
-  .local-table-header h3{ margin:0; font-size:1rem; font-weight:600 }
-  .local-table-group .table{ margin:0 }
   
   /* =========================
      Reduced Motion
@@ -488,10 +744,7 @@
   @media (prefers-reduced-motion: reduce){
     .topnav-item::after,
     .app{ transition:none !important }
-    .sidebar{
-      transition: opacity .1s linear !important;
-      transform:none !important;
-    }
+    .sidebar{ transition: opacity .1s linear !important; transform:none !important; }
     .app.sidebar-collapsing .sidebar,
     .app.sidebar-collapsed.prep-expand .sidebar{ opacity:0 !important }
   }
@@ -506,522 +759,119 @@
     .btn--ghost:hover{ background:#2a2a2a }
     .local-table-header h3{ color:#eaeaea }
   }
-/* Generischer Bottom-Sheet Standard: geschlossen */
-#filtersPanel,
-#filterSheet,
-.filters-panel,
-[data-filter-sheet]{
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  background: #fff;
-  border-top: 1px solid var(--divider);
-  box-shadow: 0 -10px 30px rgba(15,23,42,.08);
-  transform: translateY(100%);
-  transition: transform .28s ease;
-  z-index: 110;            /* über Inhalt, unter Topbar */
-  will-change: transform;
+  /* === FIX 1: Section-Header & Actions exakt ausrichten ===================== */
+.section-head{
+  display:flex;
+  align-items:center;           /* exakt mittig auf einer Linie */
+  justify-content:space-between;
+  gap:.75rem;
+  padding-inline: var(--content-pad);
+  margin: 1rem 0 .75rem;
+  min-height: 42px;             /* stabilisiert die Höhe */
 }
-
-/* Offen, wenn JS .is-open setzt */
-#filtersPanel.is-open,
-#filterSheet.is-open,
-.filters-panel.is-open,
-[data-filter-sheet].is-open{
-  transform: translateY(0);
-}
-
-/* Falls euer Code statt .is-open mit aria-hidden arbeitet */
-#filtersPanel[aria-hidden="true"],
-#filterSheet[aria-hidden="true"],
-.filters-panel[aria-hidden="true"],
-[data-filter-sheet][aria-hidden="true"]{
-  transform: translateY(100%) !important;
-}
-
-/* Sicherheit für echte <dialog>-Elemente: geschlossen bleibt unsichtbar */
-dialog:not([open]){ display:none !important; }
-/* Bottom-Sheet: standardmäßig ZU */
-#filterOverlay,
-[data-filter-sheet],
-.filters-panel,
-#filtersPanel,
-#filterSheet{
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  background: #fff;
-  border-top: 1px solid var(--divider);
-  box-shadow: 0 -10px 30px rgba(15,23,42,.08);
-  transform: translateY(100%);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform .28s ease, opacity .2s ease;
-  z-index: 110; /* über Inhalt, unter Topbar */
-}
-
-/* Offen (entweder Klasse .is-open ODER aria-hidden="false") */
-#filterOverlay.is-open,
-#filterOverlay[aria-hidden="false"],
-[data-filter-sheet].is-open,
-[data-filter-sheet][aria-hidden="false"],
-.filters-panel.is-open,
-.filters-panel[aria-hidden="false"],
-#filtersPanel.is-open,
-#filterSheet.is-open{
-  transform: translateY(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Sicherheitsnetz für echte <dialog> */
-dialog:not([open]){ display:none !important; }
-
-/* === Filter Overlay Styling ===================================== */
-#filterOverlay{
-  inset: 0;
-  top: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 20px;
-  background: rgba(15, 23, 42, .32);
-  backdrop-filter: blur(6px);
-  border-top: 0;
-  box-shadow: none;
-  transform: none;
-  transition: opacity .24s ease;
-  z-index: 160;
-}
-#filterOverlay[aria-hidden="true"],
-#filterOverlay:not(.is-open){
-  opacity: 0;
-  pointer-events: none;
-  transform: none !important;
-}
-#filterOverlay.is-open,
-#filterOverlay[aria-hidden="false"]{
-  opacity: 1;
-  pointer-events: auto;
-  transform: none !important;
-}
-
-#filterOverlay .overlay-backdrop{
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#filterOverlay .overlay-card{
-  width: min(720px, 100%);
-  max-height: calc(100vh - 120px);
-  background: var(--panel-elev);
-  border: 1px solid var(--divider);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-2);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transform: translateY(16px);
-  opacity: 0;
-  transition: transform .28s ease, opacity .28s ease;
-}
-
-#filterOverlay.is-open .overlay-card,
-#filterOverlay[aria-hidden="false"] .overlay-card{
-  transform: translateY(0);
-  opacity: 1;
-}
-
-.overlay-head{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 22px 16px;
-  border-bottom: 1px solid var(--divider);
-  background: linear-gradient(180deg, rgba(248,250,255,.9) 0%, rgba(255,255,255,1) 100%);
-}
-
-.overlay-head .panel-title{
+.section-title{
   margin: 0;
-  font-size: 1.05rem;
+  line-height: 1;               /* verhindert optische Verschiebung */
+  display:flex; align-items:center;
+}
+.section-actions{
+  display:inline-flex; align-items:center; gap:.5rem;
+}
+.section-actions .btn{ vertical-align: middle; line-height: 1; }
+
+/* === FIX 2: Mapping-Modal – Kopfbereich (LE/System/Fields/Fallback) ====== */
+.map-editor .grid-2{            /* zwei gleich breite Spalten, auch auf iPad stabil */
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+  margin-bottom: 8px;
+}
+@media (max-width: 700px){
+  .map-editor .grid-2{ grid-template-columns: 1fr; }
 }
 
-.overlay-body{
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
+/* Labels im Modal konsistent wie im Dialog-Baukasten */
+.map-editor .grid-2 > label{
+  display:flex; flex-direction:column; gap:6px;
+  font-size:12.5px; color:var(--text-dim);
 }
-
-.filters-grid{
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 24px;
-}
-
-.filter-block h4{
-  margin: 0 0 12px;
-  font-size: .85rem;
-  font-weight: 600;
-  color: var(--text-dim);
-  letter-spacing: .4px;
-  text-transform: uppercase;
-}
-
-.chips{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-label.chip{
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--divider);
-  background: rgba(242,244,251,.7);
-  color: var(--muted);
-  font-size: .85rem;
-  font-weight: 600;
-  transition: border-color .2s ease, background .2s ease, color .2s ease, box-shadow .2s ease;
-  cursor: pointer;
-}
-
-label.chip input{
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid rgba(46,109,246,.35);
-  box-shadow: inset 0 0 0 2px #fff;
-  margin: 0;
-  position: relative;
-  transition: background .2s ease, border-color .2s ease;
-}
-
-label.chip input:checked{
-  background: var(--accent-grad);
-  border-color: transparent;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,.9);
-}
-
-label.chip span{
-  white-space: nowrap;
-}
-
-label.chip:has(input:checked){
-  background: var(--accent-grad);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 8px 18px rgba(46,109,246,.18);
-}
-
-label.chip:focus-within{
-  outline: 2px solid rgba(46,109,246,.28);
-  outline-offset: 2px;
-}
-
-.filter-row{
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-
-.filter-row label{
-  font-size: .85rem;
-  color: var(--text-dim);
-}
-
-.filter-row input[type="text"]{
-  flex: 1 1 220px;
-  min-height: 38px;
-  border-radius: 10px;
-  border: 1px solid var(--divider);
-  padding: 6px 12px;
-  font-size: .95rem;
-  background: #fff;
-  color: var(--text);
+.map-editor select{
+  width:100%;
+  min-height:36px;
+  padding:6px 10px;
+  border-radius:8px;
+  border:1px solid var(--divider);
+  background:#fff; color:var(--text); font-size:13px;
   transition: border-color .2s ease, box-shadow .2s ease;
 }
-
-.filter-row input[type="text"]:focus{
-  outline: none;
-  border-color: rgba(46,109,246,.35);
+.map-editor select:focus{
+  outline:none; border-color: rgba(46,109,246,.35);
   box-shadow: 0 0 0 3px rgba(46,109,246,.12);
 }
 
-.overlay-foot{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 22px 20px;
-  border-top: 1px solid var(--divider);
-  background: rgba(248,250,255,.85);
+/* Mode-/Fallback-Zeile etwas kompakter, gleiche Ausrichtung */
+.map-editor .grid-2 label .form-label{ margin-bottom: 0; }
+
+/* === FIX 3: Mapping-Modal – Wert-Zuordnungen unten ======================= */
+.table.map-pairs{
+  table-layout: fixed;          /* gleiche Spaltenbreite */
+  border:1px solid var(--divider);
+  border-radius:10px;
+  overflow:hidden;
+}
+.table.map-pairs thead th{
+  background:#f7f9ff;
+  color:var(--text-dim);
+  font-weight:600;
+  padding:10px 12px !important;
+}
+.table.map-pairs tbody td{
+  padding:8px 12px !important;
+  vertical-align: middle;
+  background:#fff !important;
+  border-bottom:1px solid var(--divider);
+}
+.table.map-pairs tbody tr:last-child td{ border-bottom:none !important; }
+
+/* Linke & rechte Spalte klar definieren */
+.table.map-pairs thead th:first-child,
+.table.map-pairs tbody td:first-child{ width:50%; }
+.table.map-pairs thead th:last-child,
+.table.map-pairs tbody td:last-child{ width:50%; }
+
+.table.map-pairs .value-select{
+  width:100%;
+  min-height:34px;
+  padding:6px 10px;
+  border:1px solid var(--divider);
+  border-radius:8px;
+  background:#fff;
+  font-size:13px; color:var(--text);
+  -webkit-appearance:none; background-clip:padding-box;
+}
+.table.map-pairs .value-select:focus{
+  outline:none; border-color: rgba(46,109,246,.35);
+  box-shadow: 0 0 0 3px rgba(46,109,246,.12);
 }
 
-.btn-clear{
-  padding: 8px 0;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: .95rem;
-  transition: color .2s ease;
+/* Hinweiszeile unter der Tabelle bündig und ruhig */
+.hint-row{
+  margin-top:.5rem;
+  display:flex; align-items:center; gap:.5rem;
+  color:var(--text-dim);
+  font-size:.92rem;
 }
 
-.btn-clear:hover{
-  color: var(--accent-1);
+/* === FIX 4: Icon-Buttons (Stift/Mülleimer) konsistent in Tabellen ======== */
+.table .table-actions{ display:inline-flex; gap:8px; align-items:center; }
+.icon-btn{
+  display:inline-grid; place-items:center;
+  width:28px; height:28px; padding:0; margin:0;
+  border:1px solid var(--divider); background:#fff; border-radius:8px;
+  transition: background .15s ease, border-color .15s ease;
 }
+.icon-btn:hover{ background:#fafafa; border-color:#dfe3ea; }
+.icon-16{ width:16px; height:16px; display:block; }
 
-.overlay-foot .btn-primary{
-  padding-inline: 8px;
-}
-
-@media (max-width: 720px){
-  #filterOverlay{
-    align-items: flex-end;
-    padding: 24px 16px 16px;
-  }
-
-  #filterOverlay .overlay-card{
-    max-height: calc(100vh - 40px);
-    border-radius: var(--radius-l) var(--radius-l) 0 0;
-  }
-
-  .filters-grid{
-    grid-template-columns: 1fr;
-  }
-
-  .overlay-foot{
-    flex-direction: column-reverse;
-    align-items: stretch;
-  }
-
-  .overlay-foot .btn-primary{
-    width: 100%;
-    text-align: center;
-  }
-
-  .btn-clear{
-    text-align: center;
-  }
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .75rem;
-  padding-inline: var(--content-pad);
-  margin: 1rem 0 .75rem;
-}
-
-.section-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.section-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-}
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  padding: .35rem .6rem;
-  border: 1px solid var(--hairline, #e6e6e6);
-  background: var(--surface, #fff);
-  color: var(--ink, #222);
-  border-radius: 8px;
-  font-size: .9rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
-}
-
-.icon-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-.icon-btn:hover {
-  background: var(--surface-2, #fafafa);
-  border-color: var(--hairline-2, #ddd);
-}
-
-.icon-btn:active {
-  background: var(--surface-3, #f5f5f5);
-}
-
-.icon-btn:is(.active, :focus-visible) {
-  outline: none;
-  border-color: var(--accent, #4c6f62);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #4c6f62) 20%, transparent);
-}
-
-@media (max-width: 680px) {
-  .icon-btn span { display: none; } /* auf Mobil nur das Icon zeigen */
-}
-
-
-.section-actions .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: .375rem;
-}
-
-.table-wrap { overflow: auto; }
-
-.tabs { margin-bottom: .5rem; }
-
-/* Formatierung des Filterfeldes in den Tabllen*/
-.table thead input[type="text"] {
-  width: 100%;
-  padding: 4px 6px;
-  border: 1px solid var(--divider);
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--text);
-  background: #f9fafb;
-}
-.table thead input[type="text"]:focus {
-  outline: none;
-  border-color: var(--accent-1);
-  background: #fff;
-  box-shadow: 0 0 0 2px rgba(46,109,246,.15);
-}
-
-/* === Unified Buttons === */
-:root{
-  /* Passe diese 3 Farben ggf. an den Glossary-NEW-Button an */
-  --btn-primary-bg: linear-gradient(135deg, #2e6df6 0%, #7ca3ff 100%);    /* HINTERGRUND wie dein Glossary-New */
-  --btn-primary-text: #ffffff;  /* TEXTFARBE auf Primary */
-  --btn-primary-border: #0a84ff;
-
-  --btn-hover-mult: 0.9;        /* dunkelt bei Hover leicht ab */
-  --btn-active-mult: 0.82;
-
-  --btn-radius: 10px;           /* wie Glossary-New (ggf. anpassen) */
-  --btn-padding-y: 6px;
-  --btn-padding-x: 14px;
-  --btn-font-weight: 600;
-  --btn-font-size: 14px;
-  --btn-gap: 8px;               /* Abstand Icon-Text */
-  --btn-shadow: 0 1px 2px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.06);
-  --btn-shadow-focus: 0 0 0 3px rgba(10,132,255,.25);
-  --btn-border-width: 1px;
-
-  /* Neutrale Farben */
-  --btn-neutral-bg: #f5f6f7;
-  --btn-neutral-text: #111;
-  --btn-neutral-border: #d0d5dd;
-
-  /* Danger (für „Delete“, „Clear all“, ggf. „Cancel“) */
-  --btn-danger-bg: #e54848;
-  --btn-danger-text: #fff;
-  --btn-danger-border: #e54848;
-}
-
-/* Basis */
-button.btn {
-  appearance: none;
-  -webkit-appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--btn-gap);
-  padding: var(--btn-padding-y) var(--btn-padding-x);
-  border-radius: var(--btn-radius);
-  font-weight: var(--btn-font-weight);
-  font-size: var(--btn-font-size);
-  line-height: 1.2;
-  border: var(--btn-border-width) solid transparent;
-  box-shadow: var(--btn-shadow);
-  cursor: pointer;
-  user-select: none;
-  transition: transform .04s ease, box-shadow .2s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
-  text-decoration: none;
-}
-
-/* Primary (wie Glossary-New) */
-button.btn.btn--primary {
-  background: var(--btn-primary-bg);
-  color: var(--btn-primary-text);
-  border-color: var(--btn-primary-border);
-}
-
-/* Neutral/Secondary (z. B. „Filter“, „Done“, „Export“) */
-button.btn.btn--secondary {
-  background: var(--btn-neutral-bg);
-  color: var(--btn-neutral-text);
-  border-color: var(--btn-neutral-border);
-}
-
-/* Ghost (dezente Alternative: transparenter Hintergrund) */
-button.btn.btn--ghost {
-  background: transparent;
-  color: var(--btn-neutral-text);
-  border-color: var(--btn-neutral-border);
-}
-
-/* Danger (z. B. „Delete“, „Clear all“) */
-button.btn.btn--danger {
-  background: var(--btn-danger-bg);
-  color: var(--btn-danger-text);
-  border-color: var(--btn-danger-border);
-}
-
-/* Hover/Active (kleine Abdunklung) */
-button.btn:hover { transform: translateY(-1px); }
-button.btn:active { transform: translateY(0); }
-
-button.btn.btn--primary:hover    { filter: brightness(var(--btn-hover-mult)); }
-button.btn.btn--primary:active   { filter: brightness(var(--btn-active-mult)); }
-button.btn.btn--secondary:hover  { background: #eceff1; }
-button.btn.btn--secondary:active { background: #e6eaed; }
-button.btn.btn--ghost:hover      { background: #f2f4f7; }
-button.btn.btn--ghost:active     { background: #eceff3; }
-button.btn.btn--danger:hover     { filter: brightness(var(--btn-hover-mult)); }
-button.btn.btn--danger:active    { filter: brightness(var(--btn-active-mult)); }
-
-/* Fokus-Ring */
-button.btn:focus-visible {
-  outline: none;
-  box-shadow: var(--btn-shadow-focus);
-}
-
-/* Disabled */
-button.btn:disabled,
-button.btn[aria-disabled="true"] {
-  opacity: .55;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* Icon-Unterstützung (SVG oder <span class="icon">…) */
-button.btn .icon {
-  display: inline-flex;
-  width: 1.1em;
-  height: 1.1em;
-  line-height: 1;
-}
-
-/* Volle Breite (falls benötigt) */
-button.btn.btn--block { width: 100%; }
-
-/* Klein/Groß (falls benötigt) */
-button.btn.btn--sm { --btn-padding-y: 6px; --btn-padding-x: 10px; --btn-font-size: 12px; }
-button.btn.btn--lg { --btn-padding-y: 8px; --btn-padding-x: 18px; --btn-font-size: 15px; }
+/* === FIX 5: Data-Map – sicherstellen, dass die Liste in Nodes scrollbar ist */
+.map-node-fields{ max-height:360px; overflow:auto; }
