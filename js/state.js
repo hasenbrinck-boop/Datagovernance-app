@@ -66,6 +66,7 @@ export const state = {
     { id: 'gls-006', term: 'Time to recruit', definition: 'Time from final approval of PR until contract signed', info: '', owner: 'HR Analytics', fieldRef: '', type: 'KPI' },
   ],
   currentSystem: 'All Systems',
+  currentDomain: null,
   editFieldIndex: null,
   editSystemIndex: null,
   editFoundationIndex: null,
