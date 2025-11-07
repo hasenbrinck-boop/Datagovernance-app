@@ -142,10 +142,10 @@ function renderDataObjects() {
           <td>${obj.domain}</td>
           <td class="table-actions">
             <button class="dbo-edit" data-index="${i}" title="Edit">
-              <svg viewBox="0 0 20 20"><path fill="currentColor" d="M14.69 2.86a1.5 1.5 0 0 1 2.12 2.12L7.62 14.17l-3.03.9.9-3.03L14.69 2.86z"/></svg>
+              <svg width="16" height="16" viewBox="0 0 20 20"><path fill="currentColor" d="M14.69 2.86a1.5 1.5 0 0 1 2.12 2.12L7.62 14.17l-3.03.9.9-3.03L14.69 2.86z"/></svg>
             </button>
             <button class="dbo-delete" data-index="${i}" title="Delete">
-              <svg viewBox="0 0 20 20"><path fill="currentColor" d="M6 6h8v10H6V6zm9-2H5v2h10V4z"/></svg>
+              <svg width="16" height="16" viewBox="0 0 20 20"><path fill="currentColor" d="M6 6h8v10H6V6zm9-2H5v2h10V4z"/></svg>
             </button>
           </td>
         </tr>
