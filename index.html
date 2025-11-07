@@ -891,7 +891,8 @@ Passive" style="width:100%;"></textarea>
 
     function onMainViewChanged(){
       // Wenn die Systems-Untertabs (TopTabs) nicht sichtbar sind -> alles verstecken
-      const systemsTabsVisible = !!document.getElementById('topTabs')?.offsetParent;
+      const topTabs = document.getElementById('topTabs');
+      const systemsTabsVisible = !!(topTabs && topTabs.offsetParent);
       if (!systemsTabsVisible) hideSystemsPanels();
     }
 
