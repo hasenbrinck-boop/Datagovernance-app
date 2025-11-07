@@ -4841,7 +4841,7 @@ function getFilteredData() {
 function updateDashboardMetrics() {
   const { filteredSystems, filteredFields } = getFilteredData();
   
-  // Systems metrics
+  // Systems metrics - Note: Systems with scope 'both' are counted in both categories
   const globalSystems = filteredSystems.filter(s => s.scope === 'global' || s.scope === 'both').length;
   const localSystems = filteredSystems.filter(s => s.scope === 'local' || s.scope === 'both').length;
   const totalSystems = filteredSystems.length;
@@ -4868,9 +4868,9 @@ function updateDashboardMetrics() {
   updateMetricValue('metricWithoutDef', fieldsWithoutDef);
   updateMetricValue('metricDefCoverage', defCoverage + '%');
   
-  // Glossary metrics
+  // Glossary metrics - Count fields that reference glossary terms
   const totalGlossaryTerms = glossaryTerms.length;
-  const linkedFields = glossaryTerms.filter(t => t.fieldRef && t.fieldRef !== '').length;
+  const linkedFields = filteredFields.filter(f => f.glossaryRef && f.glossaryRef !== '').length;
   
   updateMetricValue('metricGlossaryTerms', totalGlossaryTerms);
   updateMetricValue('metricLinkedFields', linkedFields);
@@ -4955,9 +4955,18 @@ function renderDomainsChart() {
 }
 
 function renderSimpleBarChart(ctx, data, title) {
+  // Chart constants
+  const CHART_HEIGHT = 400;
+  const CHART_PADDING = 60;
+  const BAR_WIDTH_RATIO = 0.7;
+  const GAP_WIDTH_RATIO = 0.3;
+  const LABEL_ROTATION = -Math.PI / 6; // 30 degrees
+  const MAX_LABEL_LENGTH = 15;
+  const TRUNCATED_LABEL_LENGTH = 12;
+  
   const canvas = ctx.canvas;
   const width = canvas.width = canvas.offsetWidth * 2;
-  const height = canvas.height = 400;
+  const height = canvas.height = CHART_HEIGHT;
   
   const labels = Object.keys(data);
   const values = Object.values(data);
@@ -4973,11 +4982,10 @@ function renderSimpleBarChart(ctx, data, title) {
   ];
   
   // Chart dimensions
-  const padding = 60;
-  const chartWidth = width - padding * 2;
-  const chartHeight = height - padding * 2;
-  const barWidth = chartWidth / labels.length * 0.7;
-  const gap = chartWidth / labels.length * 0.3;
+  const chartWidth = width - CHART_PADDING * 2;
+  const chartHeight = height - CHART_PADDING * 2;
+  const barWidth = chartWidth / labels.length * BAR_WIDTH_RATIO;
+  const gap = chartWidth / labels.length * GAP_WIDTH_RATIO;
   
   ctx.font = '24px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'center';
@@ -4985,13 +4993,18 @@ function renderSimpleBarChart(ctx, data, title) {
   labels.forEach((label, i) => {
     const value = values[i];
     const barHeight = (value / maxValue) * chartHeight;
-    const x = padding + i * (barWidth + gap) + gap / 2;
-    const y = height - padding - barHeight;
+    const x = CHART_PADDING + i * (barWidth + gap) + gap / 2;
+    const y = height - CHART_PADDING - barHeight;
     
     // Draw bar with gradient
-    const gradient = ctx.createLinearGradient(0, y, 0, height - padding);
-    gradient.addColorStop(0, colors[i % colors.length]);
-    gradient.addColorStop(1, colors[i % colors.length] + '88');
+    const gradient = ctx.createLinearGradient(0, y, 0, height - CHART_PADDING);
+    const baseColor = colors[i % colors.length];
+    gradient.addColorStop(0, baseColor);
+    // Convert hex to rgba for proper alpha handling
+    const r = parseInt(baseColor.slice(1, 3), 16);
+    const g = parseInt(baseColor.slice(3, 5), 16);
+    const b = parseInt(baseColor.slice(5, 7), 16);
+    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.5)`);
     
     ctx.fillStyle = gradient;
     ctx.fillRect(x, y, barWidth, barHeight);
@@ -5005,17 +5018,22 @@ function renderSimpleBarChart(ctx, data, title) {
     ctx.fillStyle = '#64748b';
     ctx.font = '22px -apple-system, system-ui, sans-serif';
     ctx.save();
-    ctx.translate(x + barWidth / 2, height - padding + 20);
-    ctx.rotate(-Math.PI / 6);
-    ctx.fillText(label.length > 15 ? label.substring(0, 12) + '...' : label, 0, 0);
+    ctx.translate(x + barWidth / 2, height - CHART_PADDING + 20);
+    ctx.rotate(LABEL_ROTATION);
+    const displayLabel = label.length > MAX_LABEL_LENGTH 
+      ? label.substring(0, TRUNCATED_LABEL_LENGTH) + '...' 
+      : label;
+    ctx.fillText(displayLabel, 0, 0);
     ctx.restore();
   });
 }
 
 function renderSimplePieChart(ctx, data) {
+  const CHART_HEIGHT = 400;
+  
   const canvas = ctx.canvas;
   const width = canvas.width = canvas.offsetWidth * 2;
-  const height = canvas.height = 400;
+  const height = canvas.height = CHART_HEIGHT;
   
   const labels = Object.keys(data);
   const values = Object.values(data);
