@@ -832,6 +832,10 @@ function renderSystemsSidebar() {
           : 'none';
       }
     });
+          ? 'block'
+          : 'none';
+      }
+    });
     cluster.appendChild(head);
     cluster.appendChild(body);
     systemListEl.appendChild(cluster);
