@@ -9,13 +9,14 @@ import {
   STORAGE_KEY_SYSTEMS,
 } from './constants.js';
 
+/** LocalStorage shim with safe fallback */
 export const storage = (() => {
   try {
     const testKey = '__gdf_test__';
     window.localStorage.setItem(testKey, '1');
     window.localStorage.removeItem(testKey);
     return window.localStorage;
-  } catch (err) {
+  } catch {
     const memoryStore = {};
     return {
       getItem(key) {
@@ -31,9 +32,71 @@ export const storage = (() => {
   }
 })();
 
+/* ---------------------------- Columns ---------------------------- */
+export function saveColumns() {
+  try {
+    storage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(state.fieldColumns || []));
+  } catch (err) {
+    console.error('saveColumns() failed', err);
+  }
+}
+
+export function loadColumns() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_COLUMNS);
+    if (raw) {
+      state.fieldColumns = JSON.parse(raw) || [];
+    } else if (!Array.isArray(state.fieldColumns)) {
+      state.fieldColumns = [];
+    }
+  } catch (err) {
+    console.error('loadColumns() failed', err);
+    state.fieldColumns = [];
+  }
+}
+
+/* ---------------------------- Map Positions ---------------------------- */
+export function savePositions() {
+  try {
+    storage.setItem(STORAGE_KEY_MAP_POS, JSON.stringify(state.mapPositions || {}));
+  } catch (err) {
+    console.error('savePositions() failed', err);
+  }
+}
+
+export function loadPositions() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_MAP_POS);
+    state.mapPositions = raw ? (JSON.parse(raw) || {}) : (state.mapPositions || {});
+  } catch (err) {
+    console.error('loadPositions() failed', err);
+    state.mapPositions = state.mapPositions || {};
+  }
+}
+
+/* ---------------------------- Map Filters ---------------------------- */
+export function saveFilters() {
+  try {
+    storage.setItem(STORAGE_KEY_MAP_FILTERS, JSON.stringify(state.mapFilters || {}));
+  } catch (err) {
+    console.error('saveFilters() failed', err);
+  }
+}
+
+export function loadFilters() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_MAP_FILTERS);
+    state.mapFilters = raw ? (JSON.parse(raw) || {}) : (state.mapFilters || {});
+  } catch (err) {
+    console.error('loadFilters() failed', err);
+    state.mapFilters = state.mapFilters || {};
+  }
+}
+
+/* ---------------------------- LE ↔ System Map ---------------------------- */
 export function saveLeSystems() {
   try {
-    storage.setItem(STORAGE_KEY_LE_SYS, JSON.stringify(state.leSystemMap));
+    storage.setItem(STORAGE_KEY_LE_SYS, JSON.stringify(state.leSystemMap || {}));
   } catch (err) {
     console.error('saveLeSystems() failed', err);
   }
@@ -44,17 +107,20 @@ export function loadLeSystems() {
     const raw = storage.getItem(STORAGE_KEY_LE_SYS);
     if (raw) {
       const parsed = JSON.parse(raw) || {};
-      Object.keys(state.leSystemMap).forEach((key) => delete state.leSystemMap[key]);
-      Object.assign(state.leSystemMap, parsed);
+      state.leSystemMap = parsed;
+    } else {
+      state.leSystemMap = state.leSystemMap || {};
     }
   } catch (err) {
     console.error('loadLeSystems() failed', err);
+    state.leSystemMap = state.leSystemMap || {};
   }
 }
 
+/* ---------------------------- Systems ---------------------------- */
 export function saveSystems() {
   try {
-    storage.setItem(STORAGE_KEY_SYSTEMS, JSON.stringify(state.systems));
+    storage.setItem(STORAGE_KEY_SYSTEMS, JSON.stringify(state.systems || []));
   } catch (err) {
     console.error('saveSystems() failed', err);
   }
@@ -63,48 +129,33 @@ export function saveSystems() {
 export function loadSystems() {
   try {
     const raw = storage.getItem(STORAGE_KEY_SYSTEMS);
-    if (!raw) return;
-    const fromStore = JSON.parse(raw) || [];
-    if (Array.isArray(fromStore) && fromStore.length > 0) {
-      state.systems.splice(0, state.systems.length, ...fromStore);
+    if (raw) {
+      state.systems = JSON.parse(raw) || [];
+    } else {
+      state.systems = state.systems || [];
     }
   } catch (err) {
     console.error('loadSystems() failed', err);
+    state.systems = state.systems || [];
   }
 }
 
-export function saveColumns() {
-  try {
-    storage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(state.fieldColumns));
-  } catch (err) {
-    console.error('saveColumns() failed', err);
-  }
-}
-
-export function loadColumns() {
-  try {
-    const raw = storage.getItem(STORAGE_KEY_COLUMNS);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      state.fieldColumns.splice(0, state.fieldColumns.length, ...parsed);
-    }
-  } catch (err) {
-    console.error('loadColumns() failed', err);
-  }
-}
-
+/* ---------------------------- Fields ---------------------------- */
+/* ---------------------------- Fields (inkl. allowedValues) ---------------------------- */
 export function saveFields() {
   try {
-    storage.setItem(STORAGE_KEY_FIELDS, JSON.stringify(state.fields));
+    // komplette Feldobjekte inkl. allowedValues sichern
+    const payload = Array.isArray(state.fields) ? state.fields : [];
+    storage.setItem(STORAGE_KEY_FIELDS, JSON.stringify(payload));
   } catch (err) {
-    console.error('saveFields() failed:', err);
+    console.error('saveFields() failed', err);
   }
 }
 
 export function loadFields() {
   try {
     let raw = storage.getItem(STORAGE_KEY_FIELDS);
+    // Migration: ältere Version
     if (!raw) {
       const legacy = storage.getItem('gdf_fields_v1');
       if (legacy) {
@@ -115,78 +166,25 @@ export function loadFields() {
     }
     if (raw) {
       const parsed = JSON.parse(raw) || [];
-      state.fields.splice(0, state.fields.length, ...parsed);
-    }
-    const glossaryMap = new Map(
-      state.glossaryTerms.map((term) => [term.id, term])
-    );
-    state.fields.forEach((field) => {
-      if (field.glossaryRef && !field.glossaryId) field.glossaryId = field.glossaryRef;
-      if (field.glossaryId) {
-        const linked = glossaryMap.get(field.glossaryId);
-        if (linked) {
-          linked.fieldRefId = field.id || '';
-          linked.fieldRef = `${field.system} • ${field.name}`;
-        }
-      }
-    });
-  } catch (err) {
-    console.error('loadFields() failed:', err);
-  }
-}
-
-export function savePositions() {
-  try {
-    storage.setItem(STORAGE_KEY_MAP_POS, JSON.stringify(state.mapPositions));
-  } catch (err) {
-    console.error('savePositions() failed', err);
-  }
-}
-
-export function loadPositions() {
-  try {
-    const raw = storage.getItem(STORAGE_KEY_MAP_POS);
-    if (raw) {
-      const parsed = JSON.parse(raw) || {};
-      Object.keys(state.mapPositions).forEach((key) => delete state.mapPositions[key]);
-      Object.assign(state.mapPositions, parsed);
+      // sicherstellen, dass allowedValues immer ein Array ist
+      state.fields = Array.isArray(parsed)
+        ? parsed.map(f => ({
+            ...f,
+            allowedValues: Array.isArray(f.allowedValues) ? f.allowedValues : [],
+          }))
+        : [];
+    } else {
+      state.fields = state.fields || [];
     }
   } catch (err) {
-    console.error('loadPositions() failed', err);
+    console.error('loadFields() failed', err);
+    state.fields = state.fields || [];
   }
 }
-
-export function saveFilters() {
-  try {
-    storage.setItem(STORAGE_KEY_MAP_FILTERS, JSON.stringify(state.mapFilters));
-  } catch (err) {
-    console.error('saveFilters() failed', err);
-  }
-}
-
-export function loadFilters() {
-  try {
-    const raw = storage.getItem(STORAGE_KEY_MAP_FILTERS);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') {
-      state.mapFilters.systems = parsed.systems || [];
-      state.mapFilters.domains = parsed.domains || [];
-      state.mapFilters.scope = parsed.scope || { global: true, local: true };
-      state.mapFilters.search = parsed.search || '';
-    }
-  } catch (err) {
-    console.error('loadFilters() failed', err);
-  }
-  if (state.mapFilters.scope?.global === false && state.mapFilters.scope?.local === false) {
-    state.mapFilters.scope = { global: true, local: true };
-    saveFilters();
-  }
-}
-
+/* ---------------------------- Glossary ---------------------------- */
 export function saveGlossary() {
   try {
-    storage.setItem(STORAGE_KEY_GLOSSARY, JSON.stringify(state.glossaryTerms));
+    storage.setItem(STORAGE_KEY_GLOSSARY, JSON.stringify(state.glossary || []));
   } catch (err) {
     console.error('saveGlossary() failed', err);
   }
@@ -195,36 +193,51 @@ export function saveGlossary() {
 export function loadGlossary() {
   try {
     const raw = storage.getItem(STORAGE_KEY_GLOSSARY);
-    if (!raw) return;
-    const fromStore = JSON.parse(raw) || [];
-    if (Array.isArray(fromStore) && fromStore.length > 0) {
-      state.glossaryTerms.splice(0, state.glossaryTerms.length, ...fromStore);
+    if (raw) {
+      state.glossary = JSON.parse(raw) || [];
+    } else {
+      state.glossary = state.glossary || [];
     }
-    const matchField = (value) => {
-      if (value == null) return null;
-      const needle = String(value).trim();
-      if (!needle) return null;
-      return (
-        state.fields.find((f) => f.id === needle) ||
-        state.fields.find((f) => `${f.system}:${f.name}` === needle) ||
-        state.fields.find((f) => `${f.system} • ${f.name}` === needle) ||
-        null
-      );
-    };
-    state.glossaryTerms.forEach((term) => {
-      if (!term.type) term.type = 'Term';
-      if (!('fieldRefId' in term) || term.fieldRefId == null) {
-        term.fieldRefId = '';
-      }
-      if (!term.fieldRefId && term.fieldRef) {
-        const match = matchField(term.fieldRef);
-        if (match) {
-          term.fieldRefId = match.id;
-          term.fieldRef = `${match.system} • ${match.name}`;
-        }
-      }
-    });
   } catch (err) {
-    console.error('loadGlossary() failed:', err);
+    console.error('loadGlossary() failed', err);
+    state.glossary = state.glossary || [];
+  }
+}
+
+/* ---------------------------- Mappings & ValueMaps ---------------------------- */
+const STORAGE_KEY_MAPPINGS = 'gdf_mappings_v1';
+const STORAGE_KEY_VALUEMAPS = 'gdf_valueMaps_v1';
+
+export function loadMappings() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_MAPPINGS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveMappings(list) {
+  try {
+    storage.setItem(STORAGE_KEY_MAPPINGS, JSON.stringify(list || []));
+  } catch (err) {
+    console.error('saveMappings() failed', err);
+  }
+}
+
+export function loadValueMaps() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_VALUEMAPS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveValueMaps(list) {
+  try {
+    storage.setItem(STORAGE_KEY_VALUEMAPS, JSON.stringify(list || []));
+  } catch (err) {
+    console.error('saveValueMaps() failed', err);
   }
 }
