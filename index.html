@@ -417,8 +417,8 @@
         <div class="panel-head">
           <h3 class="panel-title">Data Map</h3>
           <div class="data-map-toolbar">
-            <button id="openFilterPanel" class="btn-ghost">Set Filters</button>
-            <button id="mapFitBtn" class="btn-ghost">Fit to view</button>
+            <button id="openFilterPanel" class="btn btn--secondary">Set Filters</button>
+            <button id="mapFitBtn" class="btn btn--secondary">Fit to view</button>
           </div>
         </div>
         <div class="panel-body">
@@ -647,6 +647,36 @@ Passive" style="width:100%;"></textarea>
 
             <label for="le-country">Country</label>
             <input id="le-country" name="country" type="text" required />
+          </div>
+        </div>
+        <div class="dialog-foot">
+          <button class="btn-cancel" type="button">Cancel</button>
+          <button class="btn btn--primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Domain Dialog -->
+  <dialog id="domainDialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div class="panel-title">New / Edit Data Domain</div>
+      </div>
+      <form id="domainForm">
+        <div class="dialog-body">
+          <div class="dialog-grid">
+            <label for="dom-name">Domain</label>
+            <input id="dom-name" name="name" type="text" required />
+
+            <label for="dom-manager">Manager</label>
+            <input id="dom-manager" name="manager" type="text" />
+
+            <label for="dom-active">Active</label>
+            <input id="dom-active" name="active" type="checkbox" />
+
+            <label for="dom-color">Color</label>
+            <input id="dom-color" name="color" type="color" value="#6a6a6a" />
           </div>
         </div>
         <div class="dialog-foot">

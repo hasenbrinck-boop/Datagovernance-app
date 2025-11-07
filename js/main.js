@@ -142,10 +142,10 @@ function renderDataObjects() {
           <td>${obj.domain}</td>
           <td class="table-actions">
             <button class="dbo-edit" data-index="${i}" title="Edit">
-              <svg viewBox="0 0 20 20"><path fill="currentColor" d="M14.69 2.86a1.5 1.5 0 0 1 2.12 2.12L7.62 14.17l-3.03.9.9-3.03L14.69 2.86z"/></svg>
+              <svg width="16" height="16" viewBox="0 0 20 20"><path fill="currentColor" d="M14.69 2.86a1.5 1.5 0 0 1 2.12 2.12L7.62 14.17l-3.03.9.9-3.03L14.69 2.86z"/></svg>
             </button>
             <button class="dbo-delete" data-index="${i}" title="Delete">
-              <svg viewBox="0 0 20 20"><path fill="currentColor" d="M6 6h8v10H6V6zm9-2H5v2h10V4z"/></svg>
+              <svg width="16" height="16" viewBox="0 0 20 20"><path fill="currentColor" d="M6 6h8v10H6V6zm9-2H5v2h10V4z"/></svg>
             </button>
           </td>
         </tr>
@@ -1121,7 +1121,7 @@ function setModeSystemsByDomain(domainName) {
   if (tabMappings) tabMappings.style.display = 'inline-flex';
 
   // Update sidebar to show active domain
-  updateSystemsSidebar();
+  renderSystemsSidebar();
 
   // Determine which tab to show
   const activeBtn = document.querySelector('#topTabs .tab.is-active');
@@ -2957,6 +2957,73 @@ function pointsToPath(points = []) {
   return commands.join(' ');
 }
 
+// Build a curved path that avoids obstacles
+function buildCurvedEdgePath(
+  start,
+  end,
+  startSide = 'right',
+  endSide = 'left'
+) {
+  if (!start || !end) return '';
+
+  const format = (v) => Math.round(v * 100) / 100;
+  
+  // Calculate control points for Bezier curve
+  const startDir = startSide === 'right' ? 1 : -1;
+  const endDir = endSide === 'right' ? 1 : -1;
+  
+  // Distance between start and end
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  
+  // Control point offset based on distance - creates a smooth curve
+  const controlOffset = Math.min(dist / 2, 120);
+  
+  // Get obstacles to check if we need to adjust the curve
+  const excludeNodes = [];
+  if (start.node) excludeNodes.push(start.node);
+  if (end.node && end.node !== start.node) excludeNodes.push(end.node);
+  const obstacles = collectNodeObstacles(excludeNodes);
+  
+  // First control point: extend from start in the direction it's pointing
+  let cp1x = start.x + startDir * controlOffset;
+  let cp1y = start.y;
+  
+  // Second control point: approach end from the direction it needs
+  let cp2x = end.x + endDir * controlOffset;
+  let cp2y = end.y;
+  
+  // Check if the curve path might intersect obstacles
+  // If so, adjust control points to go around
+  const midY = (start.y + end.y) / 2;
+  let needsVerticalAdjustment = false;
+  
+  for (const obstacle of obstacles) {
+    // Check if our straight path intersects this obstacle
+    const pathRect = {
+      left: Math.min(start.x, end.x),
+      right: Math.max(start.x, end.x),
+      top: Math.min(start.y, end.y),
+      bottom: Math.max(start.y, end.y)
+    };
+    
+    if (rectsOverlap(pathRect, obstacle, -10)) {
+      needsVerticalAdjustment = true;
+      // Adjust control points to curve above or below the obstacle
+      const curveAbove = midY < obstacle.top;
+      const offset = curveAbove ? -OBSTACLE_MARGIN : OBSTACLE_MARGIN;
+      cp1y += offset;
+      cp2y += offset;
+      break;
+    }
+  }
+  
+  // Create a cubic Bezier curve
+  // M = move to start, C = cubic bezier with two control points
+  return `M ${format(start.x)},${format(start.y)} C ${format(cp1x)},${format(cp1y)} ${format(cp2x)},${format(cp2y)} ${format(end.x)},${format(end.y)}`;
+}
+
 function buildRoutedEdgePath(
   start,
   end,
@@ -3059,7 +3126,11 @@ function drawSelectedFieldEdges() {
   const selectedKey = normalizeFieldKey(selectedFieldName);
   const srcEl =
     getFieldEl(system, selectedFieldName) || getFieldEl(system, field);
-  if (srcEl) srcEl.classList.add('is-highlight');
+  if (srcEl) {
+    srcEl.classList.add('is-highlight');
+    // Scroll selected field into view if needed
+    srcEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 
   const outgoing = fields.filter((f) => {
     if (!f.source?.system || f.source.system !== system) return false;
@@ -3078,12 +3149,16 @@ function drawSelectedFieldEdges() {
 
   outgoing.forEach((tgt) => {
     const targetName = resolveFieldRef(tgt.system, tgt.name) || tgt.name;
+    const tgtEl = getFieldEl(tgt.system, targetName);
+    if (tgtEl) {
+      tgtEl.classList.add('is-highlight');
+      // Scroll target field into view if needed
+      tgtEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
     const p1 = fieldAnchor(system, selectedFieldName, 'right');
     const p2 = fieldAnchor(tgt.system, targetName, 'left');
-    const tgtEl = getFieldEl(tgt.system, targetName);
-    tgtEl?.classList.add('is-highlight');
     if (p1 && p2) {
-      const pathD = buildRoutedEdgePath(
+      const pathD = buildCurvedEdgePath(
         p1,
         p2,
         p1.side || 'right',
@@ -3099,12 +3174,16 @@ function drawSelectedFieldEdges() {
       resolveFieldRef(src.source.system, src.source.field, src.name) ||
       src.source.field ||
       src.name;
+    const srcRow = getFieldEl(src.source.system, sourceName);
+    if (srcRow) {
+      srcRow.classList.add('is-highlight');
+      // Scroll source field into view if needed
+      srcRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
     const p1 = fieldAnchor(src.source.system, sourceName, 'right');
     const p2 = fieldAnchor(system, selectedFieldName, 'left');
-    const srcRow = getFieldEl(src.source.system, sourceName);
-    srcRow?.classList.add('is-highlight');
     if (p1 && p2) {
-      const pathD = buildRoutedEdgePath(
+      const pathD = buildCurvedEdgePath(
         p1,
         p2,
         p1.side || 'right',
@@ -3199,6 +3278,10 @@ function renderDataMap() {
   systems.forEach((sys) => {
     if (!systemPassesFilters(sys.name)) return;
 
+    // Skip systems without any fields that pass filters
+    let list = getFieldsBySystem(sys.name).filter(fieldPassesFilters);
+    if (list.length === 0) return;
+
     const node = document.createElement('div');
     node.className = 'map-node';
     node.dataset.system = sys.name;
@@ -3225,7 +3308,6 @@ function renderDataMap() {
     const wrap = document.createElement('div');
     wrap.className = 'map-node-fields';
 
-    let list = getFieldsBySystem(sys.name).filter(fieldPassesFilters);
     if (list.length > 10) wrap.classList.add('is-scroll');
     else wrap.classList.remove('is-scroll');
 

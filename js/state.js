@@ -1,7 +1,7 @@
 export const state = {
   editDataObjectIndex: null,
   dataDomains: [
-    { name: 'HR', manager: 'Michael Hasenbrinck', active: true, color: '#4c6f62' },
+    { name: 'HR', manager: 'Michael Hasenbrinck', active: true, color: '#2e6df6' },
     { name: 'Finance', manager: 'Ellen Lunz', active: true, color: '#6b5e4c' },
   ],
   systems: [
