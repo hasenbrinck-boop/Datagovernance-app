@@ -85,6 +85,7 @@ let isPanning = state.isPanning;
 let panStart = state.panStart;
 
 let fieldDialogHandlersBound = false;
+let mapHasUserInteraction = false; // Track if user has interacted with map
 
 // === Data Object Dialog / Form (können initial null sein, Guards sind unten eingebaut)
 const dataObjectDialog = document.getElementById('dataObjectDialog');
@@ -3376,6 +3377,7 @@ function renderDataMap() {
         } else {
           selectedFieldRef = { system: sys.name, field: f.name };
           state.selectedFieldRef = selectedFieldRef;
+          mapHasUserInteraction = true; // Mark that user has interacted
           drawSelectedFieldEdges();
         }
       });
@@ -3411,11 +3413,14 @@ function renderDataMap() {
     enableDrag(node, header, sys.name);
   });
 
+  // Only draw edges if user has interacted with the map (clicked a field)
   if (selectedFieldRef) {
     drawSelectedFieldEdges();
-  } else {
+    mapHasUserInteraction = true;
+  } else if (mapHasUserInteraction) {
     drawSystemEdges();
   }
+  // Otherwise, no edges are drawn on initial load
 
   requestAnimationFrame(() => fitMapToContent());
 }
@@ -5221,18 +5226,18 @@ function render3DPieChart(ctx, data) {
   const centerX = width / 2;
   const centerY = height / 2 - 50;
   const radius = Math.min(width, height) * 0.28;
-  const depth = 20; // 3D depth effect
+  const depth = 30; // 3D depth effect - increased for more modern look
   
-  // Apple-style vibrant colors with variety
+  // Modern blue tones palette
   const baseColors = [
-    '#007AFF', // Blue
-    '#34C759', // Green
-    '#FF9500', // Orange
-    '#FF3B30', // Red
-    '#AF52DE', // Purple
-    '#5856D6', // Indigo
-    '#FF2D55', // Pink
-    '#FFCC00', // Yellow
+    '#0066CC', // Deep Blue
+    '#3399FF', // Bright Blue
+    '#0099FF', // Sky Blue
+    '#0052A3', // Royal Blue
+    '#66B3FF', // Light Blue
+    '#004080', // Navy Blue
+    '#4DB8FF', // Azure Blue
+    '#1A75D9', // Medium Blue
   ];
   
   // Generate darker shades for 3D effect
@@ -5302,16 +5307,19 @@ function render3DPieChart(ctx, data) {
     const percentage = Math.round((value / total) * 100);
     
     // Position label outside the pie
-    const labelDistance = radius + 40;
+    const labelDistance = radius + 50;
     const textX = centerX + Math.cos(midAngle) * labelDistance;
     const textY = centerY + Math.sin(midAngle) * labelDistance;
     
-    // Draw percentage with color matching slice
+    // Draw both count and percentage with color matching slice
     ctx.fillStyle = baseColors[i % baseColors.length];
-    ctx.font = '300 16px -apple-system, system-ui, sans-serif';
+    ctx.font = 'bold 18px -apple-system, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${percentage}%`, textX, textY);
+    // Show count and percentage for all values
+    ctx.fillText(`${value}`, textX, textY - 10);
+    ctx.font = '300 14px -apple-system, system-ui, sans-serif';
+    ctx.fillText(`(${percentage}%)`, textX, textY + 10);
     
     startAngle += sliceAngle;
   });
