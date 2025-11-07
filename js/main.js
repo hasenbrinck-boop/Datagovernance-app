@@ -85,6 +85,7 @@ let isPanning = state.isPanning;
 let panStart = state.panStart;
 
 let fieldDialogHandlersBound = false;
+let mapHasUserInteraction = false; // Track if user has interacted with map
 
 // === Data Object Dialog / Form (können initial null sein, Guards sind unten eingebaut)
 const dataObjectDialog = document.getElementById('dataObjectDialog');
@@ -3376,6 +3377,7 @@ function renderDataMap() {
         } else {
           selectedFieldRef = { system: sys.name, field: f.name };
           state.selectedFieldRef = selectedFieldRef;
+          mapHasUserInteraction = true; // Mark that user has interacted
           drawSelectedFieldEdges();
         }
       });
@@ -3411,11 +3413,14 @@ function renderDataMap() {
     enableDrag(node, header, sys.name);
   });
 
+  // Only draw edges if user has interacted with the map (clicked a field)
   if (selectedFieldRef) {
     drawSelectedFieldEdges();
-  } else {
+    mapHasUserInteraction = true;
+  } else if (mapHasUserInteraction) {
     drawSystemEdges();
   }
+  // Otherwise, no edges are drawn on initial load
 
   requestAnimationFrame(() => fitMapToContent());
 }
