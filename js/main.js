@@ -1529,9 +1529,26 @@ function renderLocalFieldsTables() {
     if (hasMultipleGroups) {
       const headerRow = document.createElement('div');
       headerRow.className = 'local-table-header';
+      headerRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:12px 16px; margin-top:16px; background: rgba(246,247,249,0.5); border-radius:10px;';
+      
       const title = document.createElement('h3');
       title.textContent = tableTitleText;
+      title.style.cssText = 'margin:0; font-size:1rem; font-weight:600;';
       headerRow.appendChild(title);
+      
+      // Add individual export button for this Legal Entity
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'btn btn--secondary btn--sm';
+      exportBtn.textContent = 'Export';
+      exportBtn.title = `Export ${titleName} fields`;
+      exportBtn.addEventListener('click', () => {
+        const table = group.querySelector('table.table');
+        if (table) {
+          exportMultipleTablesAsXlsx([table], `Local_DataFields_${titleName.replace(/\s+/g, '_')}.xlsx`);
+        }
+      });
+      headerRow.appendChild(exportBtn);
+      
       group.appendChild(headerRow);
     }
 
@@ -2055,12 +2072,17 @@ function renderGlossaryTable() {
       if (confirm(`Delete glossary term "${name}"?`)) {
         const globalIdx = glossaryTerms.findIndex((x) => x.id === list[i].id);
         if (globalIdx > -1) {
+          // Ask user if they want to create a new version for deletion
+          const createVersion = confirm('Do you want to create a new version for this deletion?');
+          
           const deletedRecord = glossaryTerms[globalIdx];
-          trackGlossaryChanges(deletedRecord, null, 'deleted');
+          if (createVersion) {
+            trackGlossaryChanges(deletedRecord, null, 'deleted');
+            saveGlossaryVersionAndChanges();
+          }
           glossaryTerms.splice(globalIdx, 1);
         }
         saveGlossary();
-        saveGlossaryVersionAndChanges();
         renderGlossaryTable();
         updateGlossaryVersionDisplay();
       }
@@ -2294,15 +2316,22 @@ glossaryForm?.addEventListener('submit', (e) => {
     type: data.type && GLOSSARY_TYPES.includes(data.type) ? data.type : 'Term',
   };
 
-  // Track changes for versioning
+  // Ask user if they want to create a new version
+  const createVersion = confirm('Do you want to create a new version for this change?');
+
+  // Track changes for versioning only if user confirms
   if (editGlossaryIndex !== null) {
-    // Editing existing term - track changes
-    const oldRecord = glossaryTerms[editGlossaryIndex];
-    trackGlossaryChanges(oldRecord, record, 'modified');
+    // Editing existing term
+    if (createVersion) {
+      const oldRecord = glossaryTerms[editGlossaryIndex];
+      trackGlossaryChanges(oldRecord, record, 'modified');
+    }
     glossaryTerms[editGlossaryIndex] = record;
   } else {
     // New term
-    trackGlossaryChanges(null, record, 'added');
+    if (createVersion) {
+      trackGlossaryChanges(null, record, 'added');
+    }
     glossaryTerms.push(record);
   }
 
@@ -2327,7 +2356,9 @@ glossaryForm?.addEventListener('submit', (e) => {
 
   saveFields();
   saveGlossary();
-  saveGlossaryVersionAndChanges();
+  if (createVersion) {
+    saveGlossaryVersionAndChanges();
+  }
   renderGlossaryTable();
   renderFieldsTable();
   updateGlossaryVersionDisplay();
@@ -5404,83 +5435,34 @@ function render3DPieChart(ctx, data) {
   ctx.clearRect(0, 0, width, height);
   
   const centerX = width / 2;
-  const centerY = height / 2 - 50;
-  const radius = Math.min(width, height) * 0.28;
-  const depth = 25; // Modern 3D depth effect - more subtle
+  const centerY = height / 2 - 30;
+  const radius = Math.min(width, height) * 0.30;
   
-  // Modern blue tones palette - only blues
+  // Modern blue tones palette - Apple-inspired
   const baseColors = [
-    '#1E88E5', // Vibrant Blue
-    '#42A5F5', // Sky Blue
-    '#64B5F6', // Light Blue
-    '#2196F3', // Material Blue
-    '#1976D2', // Deep Blue
-    '#1565C0', // Dark Blue
-    '#0D47A1', // Navy Blue
-    '#0277BD', // Cyan Blue
-    '#0288D1', // Light Cyan Blue
-    '#03A9F4', // Bright Cyan Blue
+    '#007AFF', // Apple Blue
+    '#5AC8FA', // Light Blue
+    '#4CD964', // Green
+    '#FF9500', // Orange
+    '#FF2D55', // Pink
+    '#AF52DE', // Purple
+    '#5856D6', // Indigo
+    '#FF3B30', // Red
+    '#FFCC00', // Yellow
+    '#34C759', // Bright Green
   ];
-  
-  // Generate darker shades for 3D effect with better color preservation
-  const darkenColor = (color, amount = 0.25) => {
-    const hex = color.replace('#', '');
-    const r = Math.max(0, parseInt(hex.substr(0, 2), 16) * (1 - amount));
-    const g = Math.max(0, parseInt(hex.substr(2, 2), 16) * (1 - amount));
-    const b = Math.max(0, parseInt(hex.substr(4, 2), 16) * (1 - amount));
-    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-  };
-  
-  // Generate lighter shades for highlights
-  const lightenColor = (color, amount = 0.2) => {
-    const hex = color.replace('#', '');
-    const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + (255 - parseInt(hex.substr(0, 2), 16)) * amount);
-    const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + (255 - parseInt(hex.substr(2, 2), 16)) * amount);
-    const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + (255 - parseInt(hex.substr(4, 2), 16)) * amount);
-    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-  };
   
   let startAngle = -Math.PI / 2;
   
-  // Draw 3D depth (bottom layer) with smoother shadow effect
+  // Draw clean 2D pie chart
   labels.forEach((label, i) => {
     const value = values[i];
     const sliceAngle = (value / total) * 2 * Math.PI;
     const endAngle = startAngle + sliceAngle;
+    const midAngle = startAngle + sliceAngle / 2;
     
-    // Draw depth with gradient for better 3D effect
-    const depthGradient = ctx.createLinearGradient(0, centerY + depth - 10, 0, centerY + depth + 10);
-    depthGradient.addColorStop(0, darkenColor(baseColors[i % baseColors.length], 0.3));
-    depthGradient.addColorStop(1, darkenColor(baseColors[i % baseColors.length], 0.5));
-    
-    ctx.fillStyle = depthGradient;
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY + depth);
-    ctx.arc(centerX, centerY + depth, radius, startAngle, endAngle);
-    ctx.closePath();
-    ctx.fill();
-    
-    startAngle = endAngle;
-  });
-  
-  // Draw top layer (main pie) with enhanced gradients
-  startAngle = -Math.PI / 2;
-  labels.forEach((label, i) => {
-    const value = values[i];
-    const sliceAngle = (value / total) * 2 * Math.PI;
-    const endAngle = startAngle + sliceAngle;
-    
-    // Draw slice with modern radial gradient for 3D effect
-    const gradient = ctx.createRadialGradient(
-      centerX - radius * 0.4, centerY - radius * 0.4, radius * 0.1,
-      centerX, centerY, radius * 1.2
-    );
-    const baseColor = baseColors[i % baseColors.length];
-    gradient.addColorStop(0, lightenColor(baseColor, 0.2));
-    gradient.addColorStop(0.5, baseColor);
-    gradient.addColorStop(1, darkenColor(baseColor, 0.1));
-    
-    ctx.fillStyle = gradient;
+    // Draw slice
+    ctx.fillStyle = baseColors[i % baseColors.length];
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, radius, startAngle, endAngle);
@@ -5488,66 +5470,62 @@ function render3DPieChart(ctx, data) {
     ctx.fill();
     
     // Add subtle white stroke for separation
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 3;
     ctx.stroke();
+    
+    // Draw value labels INSIDE the slices to prevent overlap
+    const percentage = ((value / total) * 100).toFixed(1);
+    // Only show labels for slices > 5% to avoid crowding
+    if (parseFloat(percentage) > 5) {
+      const labelRadius = radius * 0.65;
+      const labelX = centerX + Math.cos(midAngle) * labelRadius;
+      const labelY = centerY + Math.sin(midAngle) * labelRadius;
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 24px -apple-system, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Add background for better readability
+      const text = `${value}`;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(text, labelX, labelY);
+      ctx.shadowBlur = 0;
+    }
     
     startAngle = endAngle;
   });
   
-  // Draw labels outside with light font - ALWAYS display all values
-  startAngle = -Math.PI / 2;
-  labels.forEach((label, i) => {
-    const value = values[i];
-    const sliceAngle = (value / total) * 2 * Math.PI;
-    const midAngle = startAngle + sliceAngle / 2;
-    const percentage = Math.round((value / total) * 100);
-    
-    // Position label outside the pie with better spacing
-    const labelDistance = radius + 60;
-    const textX = centerX + Math.cos(midAngle) * labelDistance;
-    const textY = centerY + Math.sin(midAngle) * labelDistance;
-    
-    // Draw both count and percentage with color matching slice - ALWAYS show regardless of size
-    ctx.fillStyle = baseColors[i % baseColors.length];
-    ctx.font = 'bold 20px -apple-system, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    // Show count for ALL values (removed conditional logic)
-    ctx.fillText(`${value}`, textX, textY - 12);
-    ctx.font = '500 15px -apple-system, system-ui, sans-serif';
-    ctx.fillText(`(${percentage}%)`, textX, textY + 12);
-    
-    startAngle += sliceAngle;
-  });
-  
-  // Draw elegant legend at bottom
-  const legendY = height - 50;
-  const totalLegendWidth = labels.reduce((sum, label) => {
-    ctx.font = '300 16px -apple-system, system-ui, sans-serif';
-    return sum + ctx.measureText(label).width + 40;
-  }, 0);
-  
-  let legendX = (width - totalLegendWidth) / 2;
+  // Draw legend below the chart
+  const legendY = centerY + radius + 50;
+  const legendItemWidth = Math.min(width / labels.length, 180);
+  const legendStartX = (width - (legendItemWidth * labels.length)) / 2;
   
   labels.forEach((label, i) => {
     const value = values[i];
+    const legendX = legendStartX + (i * legendItemWidth);
     
-    // Color indicator (small circle)
+    // Draw color box
     ctx.fillStyle = baseColors[i % baseColors.length];
-    ctx.beginPath();
-    ctx.arc(legendX + 6, legendY, 6, 0, 2 * Math.PI);
-    ctx.fill();
+    ctx.fillRect(legendX, legendY, 20, 20);
     
-    // Label text
-    ctx.fillStyle = '#86868B';
-    ctx.font = '300 16px -apple-system, system-ui, sans-serif';
+    // Draw label
+    ctx.fillStyle = '#1D1D1F';
+    ctx.font = '400 22px -apple-system, system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const text = `${label}`;
-    ctx.fillText(text, legendX + 18, legendY);
     
-    legendX += ctx.measureText(text).width + 40;
+    // Truncate long labels
+    const truncatedLabel = label.length > 12 ? label.substring(0, 10) + '...' : label;
+    ctx.fillText(truncatedLabel, legendX + 28, legendY + 10);
+    
+    // Draw percentage below label
+    const percentage = ((value / total) * 100).toFixed(1);
+    ctx.font = '300 18px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#86868B';
+    ctx.fillText(`${percentage}%`, legendX + 28, legendY + 30);
   });
 }
 
@@ -5770,27 +5748,26 @@ function renderSystemsDetails(systems) {
   }
   
   return `
-    <div class="details-list">
-      ${systems.map(sys => `
-        <div class="details-item">
-          <div class="details-item-name">${escapeHtml(sys.name)}</div>
-          <div class="details-item-info">
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Owner:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.owner || '—')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Scope:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.scope || '—')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Domain:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.dataDomain || '—')}</span>
-            </div>
-          </div>
-        </div>
-      `).join('')}
-    </div>
+    <table class="table details-table">
+      <thead>
+        <tr>
+          <th style="width: 30%">Name</th>
+          <th style="width: 25%">Owner</th>
+          <th style="width: 20%">Scope</th>
+          <th style="width: 25%">Domain</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${systems.map(sys => `
+          <tr>
+            <td><strong>${escapeHtml(sys.name)}</strong></td>
+            <td>${escapeHtml(sys.owner || '—')}</td>
+            <td>${escapeHtml(sys.scope || '—')}</td>
+            <td>${escapeHtml(sys.dataDomain || '—')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
   `;
 }
 
@@ -5800,32 +5777,29 @@ function renderFieldsDetails(fields) {
   }
   
   return `
-    <div class="details-list">
-      ${fields.map(f => {
-        const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
-        return `
-          <div class="details-item">
-            <div class="details-item-name">${escapeHtml(f.name)}</div>
-            <div class="details-item-info">
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">System:</span>
-                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
-              </div>
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Type:</span>
-                <span class="details-item-info-value">${f.local ? 'Local' : 'Global'}</span>
-              </div>
-              ${glossaryTerm ? `
-                <div class="details-item-info-row">
-                  <span class="details-item-info-label">Definition:</span>
-                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.definition || '—')}</span>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
+    <table class="table details-table">
+      <thead>
+        <tr>
+          <th style="width: 35%">Name</th>
+          <th style="width: 25%">System</th>
+          <th style="width: 15%">Type</th>
+          <th style="width: 25%">Definition</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${fields.map(f => {
+          const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
+          return `
+            <tr>
+              <td><strong>${escapeHtml(f.name)}</strong></td>
+              <td>${escapeHtml(f.system)}</td>
+              <td>${f.local ? 'Local' : 'Global'}</td>
+              <td>${glossaryTerm ? escapeHtml(glossaryTerm.definition || '—') : '—'}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
   `;
 }
 
@@ -5835,36 +5809,29 @@ function renderDefinitionsDetails(fields) {
   }
   
   return `
-    <div class="details-list">
-      ${fields.map(f => {
-        const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
-        return `
-          <div class="details-item">
-            <div class="details-item-name">${escapeHtml(f.name)}</div>
-            <div class="details-item-info">
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">System:</span>
-                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
-              </div>
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Has Definition:</span>
-                <span class="details-item-info-value">${f.glossaryRef ? 'Yes' : 'No'}</span>
-              </div>
-              ${glossaryTerm ? `
-                <div class="details-item-info-row">
-                  <span class="details-item-info-label">Term:</span>
-                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.term)}</span>
-                </div>
-                <div class="details-item-info-row">
-                  <span class="details-item-info-label">Definition:</span>
-                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.definition || '—')}</span>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
+    <table class="table details-table">
+      <thead>
+        <tr>
+          <th style="width: 30%">Field Name</th>
+          <th style="width: 20%">System</th>
+          <th style="width: 15%">Has Definition</th>
+          <th style="width: 35%">Definition</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${fields.map(f => {
+          const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
+          return `
+            <tr>
+              <td><strong>${escapeHtml(f.name)}</strong></td>
+              <td>${escapeHtml(f.system)}</td>
+              <td>${f.glossaryRef ? 'Yes' : 'No'}</td>
+              <td>${glossaryTerm ? escapeHtml(glossaryTerm.definition || '—') : '—'}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
   `;
 }
 
@@ -5874,30 +5841,29 @@ function renderDataObjectsDetails(fields) {
   }
   
   return `
-    <div class="details-list">
-      ${fields.map(f => {
-        const obj = dataObjects.find(o => String(o.id) === String(f.foundationObjectId));
-        return `
-          <div class="details-item">
-            <div class="details-item-name">${escapeHtml(f.name)}</div>
-            <div class="details-item-info">
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Data Object:</span>
-                <span class="details-item-info-value">${escapeHtml(obj?.name || '—')}</span>
-              </div>
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">System:</span>
-                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
-              </div>
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Type:</span>
-                <span class="details-item-info-value">${f.local ? 'Local' : 'Global'}</span>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
+    <table class="table details-table">
+      <thead>
+        <tr>
+          <th style="width: 35%">Field Name</th>
+          <th style="width: 25%">Data Object</th>
+          <th style="width: 20%">System</th>
+          <th style="width: 20%">Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${fields.map(f => {
+          const obj = dataObjects.find(o => String(o.id) === String(f.foundationObjectId));
+          return `
+            <tr>
+              <td><strong>${escapeHtml(f.name)}</strong></td>
+              <td>${escapeHtml(obj?.name || '—')}</td>
+              <td>${escapeHtml(f.system)}</td>
+              <td>${f.local ? 'Local' : 'Global'}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
   `;
 }
 
@@ -5907,29 +5873,26 @@ function renderGlossaryDetails() {
   }
   
   return `
-    <div class="details-list">
-      ${glossaryTerms.map(t => `
-        <div class="details-item">
-          <div class="details-item-name">${escapeHtml(t.term)}</div>
-          <div class="details-item-info">
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Type:</span>
-              <span class="details-item-info-value">${escapeHtml(t.type || '—')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Definition:</span>
-              <span class="details-item-info-value">${escapeHtml(t.definition || '—')}</span>
-            </div>
-            ${t.owner ? `
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Owner:</span>
-                <span class="details-item-info-value">${escapeHtml(t.owner)}</span>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-      `).join('')}
-    </div>
+    <table class="table details-table">
+      <thead>
+        <tr>
+          <th style="width: 25%">Term</th>
+          <th style="width: 15%">Type</th>
+          <th style="width: 40%">Definition</th>
+          <th style="width: 20%">Owner</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${glossaryTerms.map(t => `
+          <tr>
+            <td><strong>${escapeHtml(t.term)}</strong></td>
+            <td>${escapeHtml(t.type || '—')}</td>
+            <td>${escapeHtml(t.definition || '—')}</td>
+            <td>${escapeHtml(t.owner || '—')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
   `;
 }
 
@@ -5939,27 +5902,26 @@ function renderDomainsDetails(systems) {
   }
   
   return `
-    <div class="details-list">
-      ${systems.map(sys => `
-        <div class="details-item">
-          <div class="details-item-name">${escapeHtml(sys.name)}</div>
-          <div class="details-item-info">
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Domain:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.dataDomain || 'Unassigned')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Owner:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.owner || '—')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Scope:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.scope || '—')}</span>
-            </div>
-          </div>
-        </div>
-      `).join('')}
-    </div>
+    <table class="table details-table">
+      <thead>
+        <tr>
+          <th style="width: 30%">System</th>
+          <th style="width: 25%">Domain</th>
+          <th style="width: 25%">Owner</th>
+          <th style="width: 20%">Scope</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${systems.map(sys => `
+          <tr>
+            <td><strong>${escapeHtml(sys.name)}</strong></td>
+            <td>${escapeHtml(sys.dataDomain || 'Unassigned')}</td>
+            <td>${escapeHtml(sys.owner || '—')}</td>
+            <td>${escapeHtml(sys.scope || '—')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
   `;
 }
 
