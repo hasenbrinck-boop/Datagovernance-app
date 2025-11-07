@@ -1,4 +1,12 @@
-import { state } from './state.js';
+import {
+  state,
+  getLocalFields,
+  getGlobalFields,
+  getAllowedValues,
+  findMappings,
+  findValueMapByMappingId,
+  findFieldById,
+} from './state.js';
 import { ICON_EDIT, ICON_TRASH, GLOSSARY_TYPES } from './constants.js';
 import {
   saveLeSystems,
@@ -15,361 +23,29 @@ import {
   loadFilters,
   saveGlossary,
   loadGlossary,
+  loadMappings,
+  saveMappings,
+  loadValueMaps,
+  saveValueMaps,
 } from './storage.js';
-import {
-  defaultPermissions,
-  loadPermissions,
-  savePermissions,
-  canViewTab,
-  canDo,
-} from './permissions.js';
+
+// === Edit-Index: zentrale Helpers (einmalig am Anfang von main.js) ===
+function getEditFieldIndex() {
+  const v = window.state?.editFieldIndex;
+  const n = typeof v === 'string' ? parseInt(v, 10) : v;
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+function setEditFieldIndex(n) {
+  window.state.editFieldIndex = Number.isFinite(n) && n >= 0 ? n : null;
+}
+function clearEditFieldIndex() {
+  window.state.editFieldIndex = null;
+}
 
 console.log('[main.js] Modul geladen');
-
-const permissions = loadPermissions();
-let currentUser =
-  (typeof window !== 'undefined' && window.currentUser) || { roles: ['public'] };
-if (!Array.isArray(currentUser.roles) || !currentUser.roles.length) {
-  currentUser.roles = ['public'];
-}
 if (typeof window !== 'undefined') {
-  window.currentUser = currentUser;
-  window.permissions = permissions;
-  window.defaultPermissions = defaultPermissions;
-}
-
-function toggleButton(id, section, action) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const allowed = canDo(permissions, section, action, currentUser);
-  el.style.display = allowed ? '' : 'none';
-  el.disabled = !allowed;
-}
-
-function applyActionPermissions() {
-  toggleButton('btnGlobalNew', 'global', 'create');
-  toggleButton('btnGlobalExport', 'global', 'export');
-  toggleButton('btnLocalNew', 'local', 'create');
-  toggleButton('btnLocalExport', 'local', 'export');
-  toggleButton('addGlossaryBtn', 'glossary', 'create');
-  toggleButton('addSystemBtn', 'systems', 'create');
-  toggleButton('addColumnBtn', 'admin', 'create');
-  toggleButton('addDomainBtn', 'admin', 'create');
-  toggleButton('addLegalBtn', 'admin', 'create');
-  toggleButton('addDataObjectBtn', 'admin', 'create');
-  toggleButton('permSaveBtn', 'admin', 'edit');
-}
-
-function applyTabVisibility() {
-  const tabMap = {
-    systems: document.getElementById('systemsNavItem'),
-    dataMap: document.getElementById('dataMapNavItem'),
-    glossary: document.getElementById('glossaryNavItem'),
-    admin: document.getElementById('adminNavItem'),
-  };
-  Object.entries(tabMap).forEach(([tab, el]) => {
-    if (!el) return;
-    el.style.display = canViewTab(permissions, tab, currentUser) ? '' : 'none';
-  });
-
-  document
-    .querySelectorAll('#adminTabs .tab')
-    .forEach((btn) => (btn.style.display = ''));
-}
-
-function ensureAccessibleMode() {
-  const body = document.body;
-  if (!body) return;
-  const modeMap = { systems: 'systems', map: 'dataMap', glossary: 'glossary', admin: 'admin' };
-  const currentMode = body.getAttribute('data-mode') || 'systems';
-  if (canViewTab(permissions, modeMap[currentMode] || currentMode, currentUser)) {
-    return;
-  }
-
-  const order = [
-    { id: 'systemsNavItem', tab: 'systems' },
-    { id: 'dataMapNavItem', tab: 'dataMap' },
-    { id: 'glossaryNavItem', tab: 'glossary' },
-    { id: 'adminNavItem', tab: 'admin' },
-  ];
-  for (const item of order) {
-    if (!canViewTab(permissions, item.tab, currentUser)) continue;
-    const el = document.getElementById(item.id);
-    if (el && el.style.display !== 'none') {
-      el.click();
-      return;
-    }
-  }
-}
-
-function refreshPermissionsUI() {
-  applyTabVisibility();
-  applyActionPermissions();
-  ensureAccessibleMode();
-  applyRowPermissions();
-}
-
-function applyRowPermissions() {
-  const globalView = document.getElementById('global');
-  if (globalView) {
-    const canEditGlobal = canDo(permissions, 'global', 'edit', currentUser);
-    const canDeleteGlobal = canDo(permissions, 'global', 'delete', currentUser);
-    globalView
-      .querySelectorAll('.fieldEdit')
-      .forEach((btn) => (btn.style.display = canEditGlobal ? '' : 'none'));
-    globalView
-      .querySelectorAll('.fieldDelete')
-      .forEach((btn) => (btn.style.display = canDeleteGlobal ? '' : 'none'));
-  }
-
-  const localView = document.getElementById('local');
-  if (localView) {
-    const canEditLocal = canDo(permissions, 'local', 'edit', currentUser);
-    const canDeleteLocal = canDo(permissions, 'local', 'delete', currentUser);
-    localView
-      .querySelectorAll('.fieldEdit')
-      .forEach((btn) => (btn.style.display = canEditLocal ? '' : 'none'));
-    localView
-      .querySelectorAll('.fieldDelete')
-      .forEach((btn) => (btn.style.display = canDeleteLocal ? '' : 'none'));
-  }
-
-  const systemsView = document.getElementById('admin-systems');
-  if (systemsView) {
-    const canEditSystems = canDo(permissions, 'systems', 'edit', currentUser);
-    const canDeleteSystems = canDo(permissions, 'systems', 'delete', currentUser);
-    systemsView
-      .querySelectorAll('.systemEdit')
-      .forEach((btn) => (btn.style.display = canEditSystems ? '' : 'none'));
-    systemsView
-      .querySelectorAll('.systemDelete')
-      .forEach((btn) => (btn.style.display = canDeleteSystems ? '' : 'none'));
-  }
-
-  const columnsView = document.getElementById('admin-columns');
-  if (columnsView) {
-    const canEditAdmin = canDo(permissions, 'admin', 'edit', currentUser);
-    const canDeleteAdmin = canDo(permissions, 'admin', 'delete', currentUser);
-    columnsView
-      .querySelectorAll('.columnEdit')
-      .forEach((btn) => (btn.style.display = canEditAdmin ? '' : 'none'));
-    columnsView
-      .querySelectorAll('.columnDelete')
-      .forEach((btn) => (btn.style.display = canDeleteAdmin ? '' : 'none'));
-  }
-
-  const domainsView = document.getElementById('admin-domains');
-  if (domainsView) {
-    const canEditAdmin = canDo(permissions, 'admin', 'edit', currentUser);
-    const canDeleteAdmin = canDo(permissions, 'admin', 'delete', currentUser);
-    domainsView
-      .querySelectorAll('.domainEdit')
-      .forEach((btn) => (btn.style.display = canEditAdmin ? '' : 'none'));
-    domainsView
-      .querySelectorAll('.domainDelete')
-      .forEach((btn) => (btn.style.display = canDeleteAdmin ? '' : 'none'));
-  }
-
-  const legalView = document.getElementById('admin-legal');
-  if (legalView) {
-    const canEditAdmin = canDo(permissions, 'admin', 'edit', currentUser);
-    const canDeleteAdmin = canDo(permissions, 'admin', 'delete', currentUser);
-    const canApproveAdmin = canDo(permissions, 'admin', 'approve', currentUser);
-    legalView
-      .querySelectorAll('.leEdit')
-      .forEach((btn) => (btn.style.display = canEditAdmin ? '' : 'none'));
-    legalView
-      .querySelectorAll('.leDelete')
-      .forEach((btn) => (btn.style.display = canDeleteAdmin ? '' : 'none'));
-    legalView
-      .querySelectorAll('.leManage')
-      .forEach((btn) => (btn.style.display = canApproveAdmin ? '' : 'none'));
-  }
-
-  const glossaryView = document.getElementById('glossaryView');
-  if (glossaryView) {
-    const canEditGlossary = canDo(permissions, 'glossary', 'edit', currentUser);
-    const canDeleteGlossary = canDo(permissions, 'glossary', 'delete', currentUser);
-    glossaryView
-      .querySelectorAll('.glsEdit')
-      .forEach((btn) => (btn.style.display = canEditGlossary ? '' : 'none'));
-    glossaryView
-      .querySelectorAll('.glsDelete')
-      .forEach((btn) => (btn.style.display = canDeleteGlossary ? '' : 'none'));
-  }
-
-  const dataObjectsTable = document.getElementById('dataObjectsTable');
-  if (dataObjectsTable) {
-    const canEditAdmin = canDo(permissions, 'admin', 'edit', currentUser);
-    const canDeleteAdmin = canDo(permissions, 'admin', 'delete', currentUser);
-    dataObjectsTable
-      .querySelectorAll('.dbo-edit')
-      .forEach((btn) => (btn.style.display = canEditAdmin ? '' : 'none'));
-    dataObjectsTable
-      .querySelectorAll('.dbo-delete')
-      .forEach((btn) => (btn.style.display = canDeleteAdmin ? '' : 'none'));
-  }
-}
-
-let permEventsBound = false;
-
-function renderPermTabsMatrix() {
-  const table = document.getElementById('permTabsMatrix');
-  if (!table) return;
-  const roles = Array.isArray(permissions.roles) ? permissions.roles : [];
-  const tabs = permissions.tabs || {};
-  const canModify = canDo(permissions, 'admin', 'edit', currentUser);
-
-  const rows = Object.keys(tabs)
-    .map((tabKey) => {
-      const cells = roles
-        .map((role) => {
-          const allowed = !!tabs[tabKey]?.[role];
-          return `<td><input type="checkbox" data-kind="tab" data-tab="${tabKey}" data-role="${role}"${
-            allowed ? ' checked' : ''
-          }${canModify ? '' : ' disabled'}></td>`;
-        })
-        .join('');
-      return `<tr><th>${tabKey}</th>${cells}</tr>`;
-    })
-    .join('');
-
-  table.innerHTML = `
-    <thead>
-      <tr><th>Tab</th>${roles.map((role) => `<th>${role}</th>`).join('')}</tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  `;
-}
-
-function renderPermActionsMatrix() {
-  const table = document.getElementById('permActionsMatrix');
-  if (!table) return;
-  const roles = Array.isArray(permissions.roles) ? permissions.roles : [];
-  const sections = Object.keys(permissions.actions || {});
-  const actions = ['create', 'edit', 'delete', 'approve', 'export'];
-  const canModify = canDo(permissions, 'admin', 'edit', currentUser);
-
-  const body = sections
-    .map((section) =>
-      actions
-        .map((action) => {
-          const base = !!permissions.actions?.[section]?.[action];
-          const rowCells = roles
-            .map((role) => {
-              const star = permissions.roleOverrides?.[role]?.['*'];
-              const starValue =
-                star && typeof star === 'object' && typeof star[action] === 'boolean'
-                  ? star[action]
-                  : undefined;
-              const override =
-                permissions.roleOverrides?.[role]?.[section]?.[action];
-              const effective =
-                typeof starValue === 'boolean'
-                  ? starValue
-                  : typeof override === 'boolean'
-                  ? override
-                  : base;
-              const disabled = !canModify || typeof starValue === 'boolean';
-              return `<td><input type="checkbox" data-kind="action" data-sec="${section}" data-action="${action}" data-role="${role}"${
-                effective ? ' checked' : ''
-              }${disabled ? ' disabled' : ''}></td>`;
-            })
-            .join('');
-          return `<tr><th>${section} · ${action}</th>${rowCells}</tr>`;
-        })
-        .join('')
-    )
-    .join('');
-
-  table.innerHTML = `
-    <thead>
-      <tr><th>Section · Action</th>${roles.map((role) => `<th>${role}</th>`).join('')}</tr>
-    </thead>
-    <tbody>${body}</tbody>
-  `;
-}
-
-function bindPermMatrixEvents() {
-  if (permEventsBound) return;
-  const root = document.getElementById('admin-permissions');
-  if (!root) return;
-
-  root.addEventListener('change', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    if (target.disabled) return;
-    if (!canDo(permissions, 'admin', 'edit', currentUser)) {
-      event.preventDefault();
-      renderPermTabsMatrix();
-      renderPermActionsMatrix();
-      return;
-    }
-
-    if (target.dataset.kind === 'tab') {
-      const tab = target.dataset.tab;
-      const role = target.dataset.role;
-      if (!tab || !role) return;
-      permissions.tabs = permissions.tabs || {};
-      permissions.tabs[tab] = permissions.tabs[tab] || {};
-      permissions.tabs[tab][role] = target.checked;
-    } else if (target.dataset.kind === 'action') {
-      const role = target.dataset.role;
-      const section = target.dataset.sec;
-      const action = target.dataset.action;
-      if (!role || !section || !action) return;
-
-      const star = permissions.roleOverrides?.[role]?.['*'];
-      if (star && typeof star === 'object' && typeof star[action] === 'boolean') {
-        target.checked = star[action];
-        return;
-      }
-
-      const base = !!permissions.actions?.[section]?.[action];
-      permissions.roleOverrides = permissions.roleOverrides || {};
-      permissions.roleOverrides[role] = permissions.roleOverrides[role] || {};
-      permissions.roleOverrides[role][section] =
-        permissions.roleOverrides[role][section] || {};
-
-      if (target.checked === base) {
-        delete permissions.roleOverrides[role][section][action];
-        if (!Object.keys(permissions.roleOverrides[role][section]).length) {
-          delete permissions.roleOverrides[role][section];
-        }
-        if (!Object.keys(permissions.roleOverrides[role]).length) {
-          delete permissions.roleOverrides[role];
-        }
-      } else {
-        permissions.roleOverrides[role][section][action] = target.checked;
-      }
-    }
-  });
-
-  const saveBtn = document.getElementById('permSaveBtn');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
-      if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
-      savePermissions(permissions);
-      refreshPermissionsUI();
-      renderPermTabsMatrix();
-      renderPermActionsMatrix();
-    });
-  }
-
-  permEventsBound = true;
-}
-
-function detectFieldSection(index = null, opts = {}) {
-  if (opts?.presetLocal) return 'local';
-  if (typeof index === 'number' && index >= 0) {
-    const field = fields[index];
-    if (!field) return 'global';
-    if (field.local) return 'local';
-    const sys = systems.find((s) => s.name === field.system);
-    return sys?.scope === 'local' ? 'local' : 'global';
-  }
-  const activeTab = document.querySelector('#topTabs .tab.is-active')?.dataset.tab;
-  return activeTab === 'local' ? 'local' : 'global';
+  window.state = state;
+  window.fields = state.fields; // optional
 }
 
 const dataDomains = state.dataDomains;
@@ -386,7 +62,6 @@ const glossaryTerms = state.glossaryTerms;
 
 let currentSystem = state.currentSystem;
 let editDataObjectIndex = state.editDataObjectIndex;
-let editFieldIndex = state.editFieldIndex;
 let editSystemIndex = state.editSystemIndex;
 let editFoundationIndex = state.editFoundationIndex;
 let editColumnIndex = state.editColumnIndex;
@@ -435,7 +110,11 @@ function scheduleEdgesRedraw() {
   if (_edgeRAF) cancelAnimationFrame(_edgeRAF);
   _edgeRAF = requestAnimationFrame(() => {
     _edgeRAF = 0;
-    try { drawSystemEdges(); } catch (e) { console.error('[edges]', e); }
+    try {
+      drawSystemEdges();
+    } catch (e) {
+      console.error('[edges]', e);
+    }
   });
 }
 
@@ -500,9 +179,6 @@ function openDataObjectDialog(index = null) {
     return;
   }
 
-  const action = index !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'admin', action, currentUser)) return;
-
   editDataObjectIndex = index;
   state.editDataObjectIndex = editDataObjectIndex;
   dataObjectForm.reset();
@@ -533,8 +209,6 @@ function openDataObjectDialog(index = null) {
 
 dataObjectForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const action = editDataObjectIndex !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'admin', action, currentUser)) return;
   const fd = new FormData(dataObjectForm);
   const rec = {
     id: Number(fd.get('id')),
@@ -563,18 +237,15 @@ dataObjectForm?.addEventListener('submit', (e) => {
 
 /* Alte CRUD-Funktionen, jetzt auf Dialog geführt */
 function addDataObject() {
-  if (!canDo(permissions, 'admin', 'create', currentUser)) return;
   openDataObjectDialog(null);
 }
 window.addDataObject = addDataObject; // optional global
 function editDataObject(i) {
-  if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
   openDataObjectDialog(i);
 }
 function deleteDataObject(i) {
   const obj = dataObjects[i];
   if (!obj) return;
-  if (!canDo(permissions, 'admin', 'delete', currentUser)) return;
   if (!confirm(`Delete data object "${obj.name}" (ID ${obj.id})?`)) return;
   dataObjects.splice(i, 1);
   refreshFoundationSelect();
@@ -708,7 +379,9 @@ function verifyGlossaryColumns() {
 /* ================= Utilities ================= */
 
 function safeDrawAllEdges() {
-  try { drawSystemEdges(); } catch (e) {
+  try {
+    drawSystemEdges();
+  } catch (e) {
     console.error('[edges]', e);
     if (typeof clearSelectionVisuals === 'function') clearSelectionVisuals();
   }
@@ -1265,76 +938,161 @@ function showOnly(mode) {
 
 // Sichtbarkeits-Flags (müssen VOR initializeApp() definiert sein!)
 
-function setModeSystems(name) {
-  currentSystem = name;
-  state.currentSystem = currentSystem;
-  selectedFieldRef = null;
-  state.selectedFieldRef = selectedFieldRef;
-  clearSelectionVisuals();
-  document.body.setAttribute('data-mode', 'systems');
-  showOnly('systems');
+// ===== Tabs: Global / Local / Mappings =====
 
-  const sys = systems.find((s) => s.name === name);
-  let showGlobal = true,
-    showLocal = true;
+// einmalig Tab-Click-Handling einrichten
+function setupTopTabs() {
+  const tabs = document.querySelectorAll('#topTabs .tab');
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tgt = btn.dataset.tab; // "global" | "local" | "mappings"
+      // visuelle Markierung
+      tabs.forEach(b => b.classList.toggle('is-active', b === btn));
+      // Bereich zeigen
+      showMainView(tgt);
+    });
+  });
+}
+
+// zeigt eines der drei Panels an
+// ===== Views sicher umschalten (Global / Local / Mappings) =====
+function showMainView(tabId) {
+  const secGlobal   = document.getElementById('global');
+  const secLocal    = document.getElementById('local');
+  const secMappings = document.getElementById('systems-mappings-section');
+
+  // Helper
+  const show = (el) => { if (!el) return; el.hidden = false; el.style.display = ''; el.classList.add('is-active'); };
+  const hide = (el) => { if (!el) return; el.classList.remove('is-active'); el.style.display = 'none'; };
+  const hideHidden = (el) => { if (!el) return; el.hidden = true; el.style.display = 'none'; };
+
+  // Alles aus
+  hide(secGlobal);
+  hide(secLocal);
+  hideHidden(secMappings); // Mappings per hidden steuern
+
+  // Ziel an
+  switch ((tabId || '').toLowerCase()) {
+    case 'global':
+      show(secGlobal);
+      if (typeof window.renderFieldsTable === 'function') {
+        try { window.renderFieldsTable(); } catch {}
+      }
+      break;
+
+    case 'local':
+      show(secLocal);
+      if (typeof window.renderLocalFieldsTables === 'function') {
+        try { window.renderLocalFieldsTables(); } catch {}
+      } else if (typeof window.renderLocalTables === 'function') { // Fallback
+        try { window.renderLocalTables(); } catch {}
+      }
+      break;
+
+    case 'mappings':
+      if (secMappings) { secMappings.hidden = false; secMappings.style.display = ''; }
+      // Initialisierung: akzeptiere beide Varianten (IIFE oder Funktion)
+      if (!window.__mappingsInit) {
+        if (typeof window.setupMappingsFeature === 'function') {
+          try { window.setupMappingsFeature(); window.__mappingsInit = true; } catch {}
+        } else {
+          // Falls als IIFE bereits lief, nur Liste refreshen
+          window.__mappingsInit = true;
+        }
+      }
+      // Liste aktualisieren, wenn verfügbar
+      if (typeof window.__renderMappingsList === 'function') {
+        try { window.__renderMappingsList(); } catch {}
+      }
+      break;
+
+    default:
+      // Fallback -> Global
+      show(secGlobal);
+      if (typeof window.renderFieldsTable === 'function') {
+        try { window.renderFieldsTable(); } catch {}
+      }
+  }
+
+  // Tabs aktiv markieren
+  document.querySelectorAll('#topTabs .tab')
+    .forEach(t => t.classList.toggle('is-active', (t.dataset.tab || '') === (tabId || '')));
+}
+
+/**
+ * Systems-Modus aktivieren und Tabs passend ein-/ausblenden.
+ * Achtung: "Mappings" bleibt immer sichtbar (bewusst).
+ */
+function setModeSystems(name) {
+  // State übernehmen
+  state.currentSystem = name;
+  state.selectedFieldRef = null;
+  clearSelectionVisuals?.();
+  document.body.setAttribute('data-mode', 'systems');
+  showOnly?.('systems'); // falls deine alte High-Level-Sichtsteuerung das braucht
+
+  // Scope des Systems bestimmen
+  const sys = (state.systems || []).find(s => s.name === name);
+  let showGlobal = true, showLocal = true, showMappings = true;
+
   if (sys) {
     if (sys.scope === 'global') showLocal = false;
-    if (sys.scope === 'local') showGlobal = false;
-  }
-  const tabGlobal = $('#topTabs .tab[data-tab="global"]');
-  const tabLocal = $('#topTabs .tab[data-tab="local"]');
-  if (tabGlobal) tabGlobal.style.display = showGlobal ? 'inline-flex' : 'none';
-  if (tabLocal) tabLocal.style.display = showLocal ? 'inline-flex' : 'none';
-
-  let target = showGlobal ? 'global' : showLocal ? 'local' : 'global';
-  $$('#topTabs .tab').forEach((t) => t.classList.remove('is-active'));
-  const btn = $(`#topTabs .tab[data-tab="${target}"]`);
-  if (btn) {
-    btn.classList.add('is-active');
-    showMainView(target);
+    if (sys.scope === 'local')  showGlobal = false;
   }
 
-  renderSystemsSidebar();
-  renderFieldsTable();
+  // Tabs sichtbar/unsichtbar schalten
+  const tabGlobal   = document.querySelector('#topTabs .tab[data-tab="global"]');
+  const tabLocal    = document.querySelector('#topTabs .tab[data-tab="local"]');
+  const tabMappings = document.querySelector('#topTabs .tab[data-tab="mappings"]');
+
+  if (tabGlobal)   tabGlobal.style.display   = showGlobal   ? 'inline-flex' : 'none';
+  if (tabLocal)    tabLocal.style.display    = showLocal    ? 'inline-flex' : 'none';
+  if (tabMappings) tabMappings.style.display = showMappings ? 'inline-flex' : 'none'; // immer sichtbar
+
+  // Ziel-Tab bestimmen:
+  // 1) wenn aktueller aktiver Tab sichtbar bleibt, dort bleiben
+  const activeBtn = document.querySelector('#topTabs .tab.is-active');
+  const activeId  = activeBtn?.dataset?.tab;
+  if (activeBtn && activeId && (
+      (activeId === 'global'   && showGlobal) ||
+      (activeId === 'local'    && showLocal)  ||
+      (activeId === 'mappings' && showMappings)
+    )) {
+    showMainView(activeId);
+    return;
+  }
+
+  // 2) sonst Priorität: global > local > mappings (falls sichtbar)
+  let target = null;
+  if (showGlobal) target = 'global';
+  else if (showLocal) target = 'local';
+  else target = 'mappings';
+
+  // visuelle Markierung setzen
+  document.querySelectorAll('#topTabs .tab')
+    .forEach(t => t.classList.toggle('is-active', t.dataset.tab === target));
+
+  // anzeigen
+  showMainView(target);
 }
-function showMainView(id) {
-  const g = byId('global');
-  const l = byId('local');
-  if (g) g.style.display = id === 'global' ? 'block' : 'none';
-  if (l) l.style.display = id === 'local' ? 'block' : 'none';
+
+// beim App-Start einmalig aufrufen (falls noch nicht):
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupTopTabs, { once:true });
+} else {
+  setupTopTabs();
 }
 
 /* ================= Admin Tabs ================= */
-function openAdminTab(id) {
+function showAdminSubview(id) {
   $$('.admin-view').forEach((v) => (v.style.display = 'none'));
   const view = byId(id);
   if (view) view.style.display = 'block';
-  switch (id) {
-    case 'admin-systems':
-      renderSystemsTable();
-      break;
-    case 'admin-columns':
-      renderColumnsTable();
-      break;
-    case 'admin-domains':
-      renderDomainsTable();
-      break;
-    case 'admin-legal':
-      renderLegalEntities();
-      break;
-    case 'admin-dataObjects':
-      renderDataObjects();
-      break;
-    case 'admin-permissions':
-      renderPermTabsMatrix();
-      renderPermActionsMatrix();
-      applyActionPermissions();
-      bindPermMatrixEvents();
-      break;
-    default:
-      break;
-  }
-  applyRowPermissions();
+  if (id === 'admin-systems') renderSystemsTable();
+  if (id === 'admin-columns') renderColumnsTable();
+  if (id === 'admin-domains') renderDomainsTable();
+  if (id === 'admin-legal') renderLegalEntities();
+  if (id === 'admin-dataobjects') renderDataObjects();
 }
 
 /* Sortierfunktion */
@@ -1496,8 +1254,6 @@ function renderFieldsTable() {
     btn.addEventListener('click', () => {
       const v = visible[parseInt(btn.dataset.index, 10)];
       const gi = indexMap.get(v);
-      const section = detectFieldSection(gi);
-      if (!canDo(permissions, section, 'delete', currentUser)) return;
       if (confirm(`Delete field "${fields[gi].name}"?`)) {
         fields.splice(gi, 1);
         renderFieldsTable();
@@ -1584,8 +1340,6 @@ function updateGlobalTableBodyOnly() {
       const v = visible[parseInt(btn.dataset.index, 10)];
       const gi = indexMap.get(v);
       if (gi == null) return;
-      const section = detectFieldSection(gi);
-      if (!canDo(permissions, section, 'delete', currentUser)) return;
       if (confirm(`Delete field "${fields[gi].name}"?`)) {
         fields.splice(gi, 1);
         saveFields?.();
@@ -1599,14 +1353,23 @@ function updateGlobalTableBodyOnly() {
 function renderLocalFieldsTables() {
   const cols = visibleColumns();
 
-  // Host-Container finden oder anlegen
+  const {
+    fields,
+    systems,
+    legalEntities,
+    currentSystem,
+    columnFilters = (state.columnFilters ||= {}),
+    localSortByLe  = (state.localSortByLe  ||= {}),
+  } = state;
+
+  // IMMER state.* verwenden – keine losen Variablen
   const localView = document.getElementById('local');
   if (!localView) {
     console.warn('[gdf] renderLocalFieldsTables(): #local not found');
     return;
   }
 
-  const sectionHead = localView.querySelector('.section-head');
+  const sectionHead   = localView.querySelector('.section-head');
   const sectionTitleEl = sectionHead?.querySelector('.section-title');
 
   let host = document.getElementById('localTables');
@@ -1621,18 +1384,18 @@ function renderLocalFieldsTables() {
   // Hilfsfunktion
   const getLENameByNumber = (num) => {
     if (!num) return 'Unassigned';
-    const le = legalEntities.find((x) => x.number === num);
+    const le = (state.legalEntities || []).find((x) => x.number === num);
     return le ? le.name : 'Unassigned';
   };
 
-  // Lokale Felder filtern
-  const localCandidates = fields
+  // Lokale Felder filtern (nur state.*)
+  const localCandidates = (state.fields || [])
     .filter((f) => isValidSystemName(f.system))
     .filter(
-      (f) => currentSystem === 'All Systems' || f.system === currentSystem
+      (f) => (state.currentSystem === 'All Systems') || f.system === state.currentSystem
     )
     .filter((f) => {
-      const sys = systems.find((s) => s.name === f.system);
+      const sys = (state.systems || []).find((s) => s.name === f.system);
       return f.local === true || sys?.scope === 'local';
     });
 
@@ -1661,7 +1424,6 @@ function renderLocalFieldsTables() {
   } else if (orderedKeys.length === 0) {
     sectionTitleText = 'Local Data Fields - Unassigned';
   }
-
   if (sectionTitleEl) {
     sectionTitleEl.textContent = sectionTitleText;
     sectionTitleEl.removeAttribute('aria-hidden');
@@ -1673,10 +1435,9 @@ function renderLocalFieldsTables() {
     let recs = groups.get(leNumber) || [];
     recs = applyColumnFilters(recs, cols);
     recs =
-      sortFieldsCustom(recs, localSortByLe[leNumber]) ||
+      sortFieldsCustom(recs, (window.localSortByLe || {})[leNumber]) ||
       sortFieldsDefault(recs);
 
-    // Headerzeile
     const group = document.createElement('div');
     group.className = 'local-table-group';
 
@@ -1686,17 +1447,15 @@ function renderLocalFieldsTables() {
     if (hasMultipleGroups) {
       const headerRow = document.createElement('div');
       headerRow.className = 'local-table-header';
-
       const title = document.createElement('h3');
       title.textContent = tableTitleText;
       headerRow.appendChild(title);
       group.appendChild(headerRow);
     }
 
-    // Tabelle
     const table = document.createElement('table');
     table.className = 'table local-fields-table';
-    table.dataset.leNumber = leNumber; // merken für individuelle Sortierung
+    table.dataset.leNumber = leNumber;
     table.setAttribute('aria-label', tableTitleText);
 
     const thead = document.createElement('thead');
@@ -1709,18 +1468,17 @@ function renderLocalFieldsTables() {
           (c) =>
             `<th data-col="${c.name}" class="is-sortable">${
               c.name
-            }${sortIndicator(c.name, localSortByLe[leNumber])}</th>`
+            }${sortIndicator(c.name, (window.localSortByLe || {})[leNumber])}</th>`
         )
         .join('') + `<th>Actions</th>`;
-
     thead.appendChild(row1);
 
-    if (showLocalFilters) {
+    if (state.showLocalFilters) {
       const row2 = document.createElement('tr');
       row2.innerHTML =
         cols
           .map((c) => {
-            const v = columnFilters[c.name] ?? '';
+            const v = (window.columnFilters || {})[c.name] ?? '';
             return `<th><input data-col="${
               c.name
             }" type="search" placeholder="Filter…" value="${esc(v)}" /></th>`;
@@ -1731,8 +1489,7 @@ function renderLocalFieldsTables() {
       // Filter-Handler (teilen sich columnFilters)
       row2.querySelectorAll('input[type="search"]').forEach((inp) => {
         inp.addEventListener('input', () => {
-          columnFilters[inp.dataset.col] = inp.value || '';
-          // Für jetzt: gesamten Local-Bereich neu aufbauen (einfach und robust)
+          (window.columnFilters ||= {})[inp.dataset.col] = inp.value || '';
           preserveFilterInputFocus(() => renderLocalFieldsTables());
         });
       });
@@ -1743,9 +1500,10 @@ function renderLocalFieldsTables() {
       th.addEventListener('click', () => {
         const col = th.dataset.col;
         const key = mapColToSortKey(col);
-        const cur = (localSortByLe[leNumber] ||= { key: 'system', dir: 'asc' });
+        const curMap = (window.localSortByLe ||= {});
+        const cur = (curMap[leNumber] ||= { key: 'system', dir: 'asc' });
         if (cur.key === key) cur.dir = cur.dir === 'asc' ? 'desc' : 'asc';
-        else localSortByLe[leNumber] = { key, dir: 'asc' };
+        else curMap[leNumber] = { key, dir: 'asc' };
         renderLocalFieldsTables();
       });
     });
@@ -1754,10 +1512,10 @@ function renderLocalFieldsTables() {
 
     const tbody = document.createElement('tbody');
 
-    // Sichtbare Liste -> globaler Index map
+    // Sichtbare Liste -> globaler Index map (immer state.fields nutzen)
     const indexMap = new Map();
     recs.forEach((v) => {
-      const gi = fields.findIndex(
+      const gi = (state.fields || []).findIndex(
         (f) =>
           f.name === v.name &&
           f.system === v.system &&
@@ -1767,7 +1525,7 @@ function renderLocalFieldsTables() {
       indexMap.set(v, gi);
     });
 
-    recs.forEach((f, i) => {
+    recs.forEach((f) => {
       const tr = document.createElement('tr');
 
       // Datenzellen
@@ -1787,48 +1545,39 @@ function renderLocalFieldsTables() {
       const tdActions = document.createElement('td');
       tdActions.className = 'table-actions';
       tdActions.innerHTML = `
-        <button data-index="${i}" class="fieldEdit" title="Edit">
+        <button class="fieldEdit" title="Edit">
           <svg class="icon-16" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="currentColor"/></svg>
         </button>
-        <button data-index="${i}" class="fieldDelete" title="Delete">
+        <button class="fieldDelete" title="Delete">
           <svg class="icon-16" viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7Zm5-4h2l1 1h4v2H5V4h4l1-1Z" fill="currentColor"/></svg>
         </button>
       `;
-      tr.appendChild(tdActions);
+      // Edit/Delete-Handler pro Zeile
+      tdActions.querySelector('.fieldEdit')?.addEventListener('click', () => {
+        const gi = indexMap.get(f);
+        if (gi != null) openFieldDialog(gi);
+      });
+      tdActions.querySelector('.fieldDelete')?.addEventListener('click', () => {
+        const gi = indexMap.get(f);
+        if (gi == null) return;
+        if (confirm(`Delete field "${state.fields[gi].name}"?`)) {
+          state.fields.splice(gi, 1);
+          if (typeof saveFields === 'function') saveFields();
+          renderLocalFieldsTables();
+          if (document.body.getAttribute('data-mode') === 'map') {
+            renderDataMap();
+          }
+          document.dispatchEvent(new CustomEvent('gdf:fields-updated'));
+        }
+      });
 
+      tr.appendChild(tdActions);
       tbody.appendChild(tr);
     });
 
     table.appendChild(tbody);
     group.appendChild(table);
     host.appendChild(group);
-
-    // Edit/Delete-Handler pro Tabelle
-    tbody.querySelectorAll('.fieldEdit').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const i = parseInt(btn.dataset.index, 10);
-        const v = recs[i];
-        const gi = indexMap.get(v);
-        if (gi != null) openFieldDialog(gi);
-      });
-    });
-    tbody.querySelectorAll('.fieldDelete').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const i = parseInt(btn.dataset.index, 10);
-        const v = recs[i];
-        const gi = indexMap.get(v);
-        if (gi == null) return;
-        const section = detectFieldSection(gi);
-        if (!canDo(permissions, section, 'delete', currentUser)) return;
-        if (confirm(`Delete field "${fields[gi].name}"?`)) {
-          fields.splice(gi, 1);
-          saveFields?.();
-          renderLocalFieldsTables();
-          if (document.body.getAttribute('data-mode') === 'map')
-            renderDataMap();
-        }
-      });
-    });
   });
 
   // Edge-Case: Keine lokalen Felder -> trotzdem „Unassigned“-Block zeigen
@@ -1852,6 +1601,12 @@ function renderLocalFieldsTables() {
     host.appendChild(group);
   }
 }
+
+
+
+// WICHTIG: für Submit-Code und AV-Spalte verfügbar machen
+window.renderLocalTables = renderLocalFieldsTables;
+window.renderFieldsTable = renderFieldsTable;
 /* Ende Teil 4*/
 /* Teil 5 Zeilen 1463-1802*/
 /* ================= Admin Tables ================= */
@@ -1871,14 +1626,12 @@ function renderSystemsTable() {
     systemsTable.appendChild(tr);
   });
   $$('.systemEdit').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'systems', 'edit', currentUser)) return;
-      openSystemDialog(parseInt(btn.dataset.index, 10));
-    })
+    btn.addEventListener('click', () =>
+      openSystemDialog(parseInt(btn.dataset.index, 10))
+    )
   );
   $$('.systemDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'systems', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       const name = systems[i].name;
       const deletedId = systems[i].id;
@@ -1929,14 +1682,12 @@ function renderColumnsTable() {
     columnsTable.appendChild(tr);
   });
   $$('.columnEdit').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
-      openColumnDialog(parseInt(btn.dataset.index, 10));
-    })
+    btn.addEventListener('click', () =>
+      openColumnDialog(parseInt(btn.dataset.index, 10))
+    )
   );
   $$('.columnDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'admin', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       if (!confirm(`Delete column "${fieldColumns[i].name}"?`)) return;
       fieldColumns.splice(i, 1);
@@ -1966,14 +1717,12 @@ function renderDomainsTable() {
     domainsTable.appendChild(tr);
   });
   $$('.domainEdit').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
-      openDomainDialog(parseInt(btn.dataset.index, 10));
-    })
+    btn.addEventListener('click', () =>
+      openDomainDialog(parseInt(btn.dataset.index, 10))
+    )
   );
   $$('.domainDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'admin', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       const name = dataDomains[i].name;
       if (!confirm(`Delete data domain "${name}"?`)) return;
@@ -2022,14 +1771,12 @@ function renderLegalEntities() {
 
   $$('.leEdit').forEach((btn) =>
     btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'admin', 'edit', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       openLegalDialog(i);
     })
   );
   $$('.leDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'admin', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       const le = legalEntities[i];
       if (!confirm(`Delete legal entity "${le.name}"?`)) return;
@@ -2041,7 +1788,6 @@ function renderLegalEntities() {
   });
   $$('.leManage').forEach((btn) =>
     btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'admin', 'approve', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       openLeSystemsDialog(i);
     })
@@ -2053,8 +1799,6 @@ function openLegalDialog(index = null) {
   state.editLegalIndex = editLegalIndex;
   legalForm?.reset();
   if (!legalForm) return;
-  const action = index !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'admin', action, currentUser)) return;
   if (index !== null) {
     const le = legalEntities[index];
     legalForm.elements.number.value = le.number;
@@ -2065,8 +1809,6 @@ function openLegalDialog(index = null) {
 }
 legalForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const action = editLegalIndex !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'admin', action, currentUser)) return;
   const data = Object.fromEntries(new FormData(legalForm).entries());
   if (editLegalIndex !== null) {
     legalEntities[editLegalIndex] = {
@@ -2104,7 +1846,6 @@ function buildSystemChipList(container, sysList, selectedSet) {
 function openLeSystemsDialog(index) {
   editingLeIndexForSystems = index;
   state.editingLeIndexForSystems = editingLeIndexForSystems;
-  if (!canDo(permissions, 'admin', 'approve', currentUser)) return;
   const le = legalEntities[index];
   const allowed = eligibleLocalOrBothSystems();
   const selected = new Set(leSystemMap[le.number] || []);
@@ -2115,7 +1856,6 @@ function openLeSystemsDialog(index) {
 }
 leSystemsForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!canDo(permissions, 'admin', 'approve', currentUser)) return;
   if (editingLeIndexForSystems == null) {
     closeDialog(leSystemsDialog);
     return;
@@ -2164,7 +1904,9 @@ function formatGlossaryDetail(term) {
   const label = esc(term.term || '');
   const definition = term.definition ? ` – ${esc(term.definition)}` : '';
   const title = term.definition ? ` title="${esc(term.definition)}"` : '';
-  return `<span class="glossary-link" data-id="${esc(term.id)}"${title}>${label}</span>${definition}`;
+  return `<span class="glossary-link" data-id="${esc(
+    term.id
+  )}"${title}>${label}</span>${definition}`;
 }
 
 function renderGlossaryTable() {
@@ -2184,7 +1926,9 @@ function renderGlossaryTable() {
 
   list.forEach((g, i) => {
     const linkedField = findFieldByFieldRef(g.fieldRefId || g.fieldRef || '');
-    const linkedLabel = linkedField ? fieldRefLabel(linkedField) : g.fieldRef || '';
+    const linkedLabel = linkedField
+      ? fieldRefLabel(linkedField)
+      : g.fieldRef || '';
     if (linkedField && g.fieldRef !== linkedLabel) {
       g.fieldRef = linkedLabel;
     }
@@ -2224,7 +1968,6 @@ function renderGlossaryTable() {
   );
   $$('.glsDelete').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!canDo(permissions, 'glossary', 'delete', currentUser)) return;
       const i = parseInt(btn.dataset.index, 10);
       const name = list[i]?.term || 'term';
       if (confirm(`Delete glossary term "${name}"?`)) {
@@ -2236,62 +1979,6 @@ function renderGlossaryTable() {
     });
   });
 }
-
-const _renderFieldsTable = renderFieldsTable;
-renderFieldsTable = function (...args) {
-  const result = _renderFieldsTable.apply(this, args);
-  applyRowPermissions();
-  return result;
-};
-
-const _renderLocalFieldsTables = renderLocalFieldsTables;
-renderLocalFieldsTables = function (...args) {
-  const result = _renderLocalFieldsTables.apply(this, args);
-  applyRowPermissions();
-  return result;
-};
-
-const _renderSystemsTable = renderSystemsTable;
-renderSystemsTable = function (...args) {
-  const result = _renderSystemsTable.apply(this, args);
-  applyRowPermissions();
-  return result;
-};
-
-const _renderColumnsTable = renderColumnsTable;
-renderColumnsTable = function (...args) {
-  const result = _renderColumnsTable.apply(this, args);
-  applyRowPermissions();
-  return result;
-};
-
-const _renderDomainsTable = renderDomainsTable;
-renderDomainsTable = function (...args) {
-  const result = _renderDomainsTable.apply(this, args);
-  applyRowPermissions();
-  return result;
-};
-
-const _renderLegalEntities = renderLegalEntities;
-renderLegalEntities = function (...args) {
-  const result = _renderLegalEntities.apply(this, args);
-  applyRowPermissions();
-  return result;
-};
-
-const _renderDataObjects = renderDataObjects;
-renderDataObjects = function (...args) {
-  const result = _renderDataObjects.apply(this, args);
-  applyRowPermissions();
-  return result;
-};
-
-const _renderGlossaryTable = renderGlossaryTable;
-renderGlossaryTable = function (...args) {
-  const result = _renderGlossaryTable.apply(this, args);
-  applyRowPermissions();
-  return result;
-};
 
 function populateGlossaryFieldRefOptions(selected = '') {
   if (!glossaryFieldRef) return;
@@ -2317,7 +2004,9 @@ function populateGlossaryFieldRefOptions(selected = '') {
   });
   if (selected && !hasMatch) {
     options.push(
-      `<option value="${esc(selected)}" selected>${esc(selected)} (not found)</option>`
+      `<option value="${esc(selected)}" selected>${esc(
+        selected
+      )} (not found)</option>`
     );
   }
   glossaryFieldRef.innerHTML = options.join('');
@@ -2326,8 +2015,6 @@ function openGlossaryDialog(index = null) {
   editGlossaryIndex = index;
   state.editGlossaryIndex = editGlossaryIndex;
   glossaryForm?.reset();
-  const action = index !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'glossary', action, currentUser)) return;
   const selectedRef =
     index !== null
       ? glossaryTerms[index].fieldRefId || glossaryTerms[index].fieldRef || ''
@@ -2347,8 +2034,6 @@ function openGlossaryDialog(index = null) {
 }
 glossaryForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const action = editGlossaryIndex !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'glossary', action, currentUser)) return;
   const formData = new FormData(glossaryForm);
   const data = Object.fromEntries(formData.entries());
   const glossaryId =
@@ -2469,13 +2154,9 @@ function installSelectFirstClickOpen(select) {
 }
 
 function openFieldDialog(index = null, opts = {}) {
-  editFieldIndex = index;
-  state.editFieldIndex = editFieldIndex;
+  // Edit-Index sauber setzen (ersetzt alte Variablen-Zuweisung)
+  setEditFieldIndex(index);
   if (!fieldForm) return;
-
-  const section = detectFieldSection(index, opts);
-  const action = index !== null ? 'edit' : 'create';
-  if (!canDo(permissions, section, action, currentUser)) return;
 
   fieldForm.reset();
   ensureFieldDialogHandlers();
@@ -2577,7 +2258,6 @@ function openFieldDialog(index = null, opts = {}) {
       editedLocal,
       fields[index].legalEntityNumber || ''
     );
-
     // Source-System/-Feld
     if (f.source?.system) {
       if (sourceSystemSelect) sourceSystemSelect.value = f.source.system;
@@ -2590,75 +2270,89 @@ function openFieldDialog(index = null, opts = {}) {
     // Neu: Source leer
     if (sourceSystemSelect) sourceSystemSelect.value = '';
     updateSourceFieldSelect();
+    
   }
 
   openDialog(fieldDialog);
 }
 
+// ===== Field-Form Submit (CREATE/UPDATE stabil) =====
+// ===== Field-Form Submit (CREATE/UPDATE stabil) =====
 fieldForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const section = detectFieldSection(editFieldIndex, {
-    presetLocal: !!fieldForm.elements.local?.checked,
-  });
-  const action = editFieldIndex !== null ? 'edit' : 'create';
-  if (!canDo(permissions, section, action, currentUser)) return;
 
-  // 1) Form auslesen
-  const data = Object.fromEntries(new FormData(fieldForm).entries());
-  const pickedSourceSystem = (data.sourceSystem || '').trim();
-  const pickedSourceField = (data.sourceField || '').trim();
-  delete data.sourceSystem;
-  delete data.sourceField;
-  const pickedFoundationId = (
-    fieldForm.elements.foundationObject?.value || ''
-  ).trim();
-  const pickedGlossaryId =
-    (fieldForm.elements['fld-glossary']?.value || '').trim() || '';
+  try {
+    // --- Allowed Values lesen ---
+    const rawEnumEl = document.getElementById('fld-allowed-values');
+    const rawEnum   = (rawEnumEl?.value || '').trim();
+    const allowedValues = rawEnum
+      ? Array.from(new Set(rawEnum.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean)))
+      : [];
 
-  // Checkboxen korrekt auslesen
-  data.mandatory = fieldForm.elements['fld-mandatory']?.checked || false;
-  data.local = fieldForm.elements.local?.checked || false;
+    // --- Formdaten lesen ---
+    const fd = new FormData(fieldForm);
+    const data = Object.fromEntries(fd.entries());
 
-  // 2) Legal Entity nur zulassen, wenn erlaubt
-  const sysNameForLE = data.system;
-  const isLocalForLE = !!data.local;
-  let pickedLENumber = (
-    fieldForm.elements.legalEntityNumber?.value || ''
-  ).trim();
-  if (!eligibleForLE(sysNameForLE, isLocalForLE)) pickedLENumber = '';
+    const pickedSourceSystem = (data.sourceSystem || '').trim();
+    const pickedSourceField  = (data.sourceField  || '').trim();
+    delete data.sourceSystem;
+    delete data.sourceField;
 
-  // 3) Merge/Create
-  if (editFieldIndex !== null) {
-    const next = { ...fields[editFieldIndex], ...data };
-    if (pickedFoundationId) next.foundationObjectId = pickedFoundationId;
-    else delete next.foundationObjectId;
-    if (pickedGlossaryId) next.glossaryId = pickedGlossaryId;
-    else delete next.glossaryId;
-    if (pickedLENumber) next.legalEntityNumber = pickedLENumber;
-    else delete next.legalEntityNumber;
-    if (pickedSourceSystem) {
-      next.source = { system: pickedSourceSystem, field: pickedSourceField };
+    const pickedFoundationId = (fieldForm.elements.foundationObject?.value || '').trim();
+    const pickedGlossaryId   = (fieldForm.elements.glossaryId?.value || '').trim();
+
+    data.mandatory = !!fieldForm.elements['fld-mandatory']?.checked;
+    data.local     = !!fieldForm.elements.local?.checked;
+
+    const sysNameForLE = data.system;
+    const isLocalForLE = !!data.local;
+    let pickedLENumber = (fieldForm.elements.legalEntityNumber?.value || '').trim();
+    if (!eligibleForLE(sysNameForLE, isLocalForLE)) pickedLENumber = '';
+
+    if (!Array.isArray(state.fields)) state.fields = [];
+    const idx = getEditFieldIndex();
+
+    if (idx !== null && state.fields[idx]) {
+      // ===== UPDATE =====
+      const next = { ...state.fields[idx], ...data };
+      next.allowedValues = allowedValues;
+
+      if (pickedFoundationId) next.foundationObjectId = pickedFoundationId; else delete next.foundationObjectId;
+      if (pickedGlossaryId)   next.glossaryId        = pickedGlossaryId;   else delete next.glossaryId;
+      if (pickedLENumber)     next.legalEntityNumber = pickedLENumber;     else delete next.legalEntityNumber;
+
+      if (pickedSourceSystem) next.source = { system: pickedSourceSystem, field: pickedSourceField };
+      else delete next.source;
+
+      state.fields[idx] = next;
     } else {
-      delete next.source;
+      // ===== CREATE =====
+      const uid = (p='fld') => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+      const rec = { id: uid('fld'), ...data, allowedValues };
+
+      if (pickedFoundationId) rec.foundationObjectId = pickedFoundationId;
+      if (pickedGlossaryId)   rec.glossaryId        = pickedGlossaryId;
+      if (pickedLENumber)     rec.legalEntityNumber = pickedLENumber;
+      if (pickedSourceSystem) rec.source            = { system: pickedSourceSystem, field: pickedSourceField };
+
+      state.fields.push(rec);
+      setEditFieldIndex(state.fields.length - 1);
     }
 
-    fields[editFieldIndex] = next;
-  } else {
-    const rec = { id: uid('fld'), ...data };
-    if (pickedFoundationId) rec.foundationObjectId = pickedFoundationId;
-    if (pickedGlossaryId) rec.glossaryId = pickedGlossaryId;
-    if (pickedLENumber) rec.legalEntityNumber = pickedLENumber;
-    if (pickedSourceSystem) {
-      rec.source = { system: pickedSourceSystem, field: pickedSourceField };
-    }
-    fields.push(rec);
+    // Persist & UI
+    saveFields();
+    setTimeout(() => {
+      window.renderFieldsTable?.();
+      window.renderLocalFieldsTables?.();
+      document.dispatchEvent(new CustomEvent('gdf:fields-updated'));
+    }, 30);
+
+    clearEditFieldIndex();
+    document.getElementById('fieldDialog')?.close?.();
+
+  } catch (err) {
+    alert('Speichern fehlgeschlagen: ' + (err?.message || err));
   }
-
-  // 4) Persist & UI refresh
-  saveFields();
-  renderFieldsTable();
-  if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
-  closeDialog(fieldDialog);
 });
 
 function openSystemDialog(index = null) {
@@ -2666,9 +2360,6 @@ function openSystemDialog(index = null) {
   state.editSystemIndex = editSystemIndex;
   systemForm?.reset();
   if (!systemForm) return;
-
-  const action = index !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'systems', action, currentUser)) return;
 
   if (systemDomainSelect) {
     systemDomainSelect.innerHTML =
@@ -2691,8 +2382,6 @@ function openSystemDialog(index = null) {
 }
 systemForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const action = editSystemIndex !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'systems', action, currentUser)) return;
   const data = Object.fromEntries(new FormData(systemForm).entries());
   if (editSystemIndex !== null) {
     const old = systems[editSystemIndex];
@@ -2731,8 +2420,6 @@ function openColumnDialog(index = null) {
   state.editColumnIndex = editColumnIndex;
   columnForm?.reset();
   if (!columnForm) return;
-  const action = index !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'admin', action, currentUser)) return;
   if (index !== null) {
     const c = fieldColumns[index];
     columnForm.elements.name.value = c.name;
@@ -2743,8 +2430,6 @@ function openColumnDialog(index = null) {
 }
 columnForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const action = editColumnIndex !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'admin', action, currentUser)) return;
   const data = Object.fromEntries(new FormData(columnForm).entries());
   data.visible = columnForm.elements.visible.checked;
   data.order = data.order ? Number(data.order) : 1;
@@ -2761,8 +2446,6 @@ function openDomainDialog(index = null) {
   state.editDomainIndex = editDomainIndex;
   domainForm?.reset();
   if (!domainForm) return;
-  const action = index !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'admin', action, currentUser)) return;
   if (index !== null) {
     const d = dataDomains[index];
     domainForm.elements.name.value = d.name;
@@ -2777,8 +2460,6 @@ function openDomainDialog(index = null) {
 }
 domainForm?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const action = editDomainIndex !== null ? 'edit' : 'create';
-  if (!canDo(permissions, 'admin', action, currentUser)) return;
   const data = Object.fromEntries(new FormData(domainForm).entries());
   data.active = domainForm.elements.active.checked;
   if (editDomainIndex !== null) dataDomains[editDomainIndex] = data;
@@ -2845,7 +2526,8 @@ function computeNodePositions(nodeEntries = []) {
     typeof window !== 'undefined' && window.innerHeight
       ? window.innerHeight
       : 800;
-  const canvasHeight = mapCanvas?.clientHeight || mapCanvas?.offsetHeight || fallbackHeight;
+  const canvasHeight =
+    mapCanvas?.clientHeight || mapCanvas?.offsetHeight || fallbackHeight;
 
   const maxColumnHeight = Math.max(canvasHeight - baseY * 2, 520);
 
@@ -3025,14 +2707,19 @@ function collectNodeObstacles(excludeNodes = []) {
   const excludes = new Set(excludeNodes.filter(Boolean));
   return Array.from(mapNodesLayer.querySelectorAll('.map-node') || [])
     .filter((node) => !excludes.has(node))
-    .map((node) => inflateRect(rectToMap(node.getBoundingClientRect()), OBSTACLE_MARGIN));
+    .map((node) =>
+      inflateRect(rectToMap(node.getBoundingClientRect()), OBSTACLE_MARGIN)
+    );
 }
 
 function ensureEscapePoint(point, direction, obstacles) {
   let safe = { ...point };
   const dir = direction >= 0 ? 1 : -1;
   let attempts = 0;
-  while (obstacles.some((rect) => pointInsideRect(safe, rect)) && attempts < 16) {
+  while (
+    obstacles.some((rect) => pointInsideRect(safe, rect)) &&
+    attempts < 16
+  ) {
     safe = { x: safe.x + dir * ESCAPE_STEP, y: safe.y };
     attempts += 1;
   }
@@ -3082,7 +2769,8 @@ function computeRectilinearRoute(start, end, obstacles) {
       const nKey = keyFor(nx, ny);
       if (!nodeMap.has(nKey)) return;
       const next = nodeMap.get(nKey);
-      if (obstacles.some((rect) => segmentIntersectsRect(point, next, rect))) return;
+      if (obstacles.some((rect) => segmentIntersectsRect(point, next, rect)))
+        return;
       registerNeighbor(key, nKey);
     };
     tryNeighbor(ix + 1, iy);
@@ -3192,7 +2880,12 @@ function pointsToPath(points = []) {
   return commands.join(' ');
 }
 
-function buildRoutedEdgePath(start, end, startSide = 'right', endSide = 'left') {
+function buildRoutedEdgePath(
+  start,
+  end,
+  startSide = 'right',
+  endSide = 'left'
+) {
   if (!start || !end) return '';
 
   const startDir = startSide === 'right' ? 1 : -1;
@@ -3211,11 +2904,7 @@ function buildRoutedEdgePath(start, end, startSide = 'right', endSide = 'left') 
 
   let route = computeRectilinearRoute(startEscape, endEscape, obstacles);
   if (!route || route.length < 2) {
-    route = [
-      startEscape,
-      { x: startEscape.x, y: endEscape.y },
-      endEscape,
-    ];
+    route = [startEscape, { x: startEscape.x, y: endEscape.y }, endEscape];
   }
 
   const points = simplifyOrthogonalPoints([start, ...route, end]);
@@ -3537,7 +3226,11 @@ function renderDataMap() {
       ev.stopPropagation();
       node.classList.toggle('is-collapsed');
       nodeCollapsed.set(sys.name, node.classList.contains('is-collapsed'));
-      if (selectedFieldRef) { drawSelectedFieldEdges(); } else { drawSystemEdges(); }
+      if (selectedFieldRef) {
+        drawSelectedFieldEdges();
+      } else {
+        drawSystemEdges();
+      }
     });
 
     node.appendChild(wrap);
@@ -3559,7 +3252,11 @@ function renderDataMap() {
     enableDrag(node, header, sys.name);
   });
 
-  if (selectedFieldRef) { drawSelectedFieldEdges(); } else { drawSystemEdges(); }
+  if (selectedFieldRef) {
+    drawSelectedFieldEdges();
+  } else {
+    drawSystemEdges();
+  }
 
   requestAnimationFrame(() => fitMapToContent());
 }
@@ -3806,14 +3503,12 @@ function initializeApp() {
             .querySelectorAll('#adminTabs .tab')
             .forEach((t) => t.classList.remove('is-active'));
           firstTab.classList.add('is-active');
-          openAdminTab(firstTab.dataset.adminTab || 'admin-domains');
+          showAdminSubview(firstTab.dataset.adminTab || 'admin-domains');
         }
       } catch (e) {
         console.error(e);
       }
     });
-
-    refreshPermissionsUI();
 
     // =============================
     //  Top-Tabs (Systems-Ansicht)
@@ -3850,7 +3545,7 @@ function initializeApp() {
           .forEach((t) => t.classList.remove('is-active'));
         tab.classList.add('is-active');
         const target = tab.dataset.adminTab;
-        if (target) openAdminTab(target);
+        if (target) showAdminSubview(target);
       });
     });
 
@@ -3859,38 +3554,15 @@ function initializeApp() {
     // =============================
     document.addEventListener('click', (e) => {
       const t = e.target;
-      if (t.closest('#addFieldBtn')) {
-        if (!canDo(permissions, 'global', 'create', currentUser)) return;
-        openFieldDialog(null);
-      }
-      if (t.closest('#addLocalFieldBtn')) {
-        if (!canDo(permissions, 'local', 'create', currentUser)) return;
+      if (t.closest('#addFieldBtn')) openFieldDialog(null);
+      if (t.closest('#addLocalFieldBtn'))
         openFieldDialog(null, { presetLocal: true });
-      }
-      if (t.closest('#addSystemBtn')) {
-        if (!canDo(permissions, 'systems', 'create', currentUser)) return;
-        openSystemDialog(null);
-      }
-      if (t.closest('#addColumnBtn')) {
-        if (!canDo(permissions, 'admin', 'create', currentUser)) return;
-        openColumnDialog(null);
-      }
-      if (t.closest('#addDomainBtn')) {
-        if (!canDo(permissions, 'admin', 'create', currentUser)) return;
-        openDomainDialog(null);
-      }
-      if (t.closest('#addLegalBtn')) {
-        if (!canDo(permissions, 'admin', 'create', currentUser)) return;
-        openLegalDialog(null);
-      }
-      if (t.closest('#addGlossaryBtn')) {
-        if (!canDo(permissions, 'glossary', 'create', currentUser)) return;
-        openGlossaryDialog(null);
-      }
-      if (t.closest('#addDataObjectBtn')) {
-        if (!canDo(permissions, 'admin', 'create', currentUser)) return;
-        openDataObjectDialog(null);
-      }
+      if (t.closest('#addSystemBtn')) openSystemDialog(null);
+      if (t.closest('#addColumnBtn')) openColumnDialog(null);
+      if (t.closest('#addDomainBtn')) openDomainDialog(null);
+      if (t.closest('#addLegalBtn')) openLegalDialog(null);
+      if (t.closest('#addGlossaryBtn')) openGlossaryDialog(null);
+      if (t.closest('#addDataObjectBtn')) openDataObjectDialog(null);
     });
 
     // =============================
@@ -3961,14 +3633,13 @@ function initializeApp() {
       });
 
     document.getElementById('btnGlobalNew')?.addEventListener('click', () => {
-      if (!canDo(permissions, 'global', 'create', currentUser)) return;
-      openFieldDialog(null);
+      openFieldDialog(null); // neues Feld (global)
     });
 
     document
       .getElementById('btnGlobalExport')
       ?.addEventListener('click', () => {
-        if (!canDo(permissions, 'global', 'export', currentUser)) return;
+        // Exportiert die Global-Tabelle
         exportSingleTableAsXlsx('#global .table', 'Global_DataFields.xlsx');
       });
 
@@ -3979,12 +3650,11 @@ function initializeApp() {
     });
 
     document.getElementById('btnLocalNew')?.addEventListener('click', () => {
-      if (!canDo(permissions, 'local', 'create', currentUser)) return;
       openFieldDialog(null, { presetLocal: true });
     });
 
     document.getElementById('btnLocalExport')?.addEventListener('click', () => {
-      if (!canDo(permissions, 'local', 'export', currentUser)) return;
+      // Exportiert alle lokalen Tabellen zusammenhängend
       const tables = Array.from(
         document.querySelectorAll('#localTables table.table')
       );
@@ -4195,8 +3865,6 @@ function initializeApp() {
         // Hinweis: später kann hier statt alert() ein eigenes Overlay kommen
       }
     });
-
-    refreshPermissionsUI();
 
     console.log('[gdf] Init complete.');
   } catch (e) {
@@ -4492,7 +4160,8 @@ function drawSystemEdges() {
     const source = field.source;
     if (!source?.system) return;
 
-    if (!visibleSystems.has(field.system) || !visibleSystems.has(source.system)) return;
+    if (!visibleSystems.has(field.system) || !visibleSystems.has(source.system))
+      return;
 
     const dstFieldName = resolveFieldRef(field.system, field.name);
     const srcFieldName = resolveFieldRef(
@@ -4554,3 +4223,771 @@ document.addEventListener('DOMContentLoaded', () => {
     btnReset.addEventListener('click', resetAllAppData);
   }
 });
+
+// === MAPPINGS: UI & LOGIC (exported, no auto-run) ===
+function setupMappingsFeature() {
+  // Doppel-Init verhindern
+  if (window.__mappingsInit) return;
+  window.__mappingsInit = true;
+
+  // 1) State initial laden
+  if (!Array.isArray(state.mappings)) state.mappings = [];
+  if (!Array.isArray(state.valueMaps)) state.valueMaps = [];
+  try {
+    const m = loadMappings?.();
+    const v = loadValueMaps?.();
+    if (Array.isArray(m)) state.mappings = m;
+    if (Array.isArray(v)) state.valueMaps = v;
+  } catch (e) {
+    console.warn('Mappings/ValueMaps konnte nicht geladen werden:', e);
+  }
+
+  // 2) DOM-Refs
+  const section = document.getElementById('systems-mappings-section');
+  if (!section) return;
+
+  // Sichtbarkeit wird von showMainView gesteuert – hier nur sicherheitshalber an
+  section.hidden = false;
+
+  const addBtn = document.getElementById('addMappingBtn');
+  if (addBtn) {
+    addBtn.onclick = () => {
+      console.log('[Mappings] + New Mapping');
+      // Öffne den Editor immer; Auswahl kann im Dialog erfolgen
+      openEditor(null);
+    };
+  } else {
+    console.warn('[Mappings] addMappingBtn nicht gefunden');
+  }
+  const tbody   = document.getElementById('mappingsTbody');
+
+  const fLE     = document.getElementById('mapFilterLE');
+  const fSYS    = document.getElementById('mapFilterSystem');
+  const fDO     = document.getElementById('mapFilterDO');
+
+  const modal   = document.getElementById('mappingEditorModal');
+  const btnClose  = document.getElementById('mapEditClose');
+  const btnCancel = document.getElementById('mapEditCancel');
+  const btnSave   = document.getElementById('mapEditSave');
+  const btnAddGlobalValue = document.getElementById('mapAddGlobalAllowedValue');
+
+  // 3) Filter befüllen
+  function unique(list){ return Array.from(new Set(list)).filter(Boolean); }
+  function fillFilters() {
+    const locals = getLocalFields();
+
+    const allLE  = unique(locals.map(f => String(f.legalEntityNumber   || '')));
+    const allSYS = unique(locals.map(f => String(f.system              || '')));
+    const allDO  = unique(locals.map(f => String(f.foundationObjectId  || '')));
+
+    function fill(sel, items) {
+      if (!sel) return;
+      sel.innerHTML = '';
+      sel.append(new Option('Alle', ''));
+      items.forEach(v => sel.append(new Option(v, v)));
+    }
+    fill(fLE,  allLE);
+    fill(fSYS, allSYS);
+    fill(fDO,  allDO);
+  }
+
+  // 4) Mapping-Liste rendern
+  function renderList() {
+    const filter = {
+      legalEntityId: fLE?.value || undefined,
+      systemId:      fSYS?.value || undefined,
+      dataObjectId:  fDO?.value  || undefined,
+    };
+
+    const mappings = findMappings(filter);
+    tbody.innerHTML = '';
+
+    if (!mappings.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 8; // 8 Spalten laut Thead
+      td.textContent = 'Keine Mappings gefunden. Klicke auf „+ Neues Mapping“.';
+      tr.append(td);
+      tbody.append(tr);
+      return;
+    }
+
+    const lfLabel = (f) => f ? `${f.name} (Local)` : '—';
+    const gfLabel = (f) => f ? (f.name || '—') : '—';
+
+    mappings.forEach((m) => {
+      const leText  = m.legalEntityId || '—';
+      const sysText = m.systemId || '—';
+
+      const lf = findFieldById(m.localFieldId);
+      const gf = findFieldById(m.globalFieldId);
+
+      const localFieldText  = lfLabel(lf) || (m.localFieldId  || '—');
+      const globalFieldText = gfLabel(gf) || (m.globalFieldId || '—');
+
+      // ValueMap (Paare) ermitteln
+      const vm    = findValueMapByMappingId(m.id);
+      const pairs = (vm && Array.isArray(vm.pairs) && vm.pairs.length)
+        ? vm.pairs
+        : [{ from: '—', to: '—' }];
+
+      // Für jedes Paar eine Zeile
+      pairs.forEach((p) => {
+        const tr = document.createElement('tr');
+
+        const tdLE        = document.createElement('td');
+        const tdSYS       = document.createElement('td');
+        const tdLocal     = document.createElement('td');
+        const tdGlobal    = document.createElement('td');
+        const tdLocalVal  = document.createElement('td');
+        const tdGlobalVal = document.createElement('td');
+        const tdStatus    = document.createElement('td');
+        const tdActions   = document.createElement('td');
+
+        // Klassen setzen (für Styles/Monospace/Fixed widths etc.)
+        tdLE.className        = 'col-le mono';
+        tdSYS.className       = 'col-system';
+        tdLocal.className     = 'col-local';
+        tdGlobal.className    = 'col-global';
+        tdLocalVal.className  = 'col-local-val';
+        tdGlobalVal.className = 'col-global-val';
+        tdStatus.className    = 'col-status';
+        tdActions.className   = 'col-actions table-actions';
+
+        // Inhalte
+        tdLE.textContent        = leText;
+        tdSYS.textContent       = sysText;
+        tdLocal.textContent     = localFieldText;
+        tdGlobal.textContent    = globalFieldText;
+        tdLocalVal.textContent  = (p?.from ?? '—') || '—';
+        tdGlobalVal.textContent = (p?.to   ?? '—') || '—';
+        tdStatus.innerHTML      = `<span class="badge badge--${(m.status || 'DRAFT').toLowerCase()}">${m.status || 'DRAFT'}</span>`;
+
+        // Actions
+        const editBtn = document.createElement('button');
+        editBtn.className = 'icon-btn';
+        editBtn.textContent = '✎ Bearbeiten';
+        editBtn.addEventListener('click', () => openEditor(m));
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'icon-btn';
+        delBtn.textContent = 'Löschen';
+        delBtn.addEventListener('click', () => {
+          if (!confirm('Mapping wirklich löschen?')) return;
+          state.mappings = state.mappings.filter(x => x.id !== m.id);
+          state.valueMaps = state.valueMaps.filter(vm => vm.fieldMappingId !== m.id);
+          saveMappings(state.mappings);
+          saveValueMaps(state.valueMaps);
+          renderList();
+        });
+
+        tdActions.append(editBtn, document.createTextNode(' '), delBtn);
+
+        tr.append(tdLE, tdSYS, tdLocal, tdGlobal, tdLocalVal, tdGlobalVal, tdStatus, tdActions);
+        tbody.append(tr);
+      });
+    });
+  }
+  // Auch extern nutzbar machen (showMainView ruft das optional auf)
+  window.__renderMappingsList = renderList;
+
+  // 5) Editor öffnen/füllen
+  let currentEditing = null;
+
+  function openEditor(mapping) {
+    const modal = document.getElementById('mappingEditorModal');
+    if (!modal) {
+      console.error('[Mappings] #mappingEditorModal fehlt im DOM');
+      alert('Mapping-Editor-Modal nicht gefunden.');
+      return;
+    }
+  
+    // Modal sichtbar machen (mit deinem CSS kompatibel)
+    modal.removeAttribute('hidden');
+    modal.style.display = 'flex';
+    modal.classList.add('is-open');
+    document.body.classList.add('modal-open');
+  
+    // Editierzustand
+    currentEditing = mapping ? { ...mapping } : null;
+  
+    try {
+      // ---- DOM-Refs
+      const selLE       = document.getElementById('mapEditLE');
+      const selSYS      = document.getElementById('mapEditSystem');
+      const selLocal    = document.getElementById('mapEditLocalField');
+      const selGlobal   = document.getElementById('mapEditGlobalField');
+      const selFallback = document.getElementById('mapEditFallback');
+      const pairsTbody  = document.getElementById('mapPairsTbody');
+      const btnAddGlobalValue = document.getElementById('mapAddGlobalAllowedValue');
+      const btnClose    = document.getElementById('mapEditClose');
+      const btnCancel   = document.getElementById('mapEditCancel');
+      const btnSave     = document.getElementById('mapEditSave');
+  
+      const missing = [];
+      if (!selLE)       missing.push('#mapEditLE');
+      if (!selSYS)      missing.push('#mapEditSystem');
+      if (!selLocal)    missing.push('#mapEditLocalField');
+      if (!selGlobal)   missing.push('#mapEditGlobalField');
+      if (!selFallback) missing.push('#mapEditFallback');
+      if (!pairsTbody)  missing.push('#mapPairsTbody');
+      if (!btnSave)     missing.push('#mapEditSave');
+      if (missing.length) {
+        console.error('[Mappings] Fehlende Editor-Elemente:', missing.join(', '));
+        alert('Einige Editor-Elemente fehlen: ' + missing.join(', '));
+        return;
+      }
+  
+      // ---- Helper
+      const uniq = (arr) => Array.from(new Set(arr)).filter(Boolean);
+      const fLEFilter  = document.getElementById('mapFilterLE');
+      const fSYSFilter = document.getElementById('mapFilterSystem');
+      const fDOFilter  = document.getElementById('mapFilterDO');
+  
+      function fillSelect(sel, items, getLabel = x => x, getValue = x => x, withBlank = false) {
+        sel.innerHTML = '';
+        if (withBlank) sel.append(new Option('—', ''));
+        items.forEach(item => sel.append(new Option(getLabel(item), getValue(item))));
+      }
+  
+      // ---- Kandidatenlisten
+      function allLocalFields()  { return getLocalFields?.()  || []; }
+      function allGlobalFields() { return getGlobalFields?.() || []; }
+  
+      // LE/SYS-Listen aus lokalen Feldern ableiten (nur vorhandene)
+      const LE_LIST  = uniq(allLocalFields().map(f => String(f.legalEntityNumber || '')));
+      const SYS_LIST = uniq(allLocalFields().map(f => String(f.system || '')));
+  
+      fillSelect(selLE,  LE_LIST,  v => v, v => v);
+      fillSelect(selSYS, SYS_LIST, v => v, v => v);
+  
+      // Vorbelegung (Editor > Filter > erste Option)
+      selLE.value  = (currentEditing?.legalEntityId) || (fLEFilter?.value  || LE_LIST[0]  || '');
+      selSYS.value = (currentEditing?.systemId)      || (fSYSFilter?.value || SYS_LIST[0] || '');
+  
+      // Locals nach LE+SYS (+ optional DO-Filter aus der Liste) filtern
+      function candidateLocals() {
+        return getLocalFields({
+          legalEntityId: selLE.value || undefined,
+          systemId:      selSYS.value || undefined,
+          dataObjectId:  fDOFilter?.value || undefined
+        });
+      }
+  
+      // Globals nach SYS und DataObject (vom aktuell gewählten Local) filtern
+      function candidateGlobals() {
+        const sys = (selSYS.value || '').trim();
+        const localFO = findFieldById?.(selLocal.value)?.foundationObjectId || (fDOFilter?.value || '');
+        return allGlobalFields().filter(f => {
+          const okScope  = !f.local; // echte globale Felder
+          const okSys    = !sys || f.system === sys;
+          const okFO     = !localFO || f.foundationObjectId === localFO;
+          return okScope && okSys && okFO;
+        });
+      }
+  
+      // ---- Wert-Paare rendern
+      function renderPairs() {
+        const localFieldId  = selLocal.value;
+        const globalFieldId = selGlobal.value;
+  
+        const gVals = globalFieldId ? (getAllowedValues?.(globalFieldId) || []) : [];
+        const lVals = localFieldId  ? (getAllowedValues?.(localFieldId)  || []) : [];
+  
+        // Fallback neu befüllen (nur globale Werte)
+        const prevFallback = selFallback.value || '';
+        selFallback.innerHTML = '';
+        selFallback.append(new Option('— (kein Fallback)', ''));
+        gVals.forEach(v => selFallback.append(new Option(v, v)));
+        if (prevFallback && gVals.includes(prevFallback)) selFallback.value = prevFallback;
+  
+        // Tabelle
+        pairsTbody.innerHTML = '';
+  
+        if (!localFieldId || !globalFieldId) {
+          const tr = document.createElement('tr');
+          const td = document.createElement('td');
+          td.colSpan = 2; td.textContent = 'Bitte Local Field und Global Field auswählen.';
+          td.style.textAlign = 'center'; td.style.color = '#888';
+          tr.append(td); pairsTbody.append(tr);
+          return;
+        }
+        if (!lVals.length) {
+          const tr = document.createElement('tr');
+          const td = document.createElement('td');
+          td.colSpan = 2; td.textContent = 'Das Local Field hat keine Allowed Values.';
+          td.style.textAlign = 'center'; td.style.color = '#888';
+          tr.append(td); pairsTbody.append(tr);
+          return;
+        }
+  
+        // vorhandene Paare beim Editieren
+        let vm = currentEditing?.id ? findValueMapByMappingId?.(currentEditing.id) : null;
+        if (!vm) vm = { id: `vmap_${Date.now()}`, fieldMappingId: currentEditing?.id || '__temp__', pairs: [], fallback: '' };
+        const toMap = new Map(vm.pairs.map(p => [p.from, p.to || '']));
+  
+        lVals.forEach(fromVal => {
+          const tr  = document.createElement('tr');
+          tr.className = 'map-pair-row';
+  
+          const tdL = document.createElement('td');
+          tdL.className = 'col-left';
+          tdL.textContent = fromVal;
+  
+          const tdR = document.createElement('td');
+          tdR.className = 'col-right';
+          const sel = document.createElement('select');
+          sel.className = 'form-control';
+          sel.setAttribute('aria-label', `Global Value für "${fromVal}"`);
+  
+          sel.append(new Option('—', ''));
+          gVals.forEach(v => sel.append(new Option(v, v)));
+          sel.value = toMap.get(fromVal) || '';
+  
+          sel.addEventListener('change', () => {
+            if (!currentEditing) currentEditing = {};
+            if (!(currentEditing._pairs instanceof Map)) {
+              currentEditing._pairs = new Map(vm.pairs.map(p => [p.from, p.to || '']));
+            }
+            currentEditing._pairs.set(fromVal, sel.value || '');
+          });
+  
+          tdR.append(sel);
+          tr.append(tdL, tdR);
+          pairsTbody.append(tr);
+        });
+  
+        selFallback.value = vm.fallback && gVals.includes(vm.fallback)
+          ? vm.fallback
+          : (selFallback.value || '');
+      }
+  
+      // ---- Selects befüllen (reihenfolgenrichtig!)
+      function rebuildFieldOptions() {
+        // 1) Locals
+        const locals = candidateLocals();
+        fillSelect(selLocal, locals,
+          f => `${f.name} (${f.foundationObjectId || '-'})`,
+          f => f.id
+        );
+  
+        if (currentEditing?.localFieldId && locals.some(f => f.id === currentEditing.localFieldId)) {
+          selLocal.value = currentEditing.localFieldId;
+        } else if (!selLocal.value && locals.length) {
+          selLocal.value = locals[0].id;
+        }
+  
+        // 2) Globals hängen von Local (DataObject) + System ab
+        const globals = candidateGlobals();
+        fillSelect(selGlobal, globals,
+          f => `${f.name} (${f.system || '-'})`,
+          f => f.id,
+          true // Blank-Option
+        );
+  
+        if (currentEditing?.globalFieldId && globals.some(f => f.id === currentEditing.globalFieldId)) {
+          selGlobal.value = currentEditing.globalFieldId;
+        } else {
+          selGlobal.value = globals[0]?.id || '';
+        }
+  
+        // 3) Paare erst jetzt
+        renderPairs();
+      }
+  
+      // ---- Events (onchange überschreibt alte Listener -> keine Doppelbindung)
+      selLE.onchange  = () => { selGlobal.value = ''; rebuildFieldOptions(); };
+      selSYS.onchange = () => { selGlobal.value = ''; rebuildFieldOptions(); };
+      selLocal.onchange  = () => {
+        // Local ändert das Data Object -> Globals neu filtern
+        const globals = candidateGlobals();
+        fillSelect(selGlobal, globals, f => `${f.name} (${f.system || '-'})`, f => f.id, true);
+        selGlobal.value = globals[0]?.id || '';
+        renderPairs();
+      };
+      selGlobal.onchange = renderPairs;
+  
+      btnAddGlobalValue?.addEventListener('click', () => {
+        const globalFieldId = selGlobal.value;
+        if (!globalFieldId) { alert('Bitte zuerst ein Global Field wählen.'); return; }
+        const newVal = prompt('Neuen globalen Allowed Value eingeben:');
+        if (!newVal) return;
+  
+        const gf = findFieldById?.(globalFieldId);
+        if (!gf) return;
+        if (!Array.isArray(gf.allowedValues)) gf.allowedValues = [];
+        if (!gf.allowedValues.includes(newVal)) {
+          gf.allowedValues.push(newVal);
+          saveFields?.();
+          document.dispatchEvent(new CustomEvent('gdf:fields-updated'));
+        }
+        renderPairs();
+      });
+  
+      // ---- Modal schließen
+      function closeEditor() {
+        modal.classList.remove('is-open');
+        modal.style.display = '';
+        modal.setAttribute('hidden', '');
+        document.body.classList.remove('modal-open');
+        currentEditing = null;
+      }
+      btnClose.onclick  = closeEditor;
+      btnCancel.onclick = closeEditor;
+  
+      // ---- Speichern
+      btnSave.onclick = () => {
+        try {
+          const legalEntityId = (selLE.value  || '').trim();
+          const systemId      = (selSYS.value || '').trim();
+          const localFieldId  = (selLocal.value  || '').trim();
+          const globalFieldId = (selGlobal.value || '').trim();
+  
+          if (!legalEntityId || !systemId || !localFieldId) {
+            alert('Bitte Legal Entity, System und Local Field auswählen.');
+            return;
+          }
+          if (!globalFieldId) {
+            alert('Bitte ein Global Field auswählen.');
+            return;
+          }
+  
+          const id  = currentEditing?.id || `map_${legalEntityId}_${systemId}_${localFieldId}`;
+          const pos = state.mappings.findIndex(mm => mm.id === id);
+  
+          const mapping = {
+            id,
+            legalEntityId,
+            systemId,
+            dataObjectId: findFieldById?.(localFieldId)?.foundationObjectId || '',
+            localFieldId,
+            globalFieldId,
+            status: currentEditing?.status || 'DRAFT',
+            mode: 'LOOKUP',
+            defaultValue: '',
+            owner: currentEditing?.owner || '',
+            effectiveFrom: currentEditing?.effectiveFrom || '',
+            updatedAt: new Date().toISOString()
+          };
+          if (pos >= 0) state.mappings[pos] = mapping; else state.mappings.push(mapping);
+          saveMappings?.(state.mappings);
+  
+          // ValueMap speichern
+          const gVals = getAllowedValues?.(globalFieldId) || [];
+          const lVals = getAllowedValues?.(localFieldId)  || [];
+          const pairsMap = (currentEditing && currentEditing._pairs instanceof Map)
+            ? currentEditing._pairs : new Map();
+  
+          const pairs = lVals.map(from => {
+            const to = pairsMap.get(from) || '';
+            return (!to || gVals.includes(to)) ? { from, to } : { from, to: '' };
+          });
+  
+          let vm = findValueMapByMappingId?.(id);
+          if (!vm) {
+            vm = { id: `vmap_${Date.now()}`, fieldMappingId: id, pairs: [], fallback: '' };
+            state.valueMaps.push(vm);
+          }
+          vm.pairs    = pairs;
+          vm.fallback = (selFallback.value || '');
+          saveValueMaps?.(state.valueMaps);
+  
+          closeEditor();
+          window.__renderMappingsList?.();
+        } catch (e) {
+          console.error('Mapping speichern fehlgeschlagen:', e);
+          alert('Speichern fehlgeschlagen: ' + (e?.message || e));
+        }
+      };
+  
+      // ---- Initial füllen
+      rebuildFieldOptions();
+      selLE.focus();
+    } catch (err) {
+      console.error('[Mappings] openEditor crash:', err);
+      alert('Fehler im Editor: ' + (err?.message || err));
+    }
+  } // Ende openEditor
+
+// 6) Filter-Events
+[fLE, fSYS, fDO].forEach(sel => sel && sel.addEventListener('change', renderList));
+
+// 7) „+ New Mapping“ – immer öffnen
+if (addBtn) {
+  addBtn.onclick = () => {
+    try {
+      openEditor(null);
+    } catch (err) {
+      console.error('[Mappings] openEditor failed:', err);
+      alert('Editor konnte nicht geöffnet werden: ' + (err?.message || err));
+    }
+  };
+}
+
+// 8) Für externe Refreshes (z. B. nach Speichern)
+window.__renderMappingsList = renderList;
+
+// 9) Initialisieren
+fillFilters();
+renderList();
+} // <-- Ende von setupMappingsFeature()
+
+// exportieren, ohne sofort auszuführen
+window.setupMappingsFeature = setupMappingsFeature;
+
+// ===== Allowed Values Spalte – robust (erstellt fehlendes THEAD/TR, wartet auf Zeilen) =====
+(function addAllowedValuesColumnRobust() {
+  const AV_HEADER_TEXT = 'Allowed Values';
+
+  function escapeHtml(s){
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // System-ID/Name -> Anzeigename (für Vergleich mit Tabellenzelle)
+  function resolveSystemDisplay(sys) {
+    if (!sys) return '';
+    const systems = Array.isArray(window.state?.systems) ? window.state.systems : [];
+    let m = systems.find(x => x.id === sys);
+    if (m) return m.name || sys;
+    m = systems.find(x => x.name === sys);
+    if (m) return m.name;
+    m = systems.find(x => String(x.name).toLowerCase() === String(sys).toLowerCase());
+    if (m) return m.name;
+    return sys;
+  }
+
+  // Sorgt dafür, dass es ein <thead><tr> gibt
+  function ensureHead(table){
+    let thead = table.querySelector('thead');
+    if (!thead){
+      thead = document.createElement('thead');
+      table.insertBefore(thead, table.firstChild || null);
+    }
+    let headRow = thead.querySelector('tr');
+    if (!headRow){
+      headRow = document.createElement('tr');
+      thead.appendChild(headRow);
+    }
+    return { thead, headRow };
+  }
+
+  function indexOfHeader(headRow, label){
+    const t = String(label||'').trim().toLowerCase();
+    const cells = [...(headRow?.children||[])];
+    return cells.findIndex(th => (th.textContent||'').trim().toLowerCase() === t);
+  }
+
+  // Fügt den AV-Header vor "Legal Entity" ein (sonst hinter Definition, sonst vor Actions, sonst ans Ende)
+  function ensureAvHeader(table){
+    const { headRow } = ensureHead(table);
+
+    const idxLE  = indexOfHeader(headRow, 'Legal Entity');
+    const idxDef = indexOfHeader(headRow, 'Definition');
+    const idxAct = Math.max(indexOfHeader(headRow,'Actions'), indexOfHeader(headRow,'Aktionen'));
+
+    let insertIdx = -1;
+    if (idxLE >= 0) insertIdx = idxLE;
+    else if (idxDef >= 0) insertIdx = idxDef + 1;
+    else if (idxAct >= 0) insertIdx = idxAct;
+    else insertIdx = headRow.children.length;
+
+    let avIdx = indexOfHeader(headRow, AV_HEADER_TEXT);
+    let changed = false;
+    if (avIdx < 0){
+      const th = document.createElement('th');
+      th.textContent = AV_HEADER_TEXT;
+      headRow.insertBefore(th, headRow.children[insertIdx] || null);
+      avIdx = insertIdx;
+      changed = true;
+    } else if (avIdx !== insertIdx){
+      headRow.insertBefore(headRow.children[avIdx], headRow.children[insertIdx] || null);
+      avIdx = insertIdx;
+      changed = true;
+    }
+    return { avIndex: avIdx, colCount: headRow.children.length, changed };
+  }
+
+  function valuesToHtml(list){
+    if (!Array.isArray(list) || list.length === 0) return '—';
+    return list.map(v=>`<div class="av-item">${escapeHtml(v)}</div>`).join('');
+  }
+
+  function ensureAvCell(tr, avIndex){
+    // doppelte av-col entfernen
+    const allAv = tr.querySelectorAll('td.av-col');
+    for (let i=1;i<allAv.length;i++) allAv[i].remove();
+
+    // an Zielposition schon vorhanden?
+    if (tr.children[avIndex]?.classList?.contains('av-col')) return tr.children[avIndex];
+
+    // existiert irgendwo eine av-col? -> verschieben
+    const stray = tr.querySelector('td.av-col');
+    if (stray){
+      tr.insertBefore(stray, tr.children[avIndex] || null);
+      return stray;
+    }
+
+    // neue Zelle exakt an Zielposition
+    const td = document.createElement('td');
+    td.className = 'av-col';
+    tr.insertBefore(td, tr.children[avIndex] || null);
+    return td;
+  }
+
+  // ---- GLOBAL ----
+  function fillGlobal(table){
+    const tbody = table.querySelector('tbody');
+    if(!tbody) return false;
+    const rows = tbody.querySelectorAll('tr');
+    if (!rows.length) return false;
+
+    const info = ensureAvHeader(table);
+    if (info.avIndex < 0) return info.changed;
+
+    const fields = (window.state?.fields || []).filter(f => f && f.local !== true);
+    const map = new Map(
+      fields.map(f => {
+        const sysDisp = resolveSystemDisplay(f.system);
+        const key = `${f.name}@@${sysDisp}`;
+        return [key, Array.isArray(f.allowedValues)?f.allowedValues:[]];
+      })
+    );
+
+    let mutated = info.changed;
+    rows.forEach(tr=>{
+      const tds = tr.children;
+      if (tds.length < 2) return;
+      const name   = (tds[0]?.textContent||'').trim().replace(/\s+/g,' ');
+      const sysTxt = (tds[1]?.textContent||'').trim().replace(/\s+/g,' ');
+      const key = `${name}@@${sysTxt}`;
+      const av = map.get(key) || [];
+      const td = ensureAvCell(tr, info.avIndex);
+      const html = valuesToHtml(av);
+      if (td.innerHTML !== html){ td.innerHTML = html; mutated = true; }
+    });
+    return mutated;
+  }
+
+  // ---- LOCAL ----
+  function fillLocal(container){
+    const tables = container.querySelectorAll('table');
+    const locals = (window.state?.fields || []).filter(f => f && f.local === true);
+    let mutated = false;
+
+    const locMap = new Map(
+      locals.map(f => {
+        const sysDisp = resolveSystemDisplay(f.system);
+        const le = String(f.legalEntityNumber || '');
+        const key = `${f.name}@@${sysDisp}@@${le}`;
+        return [key, Array.isArray(f.allowedValues)?f.allowedValues:[]];
+      })
+    );
+
+    tables.forEach(table=>{
+      const tbody = table.querySelector('tbody');
+      if(!tbody) return;
+      const rows = tbody.querySelectorAll('tr');
+      if (!rows.length) return;
+
+      const info = ensureAvHeader(table);
+      if (info.avIndex < 0){ mutated = mutated || info.changed; return; }
+
+      rows.forEach(tr=>{
+        const tds = tr.children;
+        if (tds.length < 2) return;
+
+        const name   = (tds[0]?.textContent||'').trim().replace(/\s+/g,' ');
+        const sysTxt = (tds[1]?.textContent||'').trim().replace(/\s+/g,' ');
+
+        // LE steht in der vorletzten Spalte als "7010 — LEONI Shanghai"
+        const leCell = tds[tds.length - 2];
+        let leNum = '';
+        if (leCell){
+          const m = (leCell.textContent||'').trim().match(/^(\d{3,})/);
+          leNum = m ? m[1] : '';
+        }
+
+        const key = `${name}@@${sysTxt}@@${leNum}`;
+        const av = locMap.get(key) || [];
+        const td = ensureAvCell(tr, info.avIndex);
+        const html = valuesToHtml(av);
+        if (td.innerHTML !== html){ td.innerHTML = html; mutated = true; }
+      });
+      mutated = mutated || info.changed;
+    });
+    return mutated;
+  }
+
+  // Rebind-Logik (ohne Konsole nutzbar)
+  let applying = false;
+  let scheduled = false;
+  let observer;
+
+  function apply(){
+    if (applying) return;
+    applying = true;
+    if (observer) observer.disconnect();
+    try{
+      const gTable = document.getElementById('fieldsBody')?.closest('table');
+      if (gTable) fillGlobal(gTable);
+
+      const lWrap = document.getElementById('localTables');
+      if (lWrap) fillLocal(lWrap);
+    } finally {
+      startObserver();
+      applying = false;
+    }
+  }
+
+  function scheduleApply(){
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => { scheduled = false; apply(); });
+  }
+
+  function startObserver(){
+    const targets = [];
+    const gTable = document.getElementById('fieldsBody')?.closest('table');
+    if (gTable) targets.push(gTable);
+    const lWrap = document.getElementById('localTables');
+    if (lWrap) targets.push(lWrap);
+    if (!targets.length) return;
+
+    if (!observer) observer = new MutationObserver(() => scheduleApply());
+    targets.forEach(t => observer.observe(t, { childList:true, subtree:true }));
+  }
+
+  // Event: nach saveFields() sofort refreshen
+  document.addEventListener('gdf:fields-updated', scheduleApply);
+
+  // Initial
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { apply(); }, { once:true });
+  } else {
+    apply();
+  }
+
+  // kleines CSS
+  if (!document.getElementById('av-col-style')){
+    const st = document.createElement('style');
+    st.id = 'av-col-style';
+    st.textContent = `.av-col{vertical-align:top}.av-col .av-item{line-height:1.25;padding:2px 0}`;
+    document.head.appendChild(st);
+  }
+
+  // Optional: unsichtbarer Refresh-Button (IPad-Workaround ohne Konsole)
+  if (!document.getElementById('av-refresh-btn')) {
+    const btn = document.createElement('button');
+    btn.id = 'av-refresh-btn';
+    btn.type = 'button';
+    btn.textContent = 'Refresh Allowed Values';
+    btn.style.cssText = 'position:fixed;bottom:-9999px;right:-9999px;opacity:0;pointer-events:none;';
+    btn.addEventListener('click', scheduleApply);
+    document.body.appendChild(btn);
+  }
+
+  // Externer manueller Trigger
+  window.__refreshAllowedValuesColumn = scheduleApply;
+})();
