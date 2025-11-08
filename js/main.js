@@ -3726,10 +3726,15 @@ function renderDataObjectView() {
   const nodeEntries = [];
 
   // Get all data objects that have fields
-  const dataObjectsWithFields = dataObjects.filter((obj) => {
+  // If a data object is selected, only show that one, otherwise show all
+  let dataObjectsWithFields = dataObjects.filter((obj) => {
     const fieldCount = getFieldsByDataObject(obj.id).filter(fieldPassesFilters).length;
     return fieldCount > 0;
   });
+  
+  if (selectedDataObject) {
+    dataObjectsWithFields = dataObjectsWithFields.filter((obj) => obj.id === selectedDataObject.id);
+  }
 
   dataObjectsWithFields.forEach((obj) => {
     const fieldCount = getFieldsByDataObject(obj.id).filter(fieldPassesFilters).length;
@@ -3849,7 +3854,10 @@ function renderDataObjectView() {
 
   // Draw edges from selected data object to systems
   if (selectedDataObject) {
-    drawDataObjectEdges();
+    // Use requestAnimationFrame to ensure nodes are positioned before drawing edges
+    requestAnimationFrame(() => {
+      drawDataObjectEdges();
+    });
   }
 
   requestAnimationFrame(() => fitMapToContent());
@@ -3950,7 +3958,7 @@ function computeDataObjectPositions(nodeEntries = []) {
       measuredWidth = node.offsetWidth || 0;
     }
   });
-  const baseWidth = measuredWidth || 360;
+  const baseWidth = measuredWidth || 280; // Updated to match smaller data object width
   const columnWidth = baseWidth + columnGap;
 
   // Check for stored positions
@@ -3971,45 +3979,52 @@ function computeDataObjectPositions(nodeEntries = []) {
     
     if (dataObjectEntry) {
       const name = dataObjectEntry.obj.id.toString();
-      if (!positions.has(name)) {
-        // Center position
-        const centerX = canvasHeight / 2;
-        const centerY = canvasHeight / 2;
-        positions.set(name, { x: centerX, y: centerY });
-      }
+      
+      // Get canvas width for proper centering
+      const canvasWidth = mapCanvas?.clientWidth || mapCanvas?.offsetWidth || 1200;
+      
+      // Always position data object in center (don't use stored position)
+      const centerX = canvasWidth / 2 - 140; // 140 = half of node width (280px)
+      const centerY = canvasHeight / 2 - 50; // Approximate half of node height
+      positions.set(name, { x: centerX, y: centerY });
       
       // Position systems in a circle around the data object
       const dataObjPos = positions.get(name);
-      const radius = 350;
+      const radius = 450; // Increased radius to prevent overlapping
       const angleStep = (2 * Math.PI) / Math.max(systemEntries.length, 1);
       
+      // Always reposition systems around the selected data object (ignore stored positions)
       systemEntries.forEach((entry, idx) => {
         const sysName = entry.sys.name;
-        if (!positions.has(sysName)) {
-          const angle = idx * angleStep - Math.PI / 2; // Start from top
-          const x = dataObjPos.x + radius * Math.cos(angle);
-          const y = dataObjPos.y + radius * Math.sin(angle);
-          positions.set(sysName, { x, y });
-        }
+        const angle = idx * angleStep - Math.PI / 2; // Start from top
+        const x = dataObjPos.x + radius * Math.cos(angle);
+        const y = dataObjPos.y + radius * Math.sin(angle);
+        positions.set(sysName, { x, y });
       });
     }
   } else {
-    // Default column layout for data objects
-    let colX = baseX;
-    let colY = baseY;
-
+    // Default grid layout for data objects - spread them across the screen
+    const itemsPerRow = 3; // 3 columns for better distribution
+    const rowGap = 100;
+    const colGap = 150;
+    
+    let currentRow = 0;
+    let currentCol = 0;
+    
     nodeEntries.forEach(({ obj, node }) => {
       const name = obj.id.toString();
       if (positions.has(name)) return;
-      const nodeHeight = node.offsetHeight || 220;
-
-      if (colY > baseY && colY + nodeHeight > baseY + maxColumnHeight) {
-        colX += columnWidth;
-        colY = baseY;
+      
+      const x = baseX + currentCol * (baseWidth + colGap);
+      const y = baseY + currentRow * (220 + rowGap); // 220 is approximate node height
+      
+      positions.set(name, { x, y });
+      
+      currentCol++;
+      if (currentCol >= itemsPerRow) {
+        currentCol = 0;
+        currentRow++;
       }
-
-      positions.set(name, { x: colX, y: colY });
-      colY += nodeHeight + paddingY;
     });
   }
 
@@ -4108,33 +4123,37 @@ function drawDataObjectEdges() {
   const dataObjectNode = mapNodesLayer?.querySelector(
     `.map-data-object[data-data-object-id="${selectedDataObject.id}"]`
   );
-  if (!dataObjectNode) return;
+  if (!dataObjectNode) {
+    console.warn('Data object node not found for id:', selectedDataObject.id);
+    return;
+  }
   
   const systemNodes = mapNodesLayer?.querySelectorAll(
     `.map-system-for-object[data-data-object-id="${selectedDataObject.id}"]`
   );
-  if (!systemNodes || systemNodes.length === 0) return;
+  if (!systemNodes || systemNodes.length === 0) {
+    console.warn('No system nodes found for data object id:', selectedDataObject.id);
+    return;
+  }
   
+  // Get center of data object in canvas coordinates
   const dataObjRect = dataObjectNode.getBoundingClientRect();
-  const canvasRect = mapCanvas.getBoundingClientRect();
+  const canvasRect = mapCanvas?.getBoundingClientRect();
+  if (!canvasRect) return;
   
-  const dataObjCenter = {
-    x: dataObjRect.left - canvasRect.left + dataObjRect.width / 2,
-    y: dataObjRect.top - canvasRect.top + dataObjRect.height / 2,
-  };
+  const dataObjCenterX = ((dataObjRect.left + dataObjRect.right) / 2 - canvasRect.left - mapTransformState.x) / mapTransformState.k;
+  const dataObjCenterY = ((dataObjRect.top + dataObjRect.bottom) / 2 - canvasRect.top - mapTransformState.y) / mapTransformState.k;
   
   systemNodes.forEach((sysNode) => {
     const sysRect = sysNode.getBoundingClientRect();
-    const sysCenter = {
-      x: sysRect.left - canvasRect.left + sysRect.width / 2,
-      y: sysRect.top - canvasRect.top + sysRect.height / 2,
-    };
+    const sysCenterX = ((sysRect.left + sysRect.right) / 2 - canvasRect.left - mapTransformState.x) / mapTransformState.k;
+    const sysCenterY = ((sysRect.top + sysRect.bottom) / 2 - canvasRect.top - mapTransformState.y) / mapTransformState.k;
     
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', dataObjCenter.x);
-    line.setAttribute('y1', dataObjCenter.y);
-    line.setAttribute('x2', sysCenter.x);
-    line.setAttribute('y2', sysCenter.y);
+    line.setAttribute('x1', dataObjCenterX);
+    line.setAttribute('y1', dataObjCenterY);
+    line.setAttribute('x2', sysCenterX);
+    line.setAttribute('y2', sysCenterY);
     line.setAttribute('stroke', '#007aff');
     line.setAttribute('stroke-width', '2');
     line.setAttribute('marker-end', 'url(#arrowHead)');
