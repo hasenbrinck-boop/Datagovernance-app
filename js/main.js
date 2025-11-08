@@ -1431,8 +1431,8 @@ function renderLocalFieldsTables() {
     systems,
     legalEntities,
     currentSystem,
-    columnFilters = (state.columnFilters ||= {}),
-    localSortByLe  = (state.localSortByLe  ||= {}),
+    columnFilters = (state.columnFilters = state.columnFilters || {}),
+    localSortByLe  = (state.localSortByLe = state.localSortByLe || {}),
   } = state;
 
   // IMMER state.* verwenden – keine losen Variablen
@@ -1589,7 +1589,8 @@ function renderLocalFieldsTables() {
       // Filter-Handler (teilen sich columnFilters)
       row2.querySelectorAll('input[type="search"]').forEach((inp) => {
         inp.addEventListener('input', () => {
-          (window.columnFilters ||= {})[inp.dataset.col] = inp.value || '';
+          window.columnFilters = window.columnFilters || {};
+          window.columnFilters[inp.dataset.col] = inp.value || '';
           preserveFilterInputFocus(() => renderLocalFieldsTables());
         });
       });
@@ -1600,8 +1601,10 @@ function renderLocalFieldsTables() {
       th.addEventListener('click', () => {
         const col = th.dataset.col;
         const key = mapColToSortKey(col);
-        const curMap = (window.localSortByLe ||= {});
-        const cur = (curMap[leNumber] ||= { key: 'system', dir: 'asc' });
+        window.localSortByLe = window.localSortByLe || {};
+        const curMap = window.localSortByLe;
+        curMap[leNumber] = curMap[leNumber] || { key: 'system', dir: 'asc' };
+        const cur = curMap[leNumber];
         if (cur.key === key) cur.dir = cur.dir === 'asc' ? 'desc' : 'asc';
         else curMap[leNumber] = { key, dir: 'asc' };
         renderLocalFieldsTables();
@@ -5853,19 +5856,6 @@ function renderDefinitionsDetails(fields) {
           }).join('')}
         </tbody>
       </table>
-    </div>
-  `;
-}
-                </div>
-                <div class="details-item-info-row">
-                  <span class="details-item-info-label">Definition:</span>
-                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.definition || '—')}</span>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `;
-      }).join('')}
     </div>
   `;
 }
