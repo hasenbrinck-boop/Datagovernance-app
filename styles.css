@@ -491,6 +491,126 @@
   #fieldDialog .stack{ display:flex; flex-direction:column; gap:6px; align-self:start }
   @supports (-webkit-touch-callout: none){ #fieldDialog select{ padding-right:30px } }
   
+  /* ===== Version Dialog (Minimalistic) ===== */
+  #versionDialog {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  #versionDialog:not([open]) {
+    display: none;
+  }
+  
+  #versionDialog::backdrop {
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+  }
+  
+  .version-dialog-card {
+    min-width: 400px;
+    max-width: 480px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    animation: versionDialogSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  @keyframes versionDialogSlideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  
+  .version-dialog-body {
+    padding: 32px 24px 24px 24px;
+    text-align: center;
+  }
+  
+  .version-dialog-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: linear-gradient(135deg, #f0f7ff 0%, #e6f0ff 100%);
+    border-radius: 50%;
+    color: #2563eb;
+  }
+  
+  .version-dialog-title {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  
+  .version-dialog-message {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  
+  .version-dialog-actions {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px 24px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .version-btn {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .version-btn--secondary {
+    background: white;
+    color: var(--text);
+    border: 1px solid #cbd5e1;
+  }
+  
+  .version-btn--secondary:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+  
+  .version-btn--primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  }
+  
+  .version-btn--primary:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    transform: translateY(-1px);
+  }
+  
+  .version-btn:active {
+    transform: translateY(0);
+  }
+  
   /* ===== Mapping-Editor (Modal) ===== */
   .modal {
     position: fixed; inset: 0;

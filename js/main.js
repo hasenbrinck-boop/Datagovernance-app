@@ -2070,7 +2070,7 @@ function renderGlossaryTable() {
     )
   );
   $$('.glsDelete').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const i = parseInt(btn.dataset.index, 10);
       const name = list[i]?.term || 'term';
       if (confirm(`Delete glossary term "${name}"?`)) {
@@ -2078,17 +2078,16 @@ function renderGlossaryTable() {
         if (globalIdx > -1) {
           const deletedRecord = glossaryTerms[globalIdx];
           
-          // Ask if user wants to create a new version
-          const createNewVersion = confirm('Do you want to create a new version for this deletion?\n\nClick "OK" to create a new version.\nClick "Cancel" to delete without creating a new version.');
+          // Ask if user wants to create a new version using custom dialog
+          const createNewVersion = await showVersionDialog();
           
-          if (createNewVersion) {
-            trackGlossaryChanges(deletedRecord, null, 'deleted');
-            saveGlossaryVersionAndChanges();
-          }
+          // Log deletion to changelog (always happens) and optionally increment version
+          logGlossaryChanges(deletedRecord, null, 'deleted', createNewVersion);
           
           glossaryTerms.splice(globalIdx, 1);
         }
         saveGlossary();
+        saveGlossaryVersionAndChanges();
         renderGlossaryTable();
         updateGlossaryVersionDisplay();
       }
@@ -2097,21 +2096,66 @@ function renderGlossaryTable() {
 }
 
 // Glossary Versioning Functions
-function trackGlossaryChanges(oldRecord, newRecord, changeType) {
+
+// Show version dialog and return user choice as promise
+function showVersionDialog() {
+  return new Promise((resolve) => {
+    const dialog = document.getElementById('versionDialog');
+    const newBtn = document.getElementById('versionDialogNew');
+    const keepBtn = document.getElementById('versionDialogKeep');
+    
+    function cleanup() {
+      newBtn.removeEventListener('click', handleNew);
+      keepBtn.removeEventListener('click', handleKeep);
+      dialog.close();
+    }
+    
+    function handleNew() {
+      cleanup();
+      resolve(true); // true = create new version
+    }
+    
+    function handleKeep() {
+      cleanup();
+      resolve(false); // false = keep version
+    }
+    
+    newBtn.addEventListener('click', handleNew);
+    keepBtn.addEventListener('click', handleKeep);
+    
+    dialog.showModal();
+  });
+}
+
+// Increment version number
+function incrementGlossaryVersion() {
+  if (!state.glossaryVersion) state.glossaryVersion = { major: 1, minor: 0 };
+  state.glossaryVersion.minor += 1;
+  return `${state.glossaryVersion.major}.${state.glossaryVersion.minor}`;
+}
+
+// Get current version string
+function getCurrentVersion() {
+  if (!state.glossaryVersion) state.glossaryVersion = { major: 1, minor: 0 };
+  return `${state.glossaryVersion.major}.${state.glossaryVersion.minor}`;
+}
+
+// Log changes to changelog (always happens, regardless of version increment)
+function logGlossaryChanges(oldRecord, newRecord, changeType, shouldIncrementVersion) {
   if (!state.glossaryChanges) state.glossaryChanges = [];
   if (!state.glossaryVersion) state.glossaryVersion = { major: 1, minor: 0 };
   
-  const changes = [];
   const timestamp = new Date().toISOString();
-  const version = `${state.glossaryVersion.major}.${state.glossaryVersion.minor}`;
+  let version = getCurrentVersion();
+  
+  // Increment version if requested
+  if (shouldIncrementVersion) {
+    version = incrementGlossaryVersion();
+  }
   
   if (changeType === 'added') {
-    // Increment minor version for additions
-    state.glossaryVersion.minor += 1;
-    const newVersion = `${state.glossaryVersion.major}.${state.glossaryVersion.minor}`;
-    
     state.glossaryChanges.push({
-      version: newVersion,
+      version: version,
       date: timestamp,
       term: newRecord.term,
       changeType: 'Added',
@@ -2122,15 +2166,13 @@ function trackGlossaryChanges(oldRecord, newRecord, changeType) {
   } else if (changeType === 'modified') {
     // Track each changed field
     const fields = ['term', 'definition', 'info', 'owner', 'type', 'fieldRef'];
-    let hasChanges = false;
     
     fields.forEach(field => {
       const oldVal = oldRecord[field] || '';
       const newVal = newRecord[field] || '';
       
       if (oldVal !== newVal) {
-        hasChanges = true;
-        changes.push({
+        state.glossaryChanges.push({
           version: version,
           date: timestamp,
           term: newRecord.term,
@@ -2141,23 +2183,9 @@ function trackGlossaryChanges(oldRecord, newRecord, changeType) {
         });
       }
     });
-    
-    if (hasChanges) {
-      // Increment minor version for modifications
-      state.glossaryVersion.minor += 1;
-      const newVersion = `${state.glossaryVersion.major}.${state.glossaryVersion.minor}`;
-      
-      changes.forEach(change => {
-        change.version = newVersion;
-        state.glossaryChanges.push(change);
-      });
-    }
   } else if (changeType === 'deleted') {
-    state.glossaryVersion.minor += 1;
-    const newVersion = `${state.glossaryVersion.major}.${state.glossaryVersion.minor}`;
-    
     state.glossaryChanges.push({
-      version: newVersion,
+      version: version,
       date: timestamp,
       term: oldRecord.term,
       changeType: 'Deleted',
@@ -2300,11 +2328,11 @@ function openGlossaryDialog(index = null) {
   }
   openDialog(glossaryDialog);
 }
-glossaryForm?.addEventListener('submit', (e) => {
+glossaryForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   
-  // Ask if user wants to create a new version
-  const createNewVersion = confirm('Do you want to create a new version for this change?\n\nClick "OK" to create a new version.\nClick "Cancel" to save without creating a new version.');
+  // Ask if user wants to create a new version using the custom dialog
+  const createNewVersion = await showVersionDialog();
   
   const formData = new FormData(glossaryForm);
   const data = Object.fromEntries(formData.entries());
@@ -2326,25 +2354,17 @@ glossaryForm?.addEventListener('submit', (e) => {
     type: data.type && GLOSSARY_TYPES.includes(data.type) ? data.type : 'Term',
   };
 
-  // Track changes for versioning - only if user confirmed new version
-  if (createNewVersion) {
-    if (editGlossaryIndex !== null) {
-      // Editing existing term - track changes
-      const oldRecord = glossaryTerms[editGlossaryIndex];
-      trackGlossaryChanges(oldRecord, record, 'modified');
-      glossaryTerms[editGlossaryIndex] = record;
-    } else {
-      // New term
-      trackGlossaryChanges(null, record, 'added');
-      glossaryTerms.push(record);
-    }
+  // Log changes to changelog (always happens)
+  // And optionally increment version
+  if (editGlossaryIndex !== null) {
+    // Editing existing term
+    const oldRecord = glossaryTerms[editGlossaryIndex];
+    logGlossaryChanges(oldRecord, record, 'modified', createNewVersion);
+    glossaryTerms[editGlossaryIndex] = record;
   } else {
-    // Save without versioning
-    if (editGlossaryIndex !== null) {
-      glossaryTerms[editGlossaryIndex] = record;
-    } else {
-      glossaryTerms.push(record);
-    }
+    // New term
+    logGlossaryChanges(null, record, 'added', createNewVersion);
+    glossaryTerms.push(record);
   }
 
   fields.forEach((field) => {
@@ -2368,9 +2388,7 @@ glossaryForm?.addEventListener('submit', (e) => {
 
   saveFields();
   saveGlossary();
-  if (createNewVersion) {
-    saveGlossaryVersionAndChanges();
-  }
+  saveGlossaryVersionAndChanges();
   renderGlossaryTable();
   renderFieldsTable();
   updateGlossaryVersionDisplay();
