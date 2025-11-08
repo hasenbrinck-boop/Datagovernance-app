@@ -804,6 +804,25 @@ Option 3" style="grid-column:1/-1; width:100%; padding:8px 10px; border-radius:8
 
   <div id="appError" class="app-error" style="display: none;"></div>
 
+<!-- ===== Version Dialog ===== -->
+<dialog id="versionDialog">
+  <div class="version-dialog-card">
+    <div class="version-dialog-body">
+      <div class="version-dialog-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+        </svg>
+      </div>
+      <h3 class="version-dialog-title">Create New Version?</h3>
+      <p class="version-dialog-message">Would you like to create a new version for this change?</p>
+    </div>
+    <div class="version-dialog-actions">
+      <button id="versionDialogKeep" class="version-btn version-btn--secondary" type="button">Keep Version</button>
+      <button id="versionDialogNew" class="version-btn version-btn--primary" type="button">New Version</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- ===== Apple-Style Details Overlay ===== -->
 <div id="detailsOverlay" class="details-overlay" aria-hidden="true">
   <div class="details-overlay-backdrop">
