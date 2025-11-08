@@ -5764,26 +5764,27 @@ function renderSystemsDetails(systems) {
   }
   
   return `
-    <div class="details-list">
-      ${systems.map(sys => `
-        <div class="details-item">
-          <div class="details-item-name">${escapeHtml(sys.name)}</div>
-          <div class="details-item-info">
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Owner:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.owner || '—')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Scope:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.scope || '—')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Domain:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.dataDomain || '—')}</span>
-            </div>
-          </div>
-        </div>
-      `).join('')}
+    <div style="overflow-x: auto;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Owner</th>
+            <th>Scope</th>
+            <th>Domain</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${systems.map(sys => `
+            <tr>
+              <td><strong>${escapeHtml(sys.name)}</strong></td>
+              <td>${escapeHtml(sys.owner || '—')}</td>
+              <td>${escapeHtml(sys.scope || '—')}</td>
+              <td>${escapeHtml(sys.dataDomain || '—')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
     </div>
   `;
 }
@@ -5794,31 +5795,30 @@ function renderFieldsDetails(fields) {
   }
   
   return `
-    <div class="details-list">
-      ${fields.map(f => {
-        const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
-        return `
-          <div class="details-item">
-            <div class="details-item-name">${escapeHtml(f.name)}</div>
-            <div class="details-item-info">
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">System:</span>
-                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
-              </div>
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Type:</span>
-                <span class="details-item-info-value">${f.local ? 'Local' : 'Global'}</span>
-              </div>
-              ${glossaryTerm ? `
-                <div class="details-item-info-row">
-                  <span class="details-item-info-label">Definition:</span>
-                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.definition || '—')}</span>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `;
-      }).join('')}
+    <div style="overflow-x: auto;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th>Field Name</th>
+            <th>System</th>
+            <th>Type</th>
+            <th>Data Object</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${fields.map(f => {
+            const dataObj = f.foundationObjectId ? dataObjects.find(o => String(o.id) === String(f.foundationObjectId)) : null;
+            return `
+              <tr>
+                <td><strong>${escapeHtml(f.name)}</strong></td>
+                <td>${escapeHtml(f.system)}</td>
+                <td>${f.local ? 'Local' : 'Global'}</td>
+                <td>${dataObj ? escapeHtml(dataObj.name) : '—'}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
     </div>
   `;
 }
@@ -5829,25 +5829,33 @@ function renderDefinitionsDetails(fields) {
   }
   
   return `
-    <div class="details-list">
-      ${fields.map(f => {
-        const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
-        return `
-          <div class="details-item">
-            <div class="details-item-name">${escapeHtml(f.name)}</div>
-            <div class="details-item-info">
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">System:</span>
-                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
-              </div>
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Has Definition:</span>
-                <span class="details-item-info-value">${f.glossaryRef ? 'Yes' : 'No'}</span>
-              </div>
-              ${glossaryTerm ? `
-                <div class="details-item-info-row">
-                  <span class="details-item-info-label">Term:</span>
-                  <span class="details-item-info-value">${escapeHtml(glossaryTerm.term)}</span>
+    <div style="overflow-x: auto;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th>Field Name</th>
+            <th>System</th>
+            <th>Has Definition</th>
+            <th>Term</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${fields.map(f => {
+            const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
+            return `
+              <tr>
+                <td><strong>${escapeHtml(f.name)}</strong></td>
+                <td>${escapeHtml(f.system)}</td>
+                <td>${f.glossaryRef ? 'Yes' : 'No'}</td>
+                <td>${glossaryTerm ? escapeHtml(glossaryTerm.term) : '—'}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
                 </div>
                 <div class="details-item-info-row">
                   <span class="details-item-info-label">Definition:</span>
@@ -5868,29 +5876,30 @@ function renderDataObjectsDetails(fields) {
   }
   
   return `
-    <div class="details-list">
-      ${fields.map(f => {
-        const obj = dataObjects.find(o => String(o.id) === String(f.foundationObjectId));
-        return `
-          <div class="details-item">
-            <div class="details-item-name">${escapeHtml(f.name)}</div>
-            <div class="details-item-info">
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Data Object:</span>
-                <span class="details-item-info-value">${escapeHtml(obj?.name || '—')}</span>
-              </div>
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">System:</span>
-                <span class="details-item-info-value">${escapeHtml(f.system)}</span>
-              </div>
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Type:</span>
-                <span class="details-item-info-value">${f.local ? 'Local' : 'Global'}</span>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('')}
+    <div style="overflow-x: auto;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th>Field Name</th>
+            <th>Data Object</th>
+            <th>System</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${fields.map(f => {
+            const obj = dataObjects.find(o => String(o.id) === String(f.foundationObjectId));
+            return `
+              <tr>
+                <td><strong>${escapeHtml(f.name)}</strong></td>
+                <td>${escapeHtml(obj?.name || '—')}</td>
+                <td>${escapeHtml(f.system)}</td>
+                <td>${f.local ? 'Local' : 'Global'}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
     </div>
   `;
 }
@@ -5901,28 +5910,27 @@ function renderGlossaryDetails() {
   }
   
   return `
-    <div class="details-list">
-      ${glossaryTerms.map(t => `
-        <div class="details-item">
-          <div class="details-item-name">${escapeHtml(t.term)}</div>
-          <div class="details-item-info">
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Type:</span>
-              <span class="details-item-info-value">${escapeHtml(t.type || '—')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Definition:</span>
-              <span class="details-item-info-value">${escapeHtml(t.definition || '—')}</span>
-            </div>
-            ${t.owner ? `
-              <div class="details-item-info-row">
-                <span class="details-item-info-label">Owner:</span>
-                <span class="details-item-info-value">${escapeHtml(t.owner)}</span>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-      `).join('')}
+    <div style="overflow-x: auto;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th>Term</th>
+            <th>Type</th>
+            <th>Definition</th>
+            <th>Owner</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${glossaryTerms.map(t => `
+            <tr>
+              <td><strong>${escapeHtml(t.term)}</strong></td>
+              <td>${escapeHtml(t.type || '—')}</td>
+              <td>${escapeHtml(t.definition || '—')}</td>
+              <td>${escapeHtml(t.owner || '—')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
     </div>
   `;
 }
@@ -5933,26 +5941,27 @@ function renderDomainsDetails(systems) {
   }
   
   return `
-    <div class="details-list">
-      ${systems.map(sys => `
-        <div class="details-item">
-          <div class="details-item-name">${escapeHtml(sys.name)}</div>
-          <div class="details-item-info">
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Domain:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.dataDomain || 'Unassigned')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Owner:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.owner || '—')}</span>
-            </div>
-            <div class="details-item-info-row">
-              <span class="details-item-info-label">Scope:</span>
-              <span class="details-item-info-value">${escapeHtml(sys.scope || '—')}</span>
-            </div>
-          </div>
-        </div>
-      `).join('')}
+    <div style="overflow-x: auto;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th>System Name</th>
+            <th>Domain</th>
+            <th>Owner</th>
+            <th>Scope</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${systems.map(sys => `
+            <tr>
+              <td><strong>${escapeHtml(sys.name)}</strong></td>
+              <td>${escapeHtml(sys.dataDomain || 'Unassigned')}</td>
+              <td>${escapeHtml(sys.owner || '—')}</td>
+              <td>${escapeHtml(sys.scope || '—')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
     </div>
   `;
 }
