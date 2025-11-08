@@ -3726,10 +3726,15 @@ function renderDataObjectView() {
   const nodeEntries = [];
 
   // Get all data objects that have fields
-  const dataObjectsWithFields = dataObjects.filter((obj) => {
+  // If a data object is selected, only show that one, otherwise show all
+  let dataObjectsWithFields = dataObjects.filter((obj) => {
     const fieldCount = getFieldsByDataObject(obj.id).filter(fieldPassesFilters).length;
     return fieldCount > 0;
   });
+  
+  if (selectedDataObject) {
+    dataObjectsWithFields = dataObjectsWithFields.filter((obj) => obj.id === selectedDataObject.id);
+  }
 
   dataObjectsWithFields.forEach((obj) => {
     const fieldCount = getFieldsByDataObject(obj.id).filter(fieldPassesFilters).length;
@@ -3950,7 +3955,7 @@ function computeDataObjectPositions(nodeEntries = []) {
       measuredWidth = node.offsetWidth || 0;
     }
   });
-  const baseWidth = measuredWidth || 360;
+  const baseWidth = measuredWidth || 280; // Updated to match smaller data object width
   const columnWidth = baseWidth + columnGap;
 
   // Check for stored positions
@@ -3994,22 +3999,28 @@ function computeDataObjectPositions(nodeEntries = []) {
       });
     }
   } else {
-    // Default column layout for data objects
-    let colX = baseX;
-    let colY = baseY;
-
+    // Default grid layout for data objects - spread them across the screen
+    const itemsPerRow = 3; // 3 columns for better distribution
+    const rowGap = 100;
+    const colGap = 150;
+    
+    let currentRow = 0;
+    let currentCol = 0;
+    
     nodeEntries.forEach(({ obj, node }) => {
       const name = obj.id.toString();
       if (positions.has(name)) return;
-      const nodeHeight = node.offsetHeight || 220;
-
-      if (colY > baseY && colY + nodeHeight > baseY + maxColumnHeight) {
-        colX += columnWidth;
-        colY = baseY;
+      
+      const x = baseX + currentCol * (baseWidth + colGap);
+      const y = baseY + currentRow * (220 + rowGap); // 220 is approximate node height
+      
+      positions.set(name, { x, y });
+      
+      currentCol++;
+      if (currentCol >= itemsPerRow) {
+        currentCol = 0;
+        currentRow++;
       }
-
-      positions.set(name, { x: colX, y: colY });
-      colY += nodeHeight + paddingY;
     });
   }
 

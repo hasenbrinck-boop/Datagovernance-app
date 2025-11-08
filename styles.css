@@ -887,14 +887,24 @@
   .map-field .chev::before{ content:""; position:absolute; left:3px; right:3px; top:6px; height:2px; background:#64748b; border-radius:2px }
   .map-field.is-open .chev::after{ content:""; position:absolute; top:3px; bottom:3px; left:6px; width:2px; background:#64748b; border-radius:2px; opacity:.0 }
   .map-field-name{ font-weight:500 }
-  .map-field-details{ display:none; padding:8px 12px 12px 30px; color:var(--text-dim); background:#fafafa }
+  .map-field-details{ display:none; padding:8px 12px 12px 12px; color:var(--text-dim); background:#fafafa }
   .map-field.is-open + .map-field-details{ display:block }
-  .map-field-details > div{ margin-bottom: 6px; font-size: 0.875rem; }
+  .map-field-details > div{ margin-bottom: 6px; font-size: 0.875rem; line-height: 1.4; }
   .map-field.is-highlight{ background:#eff4ff; outline:1px solid #d9e2ff }
   .map-field.is-highlight .map-field-name{ font-weight:600 }
   
   /* Data Object View Specific Styles */
-  .map-data-object{ cursor: pointer; transition: all 0.2s ease; }
+  .map-data-object{ 
+    cursor: pointer; 
+    transition: all 0.2s ease;
+    width: 280px; /* Smaller width for data objects */
+  }
+  .map-data-object .map-node-header{
+    padding: 8px 10px; /* More compact padding */
+  }
+  .map-data-object .map-node-title{
+    font-size: 0.95rem; /* Slightly smaller title */
+  }
   .map-data-object:hover{ transform: translateY(-2px); box-shadow: var(--shadow-2); }
   .map-data-object.is-selected{ border-width: 2px; border-color: #007aff; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1); }
   .map-system-for-object{ transition: all 0.2s ease; cursor: pointer; }
