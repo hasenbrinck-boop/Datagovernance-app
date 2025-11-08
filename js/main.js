@@ -87,6 +87,9 @@ let showGlobalFilters = state.showGlobalFilters;
 let showLocalFilters = state.showLocalFilters;
 let isPanning = state.isPanning;
 let panStart = state.panStart;
+let currentMapView = state.currentMapView;
+let selectedDataObject = state.selectedDataObject;
+let dataObjectPositions = state.dataObjectPositions;
 
 let fieldDialogHandlersBound = false;
 let mapHasUserInteraction = false; // Track if user has interacted with map
@@ -883,6 +886,52 @@ function showGlossarySubnav(show) {
   const sys = document.getElementById('systemList');
   if (sub) sub.style.display = show ? 'block' : 'none';
   if (sys) sys.style.display = show ? 'none' : sys.style.display; // bei Glossary: Systems-Liste ausblenden
+}
+
+function showDataMapSubnav(show) {
+  const sub = document.getElementById('dataMapSubnav');
+  const sys = document.getElementById('systemList');
+  if (sub) sub.style.display = show ? 'block' : 'none';
+  if (sys) sys.style.display = show ? 'none' : sys.style.display; // bei Data Map: Systems-Liste ausblenden
+}
+
+function installDataMapSubnavHandlers() {
+  const sub = document.getElementById('dataMapSubnav');
+  if (!sub) return;
+  
+  let handlersInstalled = false;
+  if (sub.dataset.handlersInstalled === 'true') {
+    handlersInstalled = true;
+  }
+  
+  if (handlersInstalled) return;
+  
+  sub.querySelectorAll('.map-view-filter').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      // Active-Style setzen
+      sub
+        .querySelectorAll('.map-view-filter')
+        .forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+
+      // View wechseln
+      currentMapView = btn.dataset.view || 'system';
+      state.currentMapView = currentMapView;
+      
+      // Reset selection state
+      selectedFieldRef = null;
+      state.selectedFieldRef = selectedFieldRef;
+      selectedDataObject = null;
+      state.selectedDataObject = selectedDataObject;
+      mapHasUserInteraction = false;
+      
+      // Re-render map
+      renderDataMap();
+      fitMapToContent();
+    });
+  });
+  
+  sub.dataset.handlersInstalled = 'true';
 }
 
 function installGlossarySubnavHandlers() {
@@ -3503,6 +3552,14 @@ function closeFilterOverlay() {
 
 /* Render Map */
 function renderDataMap() {
+  if (currentMapView === 'dataobject') {
+    renderDataObjectView();
+  } else {
+    renderSystemView();
+  }
+}
+
+function renderSystemView() {
   makeEdgeDefs();
   clearEdgesKeepDefs();
   if (!mapNodesLayer) return;
@@ -3657,6 +3714,434 @@ function renderDataMap() {
   // Otherwise, no edges are drawn on initial load
 
   requestAnimationFrame(() => fitMapToContent());
+}
+
+/* ==================== Data Object View ==================== */
+function renderDataObjectView() {
+  makeEdgeDefs();
+  clearEdgesKeepDefs();
+  if (!mapNodesLayer) return;
+  mapNodesLayer.innerHTML = '';
+
+  const nodeEntries = [];
+
+  // Get all data objects that have fields
+  const dataObjectsWithFields = dataObjects.filter((obj) => {
+    const fieldCount = getFieldsByDataObject(obj.id).filter(fieldPassesFilters).length;
+    return fieldCount > 0;
+  });
+
+  dataObjectsWithFields.forEach((obj) => {
+    const fieldCount = getFieldsByDataObject(obj.id).filter(fieldPassesFilters).length;
+    
+    const node = document.createElement('div');
+    node.className = 'map-node map-data-object';
+    node.dataset.dataObjectId = obj.id;
+    const dom = domainByName(obj.domain || '');
+    const color = dom?.color || '#9aa0a6';
+    node.style.borderColor = color;
+
+    const header = document.createElement('div');
+    header.className = 'map-node-header';
+    header.style.background =
+      'linear-gradient(0deg, rgba(0,0,0,0) 0%, ' +
+      hexWithAlpha(color, 0.08) +
+      ' 100%)';
+
+    const isSelected = selectedDataObject && selectedDataObject.id === obj.id;
+    header.innerHTML = `<div class="map-node-title">${obj.name}</div><div class="map-node-count">${fieldCount} field${fieldCount !== 1 ? 's' : ''}</div>`;
+    node.appendChild(header);
+
+    if (isSelected) {
+      node.classList.add('is-selected');
+    }
+
+    // Click handler for data object
+    node.addEventListener('click', (ev) => {
+      if (ev.target.closest('.map-node-toggle, .chev, button')) return;
+      
+      if (selectedDataObject && selectedDataObject.id === obj.id) {
+        // Deselect
+        selectedDataObject = null;
+        state.selectedDataObject = selectedDataObject;
+        renderDataObjectView();
+        fitMapToContent();
+      } else {
+        // Select and center
+        selectedDataObject = { id: obj.id, name: obj.name };
+        state.selectedDataObject = selectedDataObject;
+        mapHasUserInteraction = true;
+        renderDataObjectView();
+        centerDataObject(obj.id);
+      }
+    });
+
+    mapNodesLayer.appendChild(node);
+    nodeEntries.push({ obj, node, header });
+  });
+
+  // If a data object is selected, show connected systems
+  if (selectedDataObject) {
+    const systemsWithFields = getSystemsWithFieldsForDataObject(selectedDataObject.id);
+    
+    systemsWithFields.forEach(({ sys, fieldCount }) => {
+      const node = document.createElement('div');
+      node.className = 'map-node map-system-for-object';
+      node.dataset.system = sys.name;
+      node.dataset.dataObjectId = selectedDataObject.id;
+      const dom = domainByName(sys.dataDomain || '');
+      const color = dom?.color || '#9aa0a6';
+      node.style.borderColor = color;
+
+      const header = document.createElement('div');
+      header.className = 'map-node-header';
+      header.style.background =
+        'linear-gradient(0deg, rgba(0,0,0,0) 0%, ' +
+        hexWithAlpha(color, 0.08) +
+        ' 100%)';
+
+      header.innerHTML = `<div class="map-node-title">${sys.name}</div><div class="map-node-count">${fieldCount} field${fieldCount !== 1 ? 's' : ''}</div>`;
+      node.appendChild(header);
+
+      // Click handler to show fields
+      node.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (ev.target.closest('.map-node-toggle, .chev, button')) return;
+        
+        const isOpen = node.classList.contains('is-open');
+        
+        if (isOpen) {
+          node.classList.remove('is-open');
+          const fieldsContainer = node.querySelector('.map-node-fields');
+          if (fieldsContainer) fieldsContainer.remove();
+        } else {
+          node.classList.add('is-open');
+          showFieldsForSystemAndDataObject(node, sys.name, selectedDataObject.id);
+        }
+      });
+
+      mapNodesLayer.appendChild(node);
+      nodeEntries.push({ sys, node, header, isSystem: true });
+    });
+  }
+
+  // Position nodes
+  const pos = computeDataObjectPositions(nodeEntries);
+  
+  nodeEntries.forEach(({ obj, sys, node, header, isSystem }) => {
+    const name = isSystem ? sys.name : obj.id.toString();
+    const stored = isSystem ? mapPositions[name] : dataObjectPositions[name];
+    const fallback = stored
+      ? { x: Number(stored.x) || 40, y: Number(stored.y) || 40 }
+      : { x: 40, y: 40 };
+    const p = pos.get(name) || fallback;
+    node.style.left = `${p.x}px`;
+    node.style.top = `${p.y}px`;
+    
+    if (isSystem) {
+      mapPositions[name] = { x: p.x, y: p.y };
+    } else {
+      dataObjectPositions[name] = { x: p.x, y: p.y };
+    }
+    
+    enableDragDataObject(node, header, name, isSystem);
+  });
+
+  // Draw edges from selected data object to systems
+  if (selectedDataObject) {
+    drawDataObjectEdges();
+  }
+
+  requestAnimationFrame(() => fitMapToContent());
+}
+
+function getFieldsByDataObject(dataObjectId) {
+  return fields.filter((f) => String(f.foundationObjectId) === String(dataObjectId));
+}
+
+function getSystemsWithFieldsForDataObject(dataObjectId) {
+  const systemMap = new Map();
+  
+  getFieldsByDataObject(dataObjectId)
+    .filter(fieldPassesFilters)
+    .forEach((field) => {
+      const sys = systemByName(field.system);
+      if (!sys || !systemPassesFilters(sys.name)) return;
+      
+      if (!systemMap.has(sys.name)) {
+        systemMap.set(sys.name, { sys, fieldCount: 0 });
+      }
+      systemMap.get(sys.name).fieldCount++;
+    });
+  
+  return Array.from(systemMap.values());
+}
+
+function showFieldsForSystemAndDataObject(node, systemName, dataObjectId) {
+  const fieldsList = getFieldsByDataObject(dataObjectId)
+    .filter((f) => f.system === systemName && fieldPassesFilters(f));
+  
+  const wrap = document.createElement('div');
+  wrap.className = 'map-node-fields';
+  
+  if (fieldsList.length > 10) wrap.classList.add('is-scroll');
+  
+  fieldsList.forEach((f) => {
+    const row = document.createElement('div');
+    row.className = 'map-field';
+    row.dataset.system = systemName;
+    row.dataset.field = f.name;
+
+    const name = document.createElement('div');
+    name.className = 'map-field-name';
+    name.textContent = f.name;
+    
+    const right = document.createElement('div');
+    right.className = 'map-field-badges';
+    
+    if (f.mandatory) {
+      const b = document.createElement('span');
+      b.className = 'badge';
+      b.textContent = 'mandatory';
+      right.appendChild(b);
+    }
+
+    row.appendChild(name);
+    row.appendChild(right);
+    wrap.appendChild(row);
+
+    const details = document.createElement('div');
+    details.className = 'map-field-details';
+    const glossaryTerm = fieldGlossaryTerm(f);
+    const glossaryMarkup = glossaryTerm
+      ? formatGlossaryDetail(glossaryTerm)
+      : '—';
+    details.innerHTML = `
+      <div><strong>Type:</strong> ${f.type || '—'}</div>
+      <div><strong>Mandatory:</strong> ${f.mandatory ? 'Yes' : 'No'}</div>
+      <div><strong>Mapping:</strong> ${f.mapping || '-'}</div>
+      <div><strong>Glossary:</strong> ${glossaryMarkup}</div>
+    `;
+    wrap.appendChild(details);
+  });
+  
+  node.appendChild(wrap);
+}
+
+function computeDataObjectPositions(nodeEntries = []) {
+  const positions = new Map();
+  const paddingY = 48;
+  const baseX = 60;
+  const baseY = 60;
+  const columnGap = 88;
+
+  const fallbackHeight =
+    typeof window !== 'undefined' && window.innerHeight
+      ? window.innerHeight
+      : 800;
+  const canvasHeight =
+    mapCanvas?.clientHeight || mapCanvas?.offsetHeight || fallbackHeight;
+
+  const maxColumnHeight = Math.max(canvasHeight - baseY * 2, 520);
+
+  let measuredWidth = 0;
+  nodeEntries.forEach(({ node }) => {
+    if (!measuredWidth) {
+      measuredWidth = node.offsetWidth || 0;
+    }
+  });
+  const baseWidth = measuredWidth || 360;
+  const columnWidth = baseWidth + columnGap;
+
+  // Check for stored positions
+  nodeEntries.forEach(({ obj, sys, isSystem }) => {
+    const name = isSystem ? sys.name : obj.id.toString();
+    const stored = isSystem ? mapPositions[name] : dataObjectPositions[name];
+    const sx = Number(stored?.x);
+    const sy = Number(stored?.y);
+    if (Number.isFinite(sx) && Number.isFinite(sy)) {
+      positions.set(name, { x: sx, y: sy });
+    }
+  });
+
+  // If data object is selected, position it in the center and systems around it
+  if (selectedDataObject && nodeEntries.length > 0) {
+    const dataObjectEntry = nodeEntries.find((e) => !e.isSystem && e.obj.id === selectedDataObject.id);
+    const systemEntries = nodeEntries.filter((e) => e.isSystem);
+    
+    if (dataObjectEntry) {
+      const name = dataObjectEntry.obj.id.toString();
+      if (!positions.has(name)) {
+        // Center position
+        const centerX = canvasHeight / 2;
+        const centerY = canvasHeight / 2;
+        positions.set(name, { x: centerX, y: centerY });
+      }
+      
+      // Position systems in a circle around the data object
+      const dataObjPos = positions.get(name);
+      const radius = 350;
+      const angleStep = (2 * Math.PI) / Math.max(systemEntries.length, 1);
+      
+      systemEntries.forEach((entry, idx) => {
+        const sysName = entry.sys.name;
+        if (!positions.has(sysName)) {
+          const angle = idx * angleStep - Math.PI / 2; // Start from top
+          const x = dataObjPos.x + radius * Math.cos(angle);
+          const y = dataObjPos.y + radius * Math.sin(angle);
+          positions.set(sysName, { x, y });
+        }
+      });
+    }
+  } else {
+    // Default column layout for data objects
+    let colX = baseX;
+    let colY = baseY;
+
+    nodeEntries.forEach(({ obj, node }) => {
+      const name = obj.id.toString();
+      if (positions.has(name)) return;
+      const nodeHeight = node.offsetHeight || 220;
+
+      if (colY > baseY && colY + nodeHeight > baseY + maxColumnHeight) {
+        colX += columnWidth;
+        colY = baseY;
+      }
+
+      positions.set(name, { x: colX, y: colY });
+      colY += nodeHeight + paddingY;
+    });
+  }
+
+  return positions;
+}
+
+function enableDragDataObject(node, handle, name, isSystem) {
+  let dragging = false,
+    start = { x: 0, y: 0 },
+    startPos = { x: 0, y: 0 },
+    lastValid = null;
+  handle.style.cursor = 'grab';
+  handle.addEventListener('mousedown', (e) => {
+    const isInteractive = e.target.closest(
+      'button, a, [role="button"], .map-node-toggle, .chev'
+    );
+    if (e.button !== 0 || isInteractive) return;
+    dragging = true;
+    handle.style.cursor = 'grabbing';
+    start = { x: e.clientX, y: e.clientY };
+    const rect = node.getBoundingClientRect(),
+      parentRect = mapCanvas.getBoundingClientRect();
+    startPos = {
+      x: rect.left - parentRect.left - mapTransformState.x,
+      y: rect.top - parentRect.top - mapTransformState.y,
+    };
+    lastValid = {
+      x: parseFloat(node.style.left) || 0,
+      y: parseFloat(node.style.top) || 0,
+    };
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const dx = (e.clientX - start.x) / mapTransformState.k,
+      dy = (e.clientY - start.y) / mapTransformState.k;
+    const nx = startPos.x + dx,
+      ny = startPos.y + dy;
+    if (!isNodePositionFree(node, { x: nx, y: ny }, name)) return;
+    node.style.left = `${nx}px`;
+    node.style.top = `${ny}px`;
+    lastValid = { x: nx, y: ny };
+    
+    if (isSystem) {
+      mapPositions[name] = { x: nx, y: ny };
+    } else {
+      dataObjectPositions[name] = { x: nx, y: ny };
+    }
+    
+    if (selectedDataObject) drawDataObjectEdges();
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.style.cursor = 'grab';
+    if (lastValid) {
+      if (isSystem) {
+        mapPositions[name] = lastValid;
+        savePositions();
+      } else {
+        dataObjectPositions[name] = lastValid;
+        // Could save data object positions here if needed
+      }
+    }
+  });
+}
+
+function centerDataObject(dataObjectId) {
+  const node = mapNodesLayer?.querySelector(
+    `.map-data-object[data-data-object-id="${dataObjectId}"]`
+  );
+  if (!node) return;
+  
+  const rect = node.getBoundingClientRect();
+  const canvasRect = mapCanvas.getBoundingClientRect();
+  
+  // Calculate center position
+  const centerX = canvasRect.width / 2;
+  const centerY = canvasRect.height / 2;
+  
+  const nodeX = parseFloat(node.style.left) || 0;
+  const nodeY = parseFloat(node.style.top) || 0;
+  
+  const offsetX = centerX - (nodeX * mapTransformState.k) - (rect.width / 2);
+  const offsetY = centerY - (nodeY * mapTransformState.k) - (rect.height / 2);
+  
+  mapTransformState.x = offsetX;
+  mapTransformState.y = offsetY;
+  
+  applyMapTransform();
+}
+
+function drawDataObjectEdges() {
+  if (!selectedDataObject) return;
+  clearEdgesKeepDefs();
+  
+  const dataObjectNode = mapNodesLayer?.querySelector(
+    `.map-data-object[data-data-object-id="${selectedDataObject.id}"]`
+  );
+  if (!dataObjectNode) return;
+  
+  const systemNodes = mapNodesLayer?.querySelectorAll(
+    `.map-system-for-object[data-data-object-id="${selectedDataObject.id}"]`
+  );
+  if (!systemNodes || systemNodes.length === 0) return;
+  
+  const dataObjRect = dataObjectNode.getBoundingClientRect();
+  const canvasRect = mapCanvas.getBoundingClientRect();
+  
+  const dataObjCenter = {
+    x: dataObjRect.left - canvasRect.left + dataObjRect.width / 2,
+    y: dataObjRect.top - canvasRect.top + dataObjRect.height / 2,
+  };
+  
+  systemNodes.forEach((sysNode) => {
+    const sysRect = sysNode.getBoundingClientRect();
+    const sysCenter = {
+      x: sysRect.left - canvasRect.left + sysRect.width / 2,
+      y: sysRect.top - canvasRect.top + sysRect.height / 2,
+    };
+    
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', dataObjCenter.x);
+    line.setAttribute('y1', dataObjCenter.y);
+    line.setAttribute('x2', sysCenter.x);
+    line.setAttribute('y2', sysCenter.y);
+    line.setAttribute('stroke', '#007aff');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('marker-end', 'url(#arrowHead)');
+    line.style.color = '#007aff';
+    
+    mapEdgesSvg?.appendChild(line);
+  });
 }
 
 /* Drag mit Persistenz */
@@ -3849,6 +4334,7 @@ function initializeApp() {
       document.body.setAttribute('data-mode', 'dashboard');
       showOnly('dashboard');
       showGlossarySubnav(false);
+      showDataMapSubnav(false);
       try {
         renderDashboard();
       } catch (e) {
@@ -3867,6 +4353,7 @@ function initializeApp() {
       document.body.setAttribute('data-mode', 'systems');
       showOnly('systems');
       showGlossarySubnav(false);
+      showDataMapSubnav(false);
       setModeSystems('All Systems'); // rendert Sidebar + Tabellen
     });
     // Data Map
@@ -3874,6 +4361,8 @@ function initializeApp() {
       document.body.setAttribute('data-mode', 'map');
       showOnly('map');
       showGlossarySubnav(false);
+      showDataMapSubnav(true);
+      installDataMapSubnavHandlers(); // View-Buttons einmalig anbinden
       try {
         renderDataMap();
         fitMapToContent();
@@ -3888,6 +4377,7 @@ function initializeApp() {
       document.body.setAttribute('data-mode', 'glossary');
       showOnly('glossary');
       showGlossarySubnav(true);
+      showDataMapSubnav(false);
       installGlossarySubnavHandlers(); // Filter-Buttons einmalig anbinden
       setupGlossaryTabs(); // Setup version tabs
 
@@ -3906,6 +4396,7 @@ function initializeApp() {
       document.body.setAttribute('data-mode', 'admin');
       showOnly('admin');
       showGlossarySubnav(false);
+      showDataMapSubnav(false);
       try {
         // Default-Tab wählen und rendern
         const firstTab =
@@ -4090,8 +4581,15 @@ function initializeApp() {
       ) {
         selectedFieldRef = null;
         state.selectedFieldRef = selectedFieldRef;
+        selectedDataObject = null;
+        state.selectedDataObject = selectedDataObject;
         clearSelectionVisuals();
-        safeDrawAllEdges();
+        if (currentMapView === 'dataobject') {
+          renderDataObjectView();
+          fitMapToContent();
+        } else {
+          safeDrawAllEdges();
+        }
       }
       if (e.button !== 0) return;
       isPanning = true;
@@ -4107,8 +4605,13 @@ function initializeApp() {
       mapTransformState.x = e.clientX - panStart.x;
       mapTransformState.y = e.clientY - panStart.y;
       applyMapTransform();
-      if (selectedFieldRef) drawSelectedFieldEdges();
-      else safeDrawAllEdges();
+      if (currentMapView === 'dataobject' && selectedDataObject) {
+        drawDataObjectEdges();
+      } else if (selectedFieldRef) {
+        drawSelectedFieldEdges();
+      } else {
+        safeDrawAllEdges();
+      }
     });
     window.addEventListener('mouseup', () => {
       isPanning = false;
@@ -4128,8 +4631,13 @@ function initializeApp() {
         mapTransformState.y = my - (my - mapTransformState.y) * (next / prev);
         mapTransformState.k = next;
         applyMapTransform();
-        if (selectedFieldRef) drawSelectedFieldEdges();
-        else safeDrawAllEdges();
+        if (currentMapView === 'dataobject' && selectedDataObject) {
+          drawDataObjectEdges();
+        } else if (selectedFieldRef) {
+          drawSelectedFieldEdges();
+        } else {
+          safeDrawAllEdges();
+        }
       },
       { passive: false }
     );
