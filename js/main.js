@@ -3854,7 +3854,10 @@ function renderDataObjectView() {
 
   // Draw edges from selected data object to systems
   if (selectedDataObject) {
-    drawDataObjectEdges();
+    // Use requestAnimationFrame to ensure nodes are positioned before drawing edges
+    requestAnimationFrame(() => {
+      drawDataObjectEdges();
+    });
   }
 
   requestAnimationFrame(() => fitMapToContent());
@@ -3976,26 +3979,27 @@ function computeDataObjectPositions(nodeEntries = []) {
     
     if (dataObjectEntry) {
       const name = dataObjectEntry.obj.id.toString();
-      if (!positions.has(name)) {
-        // Center position
-        const centerX = canvasHeight / 2;
-        const centerY = canvasHeight / 2;
-        positions.set(name, { x: centerX, y: centerY });
-      }
+      
+      // Get canvas width for proper centering
+      const canvasWidth = mapCanvas?.clientWidth || mapCanvas?.offsetWidth || 1200;
+      
+      // Always position data object in center (don't use stored position)
+      const centerX = canvasWidth / 2 - 140; // 140 = half of node width (280px)
+      const centerY = canvasHeight / 2 - 50; // Approximate half of node height
+      positions.set(name, { x: centerX, y: centerY });
       
       // Position systems in a circle around the data object
       const dataObjPos = positions.get(name);
-      const radius = 350;
+      const radius = 450; // Increased radius to prevent overlapping
       const angleStep = (2 * Math.PI) / Math.max(systemEntries.length, 1);
       
+      // Always reposition systems around the selected data object (ignore stored positions)
       systemEntries.forEach((entry, idx) => {
         const sysName = entry.sys.name;
-        if (!positions.has(sysName)) {
-          const angle = idx * angleStep - Math.PI / 2; // Start from top
-          const x = dataObjPos.x + radius * Math.cos(angle);
-          const y = dataObjPos.y + radius * Math.sin(angle);
-          positions.set(sysName, { x, y });
-        }
+        const angle = idx * angleStep - Math.PI / 2; // Start from top
+        const x = dataObjPos.x + radius * Math.cos(angle);
+        const y = dataObjPos.y + radius * Math.sin(angle);
+        positions.set(sysName, { x, y });
       });
     }
   } else {
@@ -4119,26 +4123,39 @@ function drawDataObjectEdges() {
   const dataObjectNode = mapNodesLayer?.querySelector(
     `.map-data-object[data-data-object-id="${selectedDataObject.id}"]`
   );
-  if (!dataObjectNode) return;
+  if (!dataObjectNode) {
+    console.warn('Data object node not found for id:', selectedDataObject.id);
+    return;
+  }
   
   const systemNodes = mapNodesLayer?.querySelectorAll(
     `.map-system-for-object[data-data-object-id="${selectedDataObject.id}"]`
   );
-  if (!systemNodes || systemNodes.length === 0) return;
+  if (!systemNodes || systemNodes.length === 0) {
+    console.warn('No system nodes found for data object id:', selectedDataObject.id);
+    return;
+  }
   
-  const dataObjRect = dataObjectNode.getBoundingClientRect();
-  const canvasRect = mapCanvas.getBoundingClientRect();
+  // Use position in the transformed coordinate system
+  const dataObjX = parseFloat(dataObjectNode.style.left) || 0;
+  const dataObjY = parseFloat(dataObjectNode.style.top) || 0;
+  const dataObjWidth = dataObjectNode.offsetWidth || 280;
+  const dataObjHeight = dataObjectNode.offsetHeight || 100;
   
   const dataObjCenter = {
-    x: dataObjRect.left - canvasRect.left + dataObjRect.width / 2,
-    y: dataObjRect.top - canvasRect.top + dataObjRect.height / 2,
+    x: dataObjX + dataObjWidth / 2,
+    y: dataObjY + dataObjHeight / 2,
   };
   
   systemNodes.forEach((sysNode) => {
-    const sysRect = sysNode.getBoundingClientRect();
+    const sysX = parseFloat(sysNode.style.left) || 0;
+    const sysY = parseFloat(sysNode.style.top) || 0;
+    const sysWidth = sysNode.offsetWidth || 360;
+    const sysHeight = sysNode.offsetHeight || 100;
+    
     const sysCenter = {
-      x: sysRect.left - canvasRect.left + sysRect.width / 2,
-      y: sysRect.top - canvasRect.top + sysRect.height / 2,
+      x: sysX + sysWidth / 2,
+      y: sysY + sysHeight / 2,
     };
     
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
