@@ -4136,33 +4136,24 @@ function drawDataObjectEdges() {
     return;
   }
   
-  // Use position in the transformed coordinate system
-  const dataObjX = parseFloat(dataObjectNode.style.left) || 0;
-  const dataObjY = parseFloat(dataObjectNode.style.top) || 0;
-  const dataObjWidth = dataObjectNode.offsetWidth || 280;
-  const dataObjHeight = dataObjectNode.offsetHeight || 100;
+  // Get center of data object in canvas coordinates
+  const dataObjRect = dataObjectNode.getBoundingClientRect();
+  const canvasRect = mapCanvas?.getBoundingClientRect();
+  if (!canvasRect) return;
   
-  const dataObjCenter = {
-    x: dataObjX + dataObjWidth / 2,
-    y: dataObjY + dataObjHeight / 2,
-  };
+  const dataObjCenterX = ((dataObjRect.left + dataObjRect.right) / 2 - canvasRect.left - mapTransformState.x) / mapTransformState.k;
+  const dataObjCenterY = ((dataObjRect.top + dataObjRect.bottom) / 2 - canvasRect.top - mapTransformState.y) / mapTransformState.k;
   
   systemNodes.forEach((sysNode) => {
-    const sysX = parseFloat(sysNode.style.left) || 0;
-    const sysY = parseFloat(sysNode.style.top) || 0;
-    const sysWidth = sysNode.offsetWidth || 360;
-    const sysHeight = sysNode.offsetHeight || 100;
-    
-    const sysCenter = {
-      x: sysX + sysWidth / 2,
-      y: sysY + sysHeight / 2,
-    };
+    const sysRect = sysNode.getBoundingClientRect();
+    const sysCenterX = ((sysRect.left + sysRect.right) / 2 - canvasRect.left - mapTransformState.x) / mapTransformState.k;
+    const sysCenterY = ((sysRect.top + sysRect.bottom) / 2 - canvasRect.top - mapTransformState.y) / mapTransformState.k;
     
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', dataObjCenter.x);
-    line.setAttribute('y1', dataObjCenter.y);
-    line.setAttribute('x2', sysCenter.x);
-    line.setAttribute('y2', sysCenter.y);
+    line.setAttribute('x1', dataObjCenterX);
+    line.setAttribute('y1', dataObjCenterY);
+    line.setAttribute('x2', sysCenterX);
+    line.setAttribute('y2', sysCenterY);
     line.setAttribute('stroke', '#007aff');
     line.setAttribute('stroke-width', '2');
     line.setAttribute('marker-end', 'url(#arrowHead)');
