@@ -1529,9 +1529,27 @@ function renderLocalFieldsTables() {
     if (hasMultipleGroups) {
       const headerRow = document.createElement('div');
       headerRow.className = 'local-table-header';
+      headerRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;';
+      
       const title = document.createElement('h3');
       title.textContent = tableTitleText;
+      title.style.cssText = 'margin:0;';
       headerRow.appendChild(title);
+      
+      // Add individual export button for this Legal Entity
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'btn btn--secondary btn--sm';
+      exportBtn.textContent = 'Export';
+      exportBtn.style.cssText = 'margin-left:auto;';
+      exportBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const table = group.querySelector('table.table');
+        if (table) {
+          exportMultipleTablesAsXlsx([table], `Local_DataFields_${titleName.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
+        }
+      });
+      headerRow.appendChild(exportBtn);
+      
       group.appendChild(headerRow);
     }
 
@@ -2056,11 +2074,18 @@ function renderGlossaryTable() {
         const globalIdx = glossaryTerms.findIndex((x) => x.id === list[i].id);
         if (globalIdx > -1) {
           const deletedRecord = glossaryTerms[globalIdx];
-          trackGlossaryChanges(deletedRecord, null, 'deleted');
+          
+          // Ask if user wants to create a new version
+          const createNewVersion = confirm('Do you want to create a new version for this deletion?\n\nClick "OK" to create a new version.\nClick "Cancel" to delete without creating a new version.');
+          
+          if (createNewVersion) {
+            trackGlossaryChanges(deletedRecord, null, 'deleted');
+            saveGlossaryVersionAndChanges();
+          }
+          
           glossaryTerms.splice(globalIdx, 1);
         }
         saveGlossary();
-        saveGlossaryVersionAndChanges();
         renderGlossaryTable();
         updateGlossaryVersionDisplay();
       }
@@ -2274,6 +2299,10 @@ function openGlossaryDialog(index = null) {
 }
 glossaryForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  
+  // Ask if user wants to create a new version
+  const createNewVersion = confirm('Do you want to create a new version for this change?\n\nClick "OK" to create a new version.\nClick "Cancel" to save without creating a new version.');
+  
   const formData = new FormData(glossaryForm);
   const data = Object.fromEntries(formData.entries());
   const glossaryId =
@@ -2294,16 +2323,25 @@ glossaryForm?.addEventListener('submit', (e) => {
     type: data.type && GLOSSARY_TYPES.includes(data.type) ? data.type : 'Term',
   };
 
-  // Track changes for versioning
-  if (editGlossaryIndex !== null) {
-    // Editing existing term - track changes
-    const oldRecord = glossaryTerms[editGlossaryIndex];
-    trackGlossaryChanges(oldRecord, record, 'modified');
-    glossaryTerms[editGlossaryIndex] = record;
+  // Track changes for versioning - only if user confirmed new version
+  if (createNewVersion) {
+    if (editGlossaryIndex !== null) {
+      // Editing existing term - track changes
+      const oldRecord = glossaryTerms[editGlossaryIndex];
+      trackGlossaryChanges(oldRecord, record, 'modified');
+      glossaryTerms[editGlossaryIndex] = record;
+    } else {
+      // New term
+      trackGlossaryChanges(null, record, 'added');
+      glossaryTerms.push(record);
+    }
   } else {
-    // New term
-    trackGlossaryChanges(null, record, 'added');
-    glossaryTerms.push(record);
+    // Save without versioning
+    if (editGlossaryIndex !== null) {
+      glossaryTerms[editGlossaryIndex] = record;
+    } else {
+      glossaryTerms.push(record);
+    }
   }
 
   fields.forEach((field) => {
@@ -2327,7 +2365,9 @@ glossaryForm?.addEventListener('submit', (e) => {
 
   saveFields();
   saveGlossary();
-  saveGlossaryVersionAndChanges();
+  if (createNewVersion) {
+    saveGlossaryVersionAndChanges();
+  }
   renderGlossaryTable();
   renderFieldsTable();
   updateGlossaryVersionDisplay();
@@ -5404,11 +5444,10 @@ function render3DPieChart(ctx, data) {
   ctx.clearRect(0, 0, width, height);
   
   const centerX = width / 2;
-  const centerY = height / 2 - 50;
-  const radius = Math.min(width, height) * 0.28;
-  const depth = 25; // Modern 3D depth effect - more subtle
+  const centerY = height / 2 - 30; // Adjusted for 2D
+  const radius = Math.min(width, height) * 0.30; // Slightly larger for 2D
   
-  // Modern blue tones palette - only blues
+  // Modern blue tones palette
   const baseColors = [
     '#1E88E5', // Vibrant Blue
     '#42A5F5', // Sky Blue
@@ -5422,80 +5461,31 @@ function render3DPieChart(ctx, data) {
     '#03A9F4', // Bright Cyan Blue
   ];
   
-  // Generate darker shades for 3D effect with better color preservation
-  const darkenColor = (color, amount = 0.25) => {
-    const hex = color.replace('#', '');
-    const r = Math.max(0, parseInt(hex.substr(0, 2), 16) * (1 - amount));
-    const g = Math.max(0, parseInt(hex.substr(2, 2), 16) * (1 - amount));
-    const b = Math.max(0, parseInt(hex.substr(4, 2), 16) * (1 - amount));
-    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-  };
-  
-  // Generate lighter shades for highlights
-  const lightenColor = (color, amount = 0.2) => {
-    const hex = color.replace('#', '');
-    const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + (255 - parseInt(hex.substr(0, 2), 16)) * amount);
-    const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + (255 - parseInt(hex.substr(2, 2), 16)) * amount);
-    const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + (255 - parseInt(hex.substr(4, 2), 16)) * amount);
-    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-  };
-  
   let startAngle = -Math.PI / 2;
   
-  // Draw 3D depth (bottom layer) with smoother shadow effect
+  // Draw flat 2D pie chart
   labels.forEach((label, i) => {
     const value = values[i];
     const sliceAngle = (value / total) * 2 * Math.PI;
     const endAngle = startAngle + sliceAngle;
     
-    // Draw depth with gradient for better 3D effect
-    const depthGradient = ctx.createLinearGradient(0, centerY + depth - 10, 0, centerY + depth + 10);
-    depthGradient.addColorStop(0, darkenColor(baseColors[i % baseColors.length], 0.3));
-    depthGradient.addColorStop(1, darkenColor(baseColors[i % baseColors.length], 0.5));
-    
-    ctx.fillStyle = depthGradient;
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY + depth);
-    ctx.arc(centerX, centerY + depth, radius, startAngle, endAngle);
-    ctx.closePath();
-    ctx.fill();
-    
-    startAngle = endAngle;
-  });
-  
-  // Draw top layer (main pie) with enhanced gradients
-  startAngle = -Math.PI / 2;
-  labels.forEach((label, i) => {
-    const value = values[i];
-    const sliceAngle = (value / total) * 2 * Math.PI;
-    const endAngle = startAngle + sliceAngle;
-    
-    // Draw slice with modern radial gradient for 3D effect
-    const gradient = ctx.createRadialGradient(
-      centerX - radius * 0.4, centerY - radius * 0.4, radius * 0.1,
-      centerX, centerY, radius * 1.2
-    );
-    const baseColor = baseColors[i % baseColors.length];
-    gradient.addColorStop(0, lightenColor(baseColor, 0.2));
-    gradient.addColorStop(0.5, baseColor);
-    gradient.addColorStop(1, darkenColor(baseColor, 0.1));
-    
-    ctx.fillStyle = gradient;
+    // Draw slice with flat color
+    ctx.fillStyle = baseColors[i % baseColors.length];
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, radius, startAngle, endAngle);
     ctx.closePath();
     ctx.fill();
     
-    // Add subtle white stroke for separation
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 2.5;
+    // Add white stroke for separation
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
     ctx.stroke();
     
     startAngle = endAngle;
   });
   
-  // Draw labels outside with light font - ALWAYS display all values
+  // Draw values inside slices to avoid overlaps
   startAngle = -Math.PI / 2;
   labels.forEach((label, i) => {
     const value = values[i];
@@ -5503,51 +5493,55 @@ function render3DPieChart(ctx, data) {
     const midAngle = startAngle + sliceAngle / 2;
     const percentage = Math.round((value / total) * 100);
     
-    // Position label outside the pie with better spacing
-    const labelDistance = radius + 60;
-    const textX = centerX + Math.cos(midAngle) * labelDistance;
-    const textY = centerY + Math.sin(midAngle) * labelDistance;
-    
-    // Draw both count and percentage with color matching slice - ALWAYS show regardless of size
-    ctx.fillStyle = baseColors[i % baseColors.length];
-    ctx.font = 'bold 20px -apple-system, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    // Show count for ALL values (removed conditional logic)
-    ctx.fillText(`${value}`, textX, textY - 12);
-    ctx.font = '500 15px -apple-system, system-ui, sans-serif';
-    ctx.fillText(`(${percentage}%)`, textX, textY + 12);
+    // Only show label if slice is large enough (>5%)
+    if (percentage >= 5) {
+      // Position label inside the slice
+      const labelDistance = radius * 0.65;
+      const textX = centerX + Math.cos(midAngle) * labelDistance;
+      const textY = centerY + Math.sin(midAngle) * labelDistance;
+      
+      // Draw white text inside slices
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px -apple-system, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${value}`, textX, textY - 8);
+      ctx.font = '500 14px -apple-system, system-ui, sans-serif';
+      ctx.fillText(`${percentage}%`, textX, textY + 10);
+    }
     
     startAngle += sliceAngle;
   });
   
   // Draw elegant legend at bottom
   const legendY = height - 50;
-  const totalLegendWidth = labels.reduce((sum, label) => {
-    ctx.font = '300 16px -apple-system, system-ui, sans-serif';
-    return sum + ctx.measureText(label).width + 40;
-  }, 0);
-  
-  let legendX = (width - totalLegendWidth) / 2;
+  const legendItemHeight = 25;
+  const legendItemsPerRow = Math.min(labels.length, 3);
+  const rows = Math.ceil(labels.length / legendItemsPerRow);
   
   labels.forEach((label, i) => {
-    const value = values[i];
+    const row = Math.floor(i / legendItemsPerRow);
+    const col = i % legendItemsPerRow;
+    
+    ctx.font = '300 15px -apple-system, system-ui, sans-serif';
+    const itemWidth = 180;
+    const totalRowWidth = legendItemsPerRow * itemWidth;
+    const legendX = (width - totalRowWidth) / 2 + col * itemWidth;
+    const legendYPos = legendY + row * legendItemHeight;
     
     // Color indicator (small circle)
     ctx.fillStyle = baseColors[i % baseColors.length];
     ctx.beginPath();
-    ctx.arc(legendX + 6, legendY, 6, 0, 2 * Math.PI);
+    ctx.arc(legendX + 6, legendYPos, 5, 0, 2 * Math.PI);
     ctx.fill();
     
-    // Label text
+    // Label text with value
     ctx.fillStyle = '#86868B';
-    ctx.font = '300 16px -apple-system, system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const text = `${label}`;
-    ctx.fillText(text, legendX + 18, legendY);
-    
-    legendX += ctx.measureText(text).width + 40;
+    const percentage = Math.round((values[i] / total) * 100);
+    const text = `${label} (${values[i]})`;
+    ctx.fillText(text, legendX + 18, legendYPos);
   });
 }
 

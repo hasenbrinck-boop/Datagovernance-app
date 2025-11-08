@@ -408,9 +408,16 @@
   }
   .table tbody tr:last-child td{ border-bottom: none !important }
   .table th:last-child, .table td:last-child{
-    width:80px !important; text-align:right !important; white-space:nowrap !important; padding-right:10px !important;
+    width:100px !important; min-width:100px !important; text-align:right !important; padding-right:10px !important;
   }
-  .table .table-actions{ display:inline-flex; gap:8px; align-items:center; line-height:0 }
+  .table .table-actions{ display:inline-flex; gap:8px; align-items:center; line-height:0; flex-wrap:wrap; justify-content:flex-end; }
+  
+  /* Ensure Allowed Values column wraps properly */
+  .table td {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+  }
   
   /* Filterfelder im thead */
   .table thead input[type="text"] {
