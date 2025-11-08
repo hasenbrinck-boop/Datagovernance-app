@@ -1475,3 +1475,12 @@
   color: var(--accent-1);
   font-weight: 500;
 }
+
+/* Ensure glossary table content wraps properly */
+#glossaryTable td,
+#glossaryChangesTable td {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
