@@ -2854,12 +2854,13 @@ function makeEdgeDefs() {
     marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
     marker.setAttribute('id', 'arrowHead');
     marker.setAttribute('orient', 'auto');
-    marker.setAttribute('markerWidth', '9');
-    marker.setAttribute('markerHeight', '9');
-    marker.setAttribute('refX', '7.2');
-    marker.setAttribute('refY', '4.5');
+    marker.setAttribute('markerWidth', '12');
+    marker.setAttribute('markerHeight', '12');
+    marker.setAttribute('refX', '10');
+    marker.setAttribute('refY', '6');
+    marker.setAttribute('markerUnits', 'strokeWidth');
     const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', 'M0,0 L9,4.5 L0,9 Z');
+    p.setAttribute('d', 'M0,0 L0,12 L12,6 Z');
     p.setAttribute('fill', 'currentColor');
     marker.appendChild(p);
     defs.appendChild(marker);
@@ -4000,7 +4001,7 @@ function computeDataObjectPositions(nodeEntries = []) {
       
       // Position systems in a circle around the data object
       const dataObjPos = positions.get(name);
-      const radius = 450; // Increased radius to prevent overlapping
+      const radius = 300; // Reduced radius to keep systems visible
       const angleStep = (2 * Math.PI) / Math.max(systemEntries.length, 1);
       
       // Always reposition systems around the selected data object (ignore stored positions)
@@ -4293,14 +4294,14 @@ function fitMapToContent() {
   if (!mapCanvas) return;
   const vw = mapCanvas.clientWidth,
     vh = mapCanvas.clientHeight,
-    cw = maxX - minX + 120,
-    ch = maxY - minY + 120;
+    cw = maxX - minX + 200,
+    ch = maxY - minY + 200;
   const k = Math.min(vw / cw, vh / ch, 1.2);
-  mapTransformState.k = Math.max(0.6, Math.min(2.5, k));
+  mapTransformState.k = Math.max(0.5, Math.min(2.5, k));
   mapTransformState.x =
-    20 + (vw - cw * mapTransformState.k) / 2 - minX * mapTransformState.k + 20;
+    40 + (vw - cw * mapTransformState.k) / 2 - minX * mapTransformState.k + 40;
   mapTransformState.y =
-    20 + (vh - ch * mapTransformState.k) / 2 - minY * mapTransformState.k + 20;
+    40 + (vh - ch * mapTransformState.k) / 2 - minY * mapTransformState.k + 40;
   applyMapTransform();
   if (selectedFieldRef) drawSelectedFieldEdges();
   else safeDrawAllEdges();
