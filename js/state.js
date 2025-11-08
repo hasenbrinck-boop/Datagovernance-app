@@ -93,6 +93,9 @@ export const state = {
   showLocalFilters: false,
   isPanning: false,
   panStart: { x: 0, y: 0 },
+  currentMapView: 'system', // 'system' or 'dataobject'
+  selectedDataObject: null, // { id, name } when a data object is selected
+  dataObjectPositions: {}, // positions for data objects in the map
 };
 
 export function resetSelectionState() {
