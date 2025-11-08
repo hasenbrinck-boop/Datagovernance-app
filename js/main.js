@@ -2878,10 +2878,10 @@ function hexWithAlpha(hex, a) {
 }
 function computeNodePositions(nodeEntries = []) {
   const positions = new Map();
-  const paddingY = 48;
+  const paddingY = 32;
   const baseX = 60;
   const baseY = 60;
-  const columnGap = 88;
+  const columnGap = 60;
 
   const fallbackHeight =
     typeof window !== 'undefined' && window.innerHeight
@@ -3900,6 +3900,10 @@ function showFieldsForSystemAndDataObject(node, systemName, dataObjectId) {
     row.dataset.system = systemName;
     row.dataset.field = f.name;
 
+    const chev = document.createElement('div');
+    chev.className = 'chev';
+    chev.title = 'Toggle details';
+    
     const name = document.createElement('div');
     name.className = 'map-field-name';
     name.textContent = f.name;
@@ -3914,6 +3918,7 @@ function showFieldsForSystemAndDataObject(node, systemName, dataObjectId) {
       right.appendChild(b);
     }
 
+    row.appendChild(chev);
     row.appendChild(name);
     row.appendChild(right);
     wrap.appendChild(row);
@@ -3931,6 +3936,11 @@ function showFieldsForSystemAndDataObject(node, systemName, dataObjectId) {
       <div><strong>Glossary:</strong> ${glossaryMarkup}</div>
     `;
     wrap.appendChild(details);
+    
+    chev.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      row.classList.toggle('is-open');
+    });
   });
   
   node.appendChild(wrap);
@@ -3938,10 +3948,10 @@ function showFieldsForSystemAndDataObject(node, systemName, dataObjectId) {
 
 function computeDataObjectPositions(nodeEntries = []) {
   const positions = new Map();
-  const paddingY = 48;
+  const paddingY = 32;
   const baseX = 60;
   const baseY = 60;
-  const columnGap = 88;
+  const columnGap = 60;
 
   const fallbackHeight =
     typeof window !== 'undefined' && window.innerHeight
@@ -4085,7 +4095,7 @@ function enableDragDataObject(node, handle, name, isSystem) {
         savePositions();
       } else {
         dataObjectPositions[name] = lastValid;
-        // Could save data object positions here if needed
+        savePositions();
       }
     }
   });
