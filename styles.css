@@ -497,13 +497,16 @@
     padding: 0;
     background: transparent;
     z-index: 9999;
-    display: flex;
+  }
+  
+  #versionDialog[open] {
+    display: flex !important;
     align-items: center;
     justify-content: center;
   }
   
   #versionDialog:not([open]) {
-    display: none;
+    display: none !important;
   }
   
   #versionDialog::backdrop {
