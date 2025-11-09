@@ -419,7 +419,7 @@
     width:100%; border-collapse: separate; border-spacing:0; table-layout: fixed; background:#fff;
   }
   .table thead th{
-    position: sticky; top: 0; z-index: 3; color: var(--muted);
+    position: sticky; top: 0; z-index: 10; color: var(--muted);
     font-weight: 600; text-align: left; background:#fff; box-shadow: 0 1px 0 var(--divider);
   }
   .table th, .table td{
@@ -713,7 +713,7 @@
   .table.map-pairs thead th {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 10;
     background: #f7f9ff;
     color: var(--text-dim);
     font-weight: 600;
@@ -1094,6 +1094,9 @@
   overflow:hidden;
 }
 .table.map-pairs thead th{
+  position: sticky;
+  top: 0;
+  z-index: 10;
   background:#f7f9ff;
   color:var(--text-dim);
   font-weight:600;

@@ -18,7 +18,7 @@ export const state = {
     { id: 159, name: 'Job Data', domain: 'HR' },
   ],
   fields: [
-    { id: 'f1', name: 'Global ID', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '', glossaryRef: 'gls-001', foundationObjectId: '135' },
+    { id: 'f1', name: 'Global ID', system: 'Employee Central', type: 'String', length: 10, mandatory: true, local: false, mapping: '', foundationObjectId: '135' },
     { id: 'f2', name: 'Org-Code', system: 'Employee Central', type: 'String', length: 12, mandatory: false, local: false, mapping: '', foundationObjectId: '114' },
     { id: 'f3', name: 'Position ID', system: 'Employee Central', type: 'String', length: 8, mandatory: true, local: false, mapping: '', glossaryRef: undefined, foundationObjectId: '114' },
     { id: 'f4', name: 'Position ID', system: '4Plan', type: 'Number', length: 9, mandatory: true, local: false, mapping: '', foundationObjectId: '114', source: { system: 'Employee Central', field: 'PositionID' } },

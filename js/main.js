@@ -2134,8 +2134,11 @@ function renderGlossaryTable() {
   list.forEach((g, i) => {
     // Get all systems using this glossary term
     const systemsUsing = getSystemsUsingGlossaryTerm(g.id);
-    const systemsText = systemsUsing.length > 0 
-      ? systemsUsing.map(s => esc(s)).join('<br>') 
+    // Fix Issue #1: Add hyphen prefix when multiple systems, show '-' when no systems
+    const systemsText = systemsUsing.length > 1 
+      ? systemsUsing.map(s => '- ' + esc(s)).join('<br>') 
+      : systemsUsing.length === 1
+      ? esc(systemsUsing[0])
       : '-';
     
     const termText = g.term ? esc(g.term) : '-';
@@ -2678,11 +2681,24 @@ function openFieldDialog(index = null, opts = {}) {
       if (sourceSystemSelect) sourceSystemSelect.value = '';
       updateSourceFieldSelect();
     }
+    
+    // Allowed Values befüllen (Fix für Issue #2)
+    const allowedValuesTextarea = document.getElementById('fld-allowed-values');
+    if (allowedValuesTextarea && Array.isArray(f.allowedValues) && f.allowedValues.length > 0) {
+      allowedValuesTextarea.value = f.allowedValues.join('\n');
+    } else if (allowedValuesTextarea) {
+      allowedValuesTextarea.value = '';
+    }
   } else {
     // Neu: Source leer
     if (sourceSystemSelect) sourceSystemSelect.value = '';
     updateSourceFieldSelect();
     
+    // Allowed Values leeren für neues Feld
+    const allowedValuesTextarea = document.getElementById('fld-allowed-values');
+    if (allowedValuesTextarea) {
+      allowedValuesTextarea.value = '';
+    }
   }
 
   openDialog(fieldDialog);
