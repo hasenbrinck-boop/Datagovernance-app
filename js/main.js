@@ -5417,9 +5417,7 @@ function setupMappingsFeature() {
       fillSelect(selSYS, SYS_LIST, v => v, v => v, true);
   
       // Vorbelegung nur wenn wir editieren (nicht bei neuem Mapping)
-      if (currentEditing?.legalEntityId) {
-        selLE.value = currentEditing.legalEntityId;
-      }
+      // Legal Entity should NOT be pre-filled per requirement
       if (currentEditing?.systemId) {
         selSYS.value = currentEditing.systemId;
       }
@@ -5512,18 +5510,22 @@ function setupMappingsFeature() {
   
       // ---- Selects befüllen (reihenfolgenrichtig!)
       function rebuildFieldOptions() {
-        // 1) Locals
+        // 1) Locals - preserve current selection
+        const currentLocalFieldId = selLocal.value;
         const locals = candidateLocals();
         fillSelect(selLocal, locals,
           f => `${f.name} (${f.foundationObjectId || '-'})`,
           f => f.id,
           true // Blank-Option
         );
-  
-        if (currentEditing?.localFieldId && locals.some(f => f.id === currentEditing.localFieldId)) {
+
+        // Restore previous selection if it's still in the list, otherwise use editing value
+        if (currentLocalFieldId && locals.some(f => f.id === currentLocalFieldId)) {
+          selLocal.value = currentLocalFieldId;
+        } else if (currentEditing?.localFieldId && locals.some(f => f.id === currentEditing.localFieldId)) {
           selLocal.value = currentEditing.localFieldId;
         }
-  
+
         // 2) Globals hängen von Local (DataObject) + System ab
         const globals = candidateGlobals();
         fillSelect(selGlobal, globals,
@@ -5531,11 +5533,11 @@ function setupMappingsFeature() {
           f => f.id,
           true // Blank-Option
         );
-  
+
         if (currentEditing?.globalFieldId && globals.some(f => f.id === currentEditing.globalFieldId)) {
           selGlobal.value = currentEditing.globalFieldId;
         }
-  
+
         // 3) Paare erst jetzt
         renderPairs();
       }

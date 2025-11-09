@@ -854,54 +854,47 @@ Option 3" style="grid-column:1/-1; width:100%; padding:8px 10px; border-radius:8
   <div class="modal-dialog">
     <!-- Kopf -->
     <header class="modal-header">
-      <h3>Mapping bearbeiten</h3>
+      <h3>Map Data Fields</h3>
       <button id="mapEditClose" class="icon-btn" aria-label="Schließen">✕</button>
     </header>
 
     <!-- Inhalt -->
     <div class="modal-body map-editor">
-      <!-- Grunddaten -->
-      <div class="grid-2">
-        <label>
-          Legal Entity
-          <select id="mapEditLE">
+      <!-- 1. Local Data Field Section -->
+      <div class="field-section local-section">
+        <div class="field-section-header">
+          <span class="field-section-title">1. Select Local Data Field</span>
+        </div>
+        <div class="field-row">
+          <label class="field-label">Legal Entity</label>
+          <select id="mapEditLE" class="field-select">
             <option value="">— Select Legal Entity —</option>
           </select>
-        </label>
-        <label>
-          System
-          <select id="mapEditSystem">
-            <option value="">— Select System —</option>
+        </div>
+        <div class="field-row">
+          <label class="field-label">Local Field</label>
+          <select id="mapEditLocalField" class="field-select">
+            <option value="">— Select Local Field —</option>
           </select>
-        </label>
+        </div>
       </div>
 
-      <!-- Field Selection with Visual Separation -->
-      <div class="grid-2 field-selection-grid">
-        <div class="field-section local-section">
-          <div class="field-section-header">
-            <span class="field-section-step">1.</span>
-            <span class="field-section-title">Local System</span>
-          </div>
-          <label>
-            Select Local Field
-            <select id="mapEditLocalField">
-              <option value="">— Select Local Field —</option>
-            </select>
-          </label>
+      <!-- 2. Global Data Field Section -->
+      <div class="field-section global-section">
+        <div class="field-section-header">
+          <span class="field-section-title">2. Select Global Data Field</span>
         </div>
-        <div class="field-section global-section">
-          <div class="field-section-header">
-            <span class="field-section-arrow">→</span>
-            <span class="field-section-step">2.</span>
-            <span class="field-section-title">Global System</span>
-          </div>
-          <label>
-            Select Global Field
-            <select id="mapEditGlobalField">
-              <option value="">— Select Global Field —</option>
-            </select>
-          </label>
+        <div class="field-row">
+          <label class="field-label">System</label>
+          <select id="mapEditSystem" class="field-select">
+            <option value="">— Select System —</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label class="field-label">Global Field</label>
+          <select id="mapEditGlobalField" class="field-select">
+            <option value="">— Select Global Field —</option>
+          </select>
         </div>
       </div>
 
