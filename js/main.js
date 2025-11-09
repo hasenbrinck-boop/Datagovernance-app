@@ -5322,13 +5322,13 @@ function setupMappingsFeature() {
 
         // Actions
         const editBtn = document.createElement('button');
-        editBtn.className = 'icon-btn';
-        editBtn.textContent = '✎ Bearbeiten';
+        editBtn.className = 'btn btn--sm btn--ghost';
+        editBtn.textContent = '✎ Edit';
         editBtn.addEventListener('click', () => openEditor(m));
 
         const delBtn = document.createElement('button');
-        delBtn.className = 'icon-btn';
-        delBtn.textContent = 'Löschen';
+        delBtn.className = 'btn btn--sm btn--ghost';
+        delBtn.textContent = 'Delete';
         delBtn.addEventListener('click', () => {
           if (!confirm('Mapping wirklich löschen?')) return;
           state.mappings = state.mappings.filter(x => x.id !== m.id);
@@ -5338,7 +5338,7 @@ function setupMappingsFeature() {
           renderList();
         });
 
-        tdActions.append(editBtn, document.createTextNode(' '), delBtn);
+        tdActions.append(editBtn, delBtn);
 
         tr.append(tdLE, tdSYS, tdLocal, tdGlobal, tdLocalVal, tdGlobalVal, tdStatus, tdActions);
         tbody.append(tr);
