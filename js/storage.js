@@ -56,9 +56,12 @@ export function loadColumns() {
 }
 
 /* ---------------------------- Map Positions ---------------------------- */
+const STORAGE_KEY_DATA_OBJECT_POS = 'gdf_data_object_positions';
+
 export function savePositions() {
   try {
     storage.setItem(STORAGE_KEY_MAP_POS, JSON.stringify(state.mapPositions || {}));
+    storage.setItem(STORAGE_KEY_DATA_OBJECT_POS, JSON.stringify(state.dataObjectPositions || {}));
   } catch (err) {
     console.error('savePositions() failed', err);
   }
@@ -68,9 +71,13 @@ export function loadPositions() {
   try {
     const raw = storage.getItem(STORAGE_KEY_MAP_POS);
     state.mapPositions = raw ? (JSON.parse(raw) || {}) : (state.mapPositions || {});
+    
+    const rawDataObj = storage.getItem(STORAGE_KEY_DATA_OBJECT_POS);
+    state.dataObjectPositions = rawDataObj ? (JSON.parse(rawDataObj) || {}) : (state.dataObjectPositions || {});
   } catch (err) {
     console.error('loadPositions() failed', err);
     state.mapPositions = state.mapPositions || {};
+    state.dataObjectPositions = state.dataObjectPositions || {};
   }
 }
 

@@ -874,8 +874,8 @@
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     padding:10px 12px; border-bottom:1px solid var(--divider); user-select:none;
   }
-  .map-node-title{ font-weight:600 }
-  .map-node-count{ font-size: 0.875rem; color: var(--text-dim); font-weight: 500; }
+  .map-node-title{ font-weight:600; font-size: 1.05rem; }
+  .map-node-count{ font-size: 0.9rem; color: var(--text-dim); font-weight: 500; }
   .map-node-fields{ display:block; max-height:360px; overflow:auto }
   .map-node.is-collapsed .map-node-fields{ display:none }
   .map-field{
@@ -886,10 +886,21 @@
   .map-field .chev{ width:14px; height:14px; border-radius:3px; border:1px solid var(--divider); position:relative; background:#fff }
   .map-field .chev::before{ content:""; position:absolute; left:3px; right:3px; top:6px; height:2px; background:#64748b; border-radius:2px }
   .map-field.is-open .chev::after{ content:""; position:absolute; top:3px; bottom:3px; left:6px; width:2px; background:#64748b; border-radius:2px; opacity:.0 }
-  .map-field-name{ font-weight:500 }
-  .map-field-details{ display:none; padding:8px 12px 12px 12px; color:var(--text-dim); background:#fafafa }
+  .map-field-name{ font-weight:500; font-size: 0.95rem; }
+  .map-field-details{ display:none; padding:10px 14px 14px 14px; color:var(--text-dim); background:#fafafa }
   .map-field.is-open + .map-field-details{ display:block }
-  .map-field-details > div{ margin-bottom: 6px; font-size: 0.875rem; line-height: 1.4; }
+  .map-field-details > div{ margin-bottom: 8px; font-size: 0.9rem; line-height: 1.5; }
+  .map-field.is-highlight{ background:#eff4ff; outline:1px solid #d9e2ff }
+  .map-field.is-highlight .map-field-name{ font-weight:600 }
+  .map-field-badges{ display: flex; gap: 6px; align-items: center; }
+  .map-field-badges .badge{ 
+    font-size: 0.75rem; 
+    padding: 3px 8px; 
+    background: #e0e7ff; 
+    color: #4338ca; 
+    border-radius: 4px; 
+    font-weight: 500;
+  }
   .map-field.is-highlight{ background:#eff4ff; outline:1px solid #d9e2ff }
   .map-field.is-highlight .map-field-name{ font-weight:600 }
   
