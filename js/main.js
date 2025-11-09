@@ -5374,7 +5374,6 @@ function setupMappingsFeature() {
       const selSYS      = document.getElementById('mapEditSystem');
       const selLocal    = document.getElementById('mapEditLocalField');
       const selGlobal   = document.getElementById('mapEditGlobalField');
-      const selFallback = document.getElementById('mapEditFallback');
       const pairsTbody  = document.getElementById('mapPairsTbody');
       const btnAddGlobalValue = document.getElementById('mapAddGlobalAllowedValue');
       const btnClose    = document.getElementById('mapEditClose');
@@ -5386,7 +5385,6 @@ function setupMappingsFeature() {
       if (!selSYS)      missing.push('#mapEditSystem');
       if (!selLocal)    missing.push('#mapEditLocalField');
       if (!selGlobal)   missing.push('#mapEditGlobalField');
-      if (!selFallback) missing.push('#mapEditFallback');
       if (!pairsTbody)  missing.push('#mapPairsTbody');
       if (!btnSave)     missing.push('#mapEditSave');
       if (missing.length) {
@@ -5403,7 +5401,7 @@ function setupMappingsFeature() {
   
       function fillSelect(sel, items, getLabel = x => x, getValue = x => x, withBlank = false) {
         sel.innerHTML = '';
-        if (withBlank) sel.append(new Option('—', ''));
+        if (withBlank) sel.append(new Option('— Select —', ''));
         items.forEach(item => sel.append(new Option(getLabel(item), getValue(item))));
       }
   
@@ -5415,12 +5413,16 @@ function setupMappingsFeature() {
       const LE_LIST  = uniq(allLocalFields().map(f => String(f.legalEntityNumber || '')));
       const SYS_LIST = uniq(allLocalFields().map(f => String(f.system || '')));
   
-      fillSelect(selLE,  LE_LIST,  v => v, v => v);
-      fillSelect(selSYS, SYS_LIST, v => v, v => v);
+      fillSelect(selLE,  LE_LIST,  v => v, v => v, true);
+      fillSelect(selSYS, SYS_LIST, v => v, v => v, true);
   
-      // Vorbelegung (Editor > Filter > erste Option)
-      selLE.value  = (currentEditing?.legalEntityId) || (fLEFilter?.value  || LE_LIST[0]  || '');
-      selSYS.value = (currentEditing?.systemId)      || (fSYSFilter?.value || SYS_LIST[0] || '');
+      // Vorbelegung nur wenn wir editieren (nicht bei neuem Mapping)
+      if (currentEditing?.legalEntityId) {
+        selLE.value = currentEditing.legalEntityId;
+      }
+      if (currentEditing?.systemId) {
+        selSYS.value = currentEditing.systemId;
+      }
   
       // Locals nach LE+SYS (+ optional DO-Filter aus der Liste) filtern
       function candidateLocals() {
@@ -5451,13 +5453,6 @@ function setupMappingsFeature() {
         const gVals = globalFieldId ? (getAllowedValues?.(globalFieldId) || []) : [];
         const lVals = localFieldId  ? (getAllowedValues?.(localFieldId)  || []) : [];
   
-        // Fallback neu befüllen (nur globale Werte)
-        const prevFallback = selFallback.value || '';
-        selFallback.innerHTML = '';
-        selFallback.append(new Option('— (kein Fallback)', ''));
-        gVals.forEach(v => selFallback.append(new Option(v, v)));
-        if (prevFallback && gVals.includes(prevFallback)) selFallback.value = prevFallback;
-  
         // Tabelle
         pairsTbody.innerHTML = '';
   
@@ -5480,7 +5475,7 @@ function setupMappingsFeature() {
   
         // vorhandene Paare beim Editieren
         let vm = currentEditing?.id ? findValueMapByMappingId?.(currentEditing.id) : null;
-        if (!vm) vm = { id: `vmap_${Date.now()}`, fieldMappingId: currentEditing?.id || '__temp__', pairs: [], fallback: '' };
+        if (!vm) vm = { id: `vmap_${Date.now()}`, fieldMappingId: currentEditing?.id || '__temp__', pairs: [] };
         const toMap = new Map(vm.pairs.map(p => [p.from, p.to || '']));
   
         lVals.forEach(fromVal => {
@@ -5513,10 +5508,6 @@ function setupMappingsFeature() {
           tr.append(tdL, tdR);
           pairsTbody.append(tr);
         });
-  
-        selFallback.value = vm.fallback && gVals.includes(vm.fallback)
-          ? vm.fallback
-          : (selFallback.value || '');
       }
   
       // ---- Selects befüllen (reihenfolgenrichtig!)
@@ -5525,13 +5516,12 @@ function setupMappingsFeature() {
         const locals = candidateLocals();
         fillSelect(selLocal, locals,
           f => `${f.name} (${f.foundationObjectId || '-'})`,
-          f => f.id
+          f => f.id,
+          true // Blank-Option
         );
   
         if (currentEditing?.localFieldId && locals.some(f => f.id === currentEditing.localFieldId)) {
           selLocal.value = currentEditing.localFieldId;
-        } else if (!selLocal.value && locals.length) {
-          selLocal.value = locals[0].id;
         }
   
         // 2) Globals hängen von Local (DataObject) + System ab
@@ -5544,8 +5534,6 @@ function setupMappingsFeature() {
   
         if (currentEditing?.globalFieldId && globals.some(f => f.id === currentEditing.globalFieldId)) {
           selGlobal.value = currentEditing.globalFieldId;
-        } else {
-          selGlobal.value = globals[0]?.id || '';
         }
   
         // 3) Paare erst jetzt
@@ -5642,11 +5630,10 @@ function setupMappingsFeature() {
   
           let vm = findValueMapByMappingId?.(id);
           if (!vm) {
-            vm = { id: `vmap_${Date.now()}`, fieldMappingId: id, pairs: [], fallback: '' };
+            vm = { id: `vmap_${Date.now()}`, fieldMappingId: id, pairs: [] };
             state.valueMaps.push(vm);
           }
-          vm.pairs    = pairs;
-          vm.fallback = (selFallback.value || '');
+          vm.pairs = pairs;
           saveValueMaps?.(state.valueMaps);
   
           closeEditor();

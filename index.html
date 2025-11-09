@@ -864,46 +864,53 @@ Option 3" style="grid-column:1/-1; width:100%; padding:8px 10px; border-radius:8
       <div class="grid-2">
         <label>
           Legal Entity
-          <select id="mapEditLE"></select>
-        </label>
-        <label>
-          System
-          <select id="mapEditSystem"></select>
-        </label>
-      </div>
-
-      <div class="grid-2">
-        <label>
-          Local Field
-          <select id="mapEditLocalField"></select>
-        </label>
-        <label>
-          → Global Field
-          <select id="mapEditGlobalField"></select>
-        </label>
-      </div>
-
-      <div class="grid-2">
-        <label>
-          Mode
-          <select id="mapEditMode" disabled>
-            <option value="LOOKUP" selected>LOOKUP</option>
+          <select id="mapEditLE">
+            <option value="">— Select Legal Entity —</option>
           </select>
         </label>
         <label>
-          Fallback (Global Value)
-          <select id="mapEditFallback"></select>
+          System
+          <select id="mapEditSystem">
+            <option value="">— Select System —</option>
+          </select>
         </label>
       </div>
 
-      <!-- ===== Wert-Zuordnungen ===== -->
-      <h4 class="map-pairs-title">Wert-Zuordnungen</h4>
+      <!-- Field Selection with Visual Separation -->
+      <div class="grid-2 field-selection-grid">
+        <div class="field-section local-section">
+          <div class="field-section-header">
+            <span class="field-section-title">Local System</span>
+          </div>
+          <label>
+            Local Field
+            <select id="mapEditLocalField">
+              <option value="">— Select Local Field —</option>
+            </select>
+          </label>
+        </div>
+        <div class="field-section global-section">
+          <div class="field-section-header">
+            <span class="field-section-arrow">→</span>
+            <span class="field-section-title">Global System</span>
+          </div>
+          <label>
+            Global Field
+            <select id="mapEditGlobalField">
+              <option value="">— Select Global Field —</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- ===== Map Field Content ===== -->
+      <h4 class="map-pairs-title">Map Field Content</h4>
 
       <table class="table compact map-pairs">
         <thead>
           <tr>
-            <th>Local Allowed Value</th>
-            <th>→ Global Value</th>
+            <th>Local Field Content</th>
+            <th>→ Global Field Content</th>
           </tr>
         </thead>
         <tbody id="mapPairsTbody"></tbody>
