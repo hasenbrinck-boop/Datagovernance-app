@@ -319,7 +319,6 @@ const glossaryFieldRef = byId('gls-fieldRef');
 
 /* Top tabs & map */
 const topTabs = byId('topTabs');
-const adminTabs = byId('adminTabs');
 
 /* Data Map */
 const mapCanvas = byId('mapCanvas');
@@ -895,6 +894,13 @@ function showDataMapSubnav(show) {
   if (sys) sys.style.display = show ? 'none' : sys.style.display; // bei Data Map: Systems-Liste ausblenden
 }
 
+function showAdminSubnav(show) {
+  const sub = document.getElementById('adminSubnav');
+  const sys = document.getElementById('systemList');
+  if (sub) sub.style.display = show ? 'block' : 'none';
+  if (sys) sys.style.display = show ? 'none' : sys.style.display; // bei Admin: Systems-Liste ausblenden
+}
+
 function installDataMapSubnavHandlers() {
   const sub = document.getElementById('dataMapSubnav');
   if (!sub) return;
@@ -953,6 +959,34 @@ function installGlossarySubnavHandlers() {
   });
 }
 
+function installAdminSubnavHandlers() {
+  const sub = document.getElementById('adminSubnav');
+  if (!sub) return;
+  
+  let handlersInstalled = false;
+  if (sub.dataset.handlersInstalled === 'true') {
+    handlersInstalled = true;
+  }
+  
+  if (handlersInstalled) return;
+  
+  sub.querySelectorAll('.admin-nav-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      // Active-Style setzen
+      sub
+        .querySelectorAll('.admin-nav-item')
+        .forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+
+      // View wechseln
+      const target = btn.dataset.adminTab;
+      if (target) showAdminSubview(target);
+    });
+  });
+  
+  sub.dataset.handlersInstalled = 'true';
+}
+
 function getFilteredGlossaryItems() {
   const list = glossaryTerms.filter((g) => {
     if (!glossaryTypeFilter || glossaryTypeFilter === 'ALL') return true;
@@ -985,7 +1019,6 @@ function showOnly(mode) {
   const globalEl = byId('global');
   const localEl = byId('local');
   const mappingsEl = byId('mappings');
-  const adminTabsEl = byId('adminTabs');
   const mapViewEl = byId('mapView');
   const glossaryEl = byId('glossaryView');
 
@@ -994,7 +1027,6 @@ function showOnly(mode) {
   if (globalEl) globalEl.style.display = showSystems ? 'block' : 'none';
   if (localEl) localEl.style.display = showSystems ? 'block' : 'none';
   if (mappingsEl) mappingsEl.style.display = showSystems ? 'none' : 'none';
-  if (adminTabsEl) adminTabsEl.style.display = showAdmin ? 'flex' : 'none';
   if (mapViewEl) mapViewEl.style.display = showMap ? 'block' : 'none';
   if (glossaryEl) glossaryEl.style.display = showGlossary ? 'block' : 'none';
 
@@ -4367,6 +4399,7 @@ function initializeApp() {
       showOnly('dashboard');
       showGlossarySubnav(false);
       showDataMapSubnav(false);
+      showAdminSubnav(false);
       try {
         renderDashboard();
       } catch (e) {
@@ -4386,6 +4419,7 @@ function initializeApp() {
       showOnly('systems');
       showGlossarySubnav(false);
       showDataMapSubnav(false);
+      showAdminSubnav(false);
       setModeSystems('All Systems'); // rendert Sidebar + Tabellen
     });
     // Data Map
@@ -4394,6 +4428,7 @@ function initializeApp() {
       showOnly('map');
       showGlossarySubnav(false);
       showDataMapSubnav(true);
+      showAdminSubnav(false);
       installDataMapSubnavHandlers(); // View-Buttons einmalig anbinden
       try {
         renderDataMap();
@@ -4410,6 +4445,7 @@ function initializeApp() {
       showOnly('glossary');
       showGlossarySubnav(true);
       showDataMapSubnav(false);
+      showAdminSubnav(false);
       installGlossarySubnavHandlers(); // Filter-Buttons einmalig anbinden
       setupGlossaryTabs(); // Setup version tabs
 
@@ -4429,18 +4465,21 @@ function initializeApp() {
       showOnly('admin');
       showGlossarySubnav(false);
       showDataMapSubnav(false);
+      showAdminSubnav(true);
+      installAdminSubnavHandlers();
       try {
-        // Default-Tab wählen und rendern
-        const firstTab =
-          document.querySelector(
-            '#adminTabs .tab[data-admin-tab="admin-domains"]'
-          ) || document.querySelector('#adminTabs .tab');
-        if (firstTab) {
-          document
-            .querySelectorAll('#adminTabs .tab')
+        // Default-Tab wählen und rendern (Data Domains)
+        const adminSubnav = document.getElementById('adminSubnav');
+        if (adminSubnav) {
+          adminSubnav
+            .querySelectorAll('.admin-nav-item')
             .forEach((t) => t.classList.remove('is-active'));
-          firstTab.classList.add('is-active');
-          showAdminSubview(firstTab.dataset.adminTab || 'admin-domains');
+          const firstBtn = adminSubnav.querySelector('.admin-nav-item[data-admin-tab="admin-domains"]') 
+                        || adminSubnav.querySelector('.admin-nav-item');
+          if (firstBtn) {
+            firstBtn.classList.add('is-active');
+            showAdminSubview(firstBtn.dataset.adminTab || 'admin-domains');
+          }
         }
       } catch (e) {
         console.error(e);
@@ -4469,20 +4508,6 @@ function initializeApp() {
         } catch (e) {
           console.error(e);
         }
-      });
-    });
-
-    // =============================
-    //  Admin-Tabs
-    // =============================
-    document.querySelectorAll('#adminTabs .tab').forEach((tab) => {
-      tab.addEventListener('click', () => {
-        document
-          .querySelectorAll('#adminTabs .tab')
-          .forEach((t) => t.classList.remove('is-active'));
-        tab.classList.add('is-active');
-        const target = tab.dataset.adminTab;
-        if (target) showAdminSubview(target);
       });
     });
 

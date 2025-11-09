@@ -46,6 +46,15 @@
           <li><button class="gls-filter" data-type="Process">Process</button></li>
           <li><button class="gls-filter" data-type="System">System</button></li>
         </ul>
+
+        <!-- Admin Submenu (nur im Admin-Mode sichtbar) -->
+        <ul id="adminSubnav" class="sidebar-list" style="display:none">
+          <li><button class="admin-nav-item" data-admin-tab="admin-domains">Data Domains</button></li>
+          <li><button class="admin-nav-item" data-admin-tab="admin-systems">Systems</button></li>
+          <li><button class="admin-nav-item" data-admin-tab="admin-legal">Legal Entities</button></li>
+          <li><button class="admin-nav-item" data-admin-tab="admin-dataObjects">Data Objects</button></li>
+          <li><button class="admin-nav-item" data-admin-tab="admin-columns">Field Information</button></li>
+        </ul>
       </div>
     </aside>
 
@@ -350,15 +359,6 @@
           </table>
         </div>
       </section>
-
-      <!-- ===== Admin Tabs ===== -->
-      <div id="adminTabs" class="admin-tabs" style="display:none">
-        <button class="tab is-active" data-admin-tab="admin-domains">Data Domains</button>
-        <button class="tab" data-admin-tab="admin-systems">Systems</button>
-        <button class="tab" data-admin-tab="admin-legal">Legal Entities</button>
-        <button class="tab" data-admin-tab="admin-dataObjects">Data Objects</button>
-        <button class="tab" data-admin-tab="admin-columns">Field Information</button>
-      </div>
 
       <!-- ===== Admin: Systems ===== -->
       <section id="admin-systems" class="panel admin-view" style="display:none">
