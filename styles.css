@@ -275,6 +275,11 @@
     background: rgba(240,245,255,.4);
     cursor: pointer;
   }
+
+  /* Glossary "All Definitions" button bold */
+  .sidebar-list button.gls-filter[data-type="ALL"] {
+    font-weight: 600;
+  }
   
   /* =========================
      Main
