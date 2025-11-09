@@ -318,16 +318,16 @@
   
   .panel{
     background: var(--panel);
-    border:1px solid var(--divider);
+    border:1px solid rgba(229, 231, 235, 0.7);
     border-radius: var(--radius-l);
-    box-shadow: var(--shadow-1);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     overflow:hidden;
   }
   .panel-head{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     padding-inline: var(--content-pad);
     padding-block: 12px;
-    border-bottom:1px solid var(--divider);
+    border-bottom:1px solid rgba(229, 231, 235, 0.6);
   }
   .panel-title{ font-weight:600 }
   
