@@ -347,7 +347,7 @@ const GLOSSARY_COLUMNS = [
   { key: 'definition', label: 'Definition' },
   { key: 'info', label: 'Additional Information' },
   { key: 'owner', label: 'Responsible Process Owner' },
-  { key: 'fieldRef', label: 'Linked Data Field' },
+  { key: 'fieldRef', label: 'Used in Systems' },
 ];
 
 /* Fallback-Utils (nur einfügen, wenn bei dir nicht vorhanden) */
@@ -2095,6 +2095,24 @@ function formatGlossaryDetail(term) {
   )}"${title}>${label}</span>${definition}`;
 }
 
+/**
+ * Get all unique systems where a glossary term is used
+ * @param {string} glossaryId - The ID of the glossary term
+ * @returns {string[]} - Array of unique system names
+ */
+function getSystemsUsingGlossaryTerm(glossaryId) {
+  if (!glossaryId) return [];
+  
+  // Find all fields that reference this glossary term
+  const fieldsWithGlossary = fields.filter(f => f.glossaryId === glossaryId);
+  
+  // Extract unique system names
+  const systems = [...new Set(fieldsWithGlossary.map(f => f.system).filter(Boolean))];
+  
+  // Sort systems alphabetically
+  return systems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
 function renderGlossaryTable() {
   if (!glossaryTable) return;
   glossaryTable.innerHTML = '';
@@ -2111,22 +2129,18 @@ function renderGlossaryTable() {
   );
 
   list.forEach((g, i) => {
-    const linkedField = findFieldByFieldRef(g.fieldRefId || g.fieldRef || '');
-    const linkedLabel = linkedField
-      ? fieldRefLabel(linkedField)
-      : g.fieldRef || '';
-    if (linkedField && g.fieldRef !== linkedLabel) {
-      g.fieldRef = linkedLabel;
-    }
-    if (!linkedField && g.fieldRefId) {
-      g.fieldRefId = '';
-    }
+    // Get all systems using this glossary term
+    const systemsUsing = getSystemsUsingGlossaryTerm(g.id);
+    const systemsText = systemsUsing.length > 0 
+      ? systemsUsing.map(s => esc(s)).join('<br>') 
+      : '-';
+    
     const termText = g.term ? esc(g.term) : '-';
     const typeText = esc(g.type || 'Term');
     const defText = g.definition ? esc(g.definition) : '-';
     const infoText = g.info ? esc(g.info) : '-';
     const ownerText = g.owner ? esc(g.owner) : '-';
-    const refText = linkedLabel ? esc(linkedLabel) : '-';
+    
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${termText}</td>
@@ -2134,7 +2148,7 @@ function renderGlossaryTable() {
       <td>${defText}</td>
       <td>${infoText}</td>
       <td>${ownerText}</td>
-      <td>${refText}</td>
+      <td>${systemsText}</td>
       <td class="table-actions">
         <button data-index="${i}" class="glsEdit" title="Edit">
           <svg class="icon-16" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Z" fill="currentColor"/></svg>
@@ -6019,21 +6033,21 @@ function render3DPieChart(ctx, data) {
   ctx.clearRect(0, 0, width, height);
   
   const centerX = width / 2;
-  const centerY = height / 2 - 30; // Adjusted for 2D
-  const radius = Math.min(width, height) * 0.30; // Slightly larger for 2D
+  const centerY = height / 2; // Centered vertically now that legend is removed
+  const radius = Math.min(width, height) * 0.28; // Adjusted for better spacing
   
-  // Modern blue tones palette
+  // Modern blue tones palette - Apple style
   const baseColors = [
-    '#1E88E5', // Vibrant Blue
-    '#42A5F5', // Sky Blue
-    '#64B5F6', // Light Blue
-    '#2196F3', // Material Blue
-    '#1976D2', // Deep Blue
-    '#1565C0', // Dark Blue
-    '#0D47A1', // Navy Blue
-    '#0277BD', // Cyan Blue
-    '#0288D1', // Light Cyan Blue
-    '#03A9F4', // Bright Cyan Blue
+    '#007AFF', // Apple Blue
+    '#5AC8FA', // Light Blue
+    '#34C759', // Green
+    '#FF9500', // Orange
+    '#FF3B30', // Red
+    '#AF52DE', // Purple
+    '#FF2D55', // Pink
+    '#FFCC00', // Yellow
+    '#5856D6', // Indigo
+    '#00C7BE', // Teal
   ];
   
   let startAngle = -Math.PI / 2;
@@ -6060,7 +6074,7 @@ function render3DPieChart(ctx, data) {
     startAngle = endAngle;
   });
   
-  // Draw values and labels outside slices with connecting lines
+  // Draw labels with values and percentages outside slices
   startAngle = -Math.PI / 2;
   labels.forEach((label, i) => {
     const value = values[i];
@@ -6072,8 +6086,8 @@ function render3DPieChart(ctx, data) {
     const edgeX = centerX + Math.cos(midAngle) * radius;
     const edgeY = centerY + Math.sin(midAngle) * radius;
     
-    // Position for label (outside the pie)
-    const labelDistance = radius * 1.4;
+    // Position for label (outside the pie) - increased distance for better spacing
+    const labelDistance = radius * 1.55;
     const labelX = centerX + Math.cos(midAngle) * labelDistance;
     const labelY = centerY + Math.sin(midAngle) * labelDistance;
     
@@ -6093,54 +6107,31 @@ function render3DPieChart(ctx, data) {
     ctx.lineTo(elbowX, elbowY);
     
     // Horizontal extension
-    const extendX = isRightSide ? labelX - 10 : labelX + 10;
+    const extendX = isRightSide ? labelX - 15 : labelX + 15;
     ctx.lineTo(extendX, labelY);
     ctx.stroke();
     
-    // Draw value (bold)
+    // Draw label text (category name) - above the numbers
     ctx.fillStyle = '#1E1E1E';
-    ctx.font = 'bold 16px -apple-system, system-ui, sans-serif';
+    ctx.font = '600 15px -apple-system, system-ui, sans-serif';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(`${value}`, labelX, labelY - 2);
+    ctx.fillText(label, labelX, labelY - 18);
     
-    // Draw percentage (in parentheses, below)
-    ctx.font = '400 13px -apple-system, system-ui, sans-serif';
-    ctx.fillStyle = '#86868B';
+    // Draw value and percentage on same line - below label
+    ctx.fillStyle = '#1E1E1E';
+    ctx.font = 'bold 17px -apple-system, system-ui, sans-serif';
     ctx.textBaseline = 'top';
-    ctx.fillText(`(${percentage}%)`, labelX, labelY + 2);
+    ctx.fillText(`${value}`, labelX, labelY - 6);
+    
+    // Draw percentage (next to value)
+    const valueWidth = ctx.measureText(`${value}`).width;
+    ctx.font = '500 14px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#86868B';
+    const percentText = ` (${percentage}%)`;
+    const percentX = isRightSide ? labelX + valueWidth + 4 : labelX - valueWidth - 4 - ctx.measureText(percentText).width;
+    ctx.fillText(percentText, percentX, labelY - 4);
     
     startAngle += sliceAngle;
-  });
-  
-  // Draw elegant legend at bottom
-  const legendY = height - 50;
-  const legendItemHeight = 25;
-  const legendItemsPerRow = Math.min(labels.length, 3);
-  const rows = Math.ceil(labels.length / legendItemsPerRow);
-  
-  labels.forEach((label, i) => {
-    const row = Math.floor(i / legendItemsPerRow);
-    const col = i % legendItemsPerRow;
-    
-    ctx.font = '300 15px -apple-system, system-ui, sans-serif';
-    const itemWidth = 180;
-    const totalRowWidth = legendItemsPerRow * itemWidth;
-    const legendX = (width - totalRowWidth) / 2 + col * itemWidth;
-    const legendYPos = legendY + row * legendItemHeight;
-    
-    // Color indicator (small circle)
-    ctx.fillStyle = baseColors[i % baseColors.length];
-    ctx.beginPath();
-    ctx.arc(legendX + 6, legendYPos, 5, 0, 2 * Math.PI);
-    ctx.fill();
-    
-    // Label text with value
-    ctx.fillStyle = '#86868B';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    const percentage = Math.round((values[i] / total) * 100);
-    const text = `${label} (${values[i]})`;
-    ctx.fillText(text, legendX + 18, legendYPos);
   });
 }
 
