@@ -2104,7 +2104,10 @@ function getSystemsUsingGlossaryTerm(glossaryId) {
   if (!glossaryId) return [];
   
   // Find all fields that reference this glossary term
-  const fieldsWithGlossary = fields.filter(f => f.glossaryId === glossaryId);
+  // Check both glossaryId (runtime) and glossaryRef (initial data)
+  const fieldsWithGlossary = fields.filter(f => 
+    f.glossaryId === glossaryId || f.glossaryRef === glossaryId
+  );
   
   // Extract unique system names
   const systems = [...new Set(fieldsWithGlossary.map(f => f.system).filter(Boolean))];
