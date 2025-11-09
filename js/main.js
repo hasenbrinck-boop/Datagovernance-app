@@ -984,6 +984,7 @@ function showOnly(mode) {
   const topTabsEl = byId('topTabs');
   const globalEl = byId('global');
   const localEl = byId('local');
+  const mappingsEl = byId('mappings');
   const adminTabsEl = byId('adminTabs');
   const mapViewEl = byId('mapView');
   const glossaryEl = byId('glossaryView');
@@ -992,6 +993,7 @@ function showOnly(mode) {
   if (topTabsEl) topTabsEl.style.display = showSystems ? 'flex' : 'none';
   if (globalEl) globalEl.style.display = showSystems ? 'block' : 'none';
   if (localEl) localEl.style.display = showSystems ? 'block' : 'none';
+  if (mappingsEl) mappingsEl.style.display = showSystems ? 'none' : 'none';
   if (adminTabsEl) adminTabsEl.style.display = showAdmin ? 'flex' : 'none';
   if (mapViewEl) mapViewEl.style.display = showMap ? 'block' : 'none';
   if (glossaryEl) glossaryEl.style.display = showGlossary ? 'block' : 'none';
@@ -6033,7 +6035,7 @@ function render3DPieChart(ctx, data) {
     startAngle = endAngle;
   });
   
-  // Draw values inside slices to avoid overlaps
+  // Draw values and labels outside slices with connecting lines
   startAngle = -Math.PI / 2;
   labels.forEach((label, i) => {
     const value = values[i];
@@ -6041,22 +6043,46 @@ function render3DPieChart(ctx, data) {
     const midAngle = startAngle + sliceAngle / 2;
     const percentage = Math.round((value / total) * 100);
     
-    // Only show label if slice is large enough (>5%)
-    if (percentage >= 5) {
-      // Position label inside the slice
-      const labelDistance = radius * 0.65;
-      const textX = centerX + Math.cos(midAngle) * labelDistance;
-      const textY = centerY + Math.sin(midAngle) * labelDistance;
-      
-      // Draw white text inside slices
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 18px -apple-system, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`${value}`, textX, textY - 8);
-      ctx.font = '500 14px -apple-system, system-ui, sans-serif';
-      ctx.fillText(`${percentage}%`, textX, textY + 10);
-    }
+    // Position for connection point on pie edge
+    const edgeX = centerX + Math.cos(midAngle) * radius;
+    const edgeY = centerY + Math.sin(midAngle) * radius;
+    
+    // Position for label (outside the pie)
+    const labelDistance = radius * 1.4;
+    const labelX = centerX + Math.cos(midAngle) * labelDistance;
+    const labelY = centerY + Math.sin(midAngle) * labelDistance;
+    
+    // Determine text alignment based on which side of the chart
+    const isRightSide = Math.cos(midAngle) > 0;
+    ctx.textAlign = isRightSide ? 'left' : 'right';
+    
+    // Draw connection line from edge to label
+    ctx.strokeStyle = '#86868B';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(edgeX, edgeY);
+    
+    // Draw elbow line
+    const elbowX = centerX + Math.cos(midAngle) * (radius * 1.15);
+    const elbowY = centerY + Math.sin(midAngle) * (radius * 1.15);
+    ctx.lineTo(elbowX, elbowY);
+    
+    // Horizontal extension
+    const extendX = isRightSide ? labelX - 10 : labelX + 10;
+    ctx.lineTo(extendX, labelY);
+    ctx.stroke();
+    
+    // Draw value (bold)
+    ctx.fillStyle = '#1E1E1E';
+    ctx.font = 'bold 16px -apple-system, system-ui, sans-serif';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`${value}`, labelX, labelY - 2);
+    
+    // Draw percentage (in parentheses, below)
+    ctx.font = '400 13px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = '#86868B';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`(${percentage}%)`, labelX, labelY + 2);
     
     startAngle += sliceAngle;
   });
