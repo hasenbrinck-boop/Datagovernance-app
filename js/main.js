@@ -748,6 +748,11 @@ function pickGlossaryForField(fieldIndex) {
     saveFields(); // <— neu
     renderFieldsTable();
     if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+    // Update dashboard metrics
+    if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+    if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
+    // Dispatch event for consistency
+    document.dispatchEvent(new CustomEvent('gdf:fields-updated'));
     return;
   }
 
@@ -762,6 +767,11 @@ function pickGlossaryForField(fieldIndex) {
   saveFields(); // <— neu
   renderFieldsTable();
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+  // Update dashboard metrics
+  if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+  if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
+  // Dispatch event for consistency
+  document.dispatchEvent(new CustomEvent('gdf:fields-updated'));
 }
 /* ================= Sidebar ================= */
 function renderSystemsSidebar() {
@@ -5850,8 +5860,8 @@ function updateDashboardMetrics() {
   updateMetricValue('metricLocalFields', localFields);
   updateMetricValue('metricTotalFields', totalFields);
   
-  // Definitions metrics
-  const fieldsWithDef = filteredFields.filter(f => f.glossaryRef).length;
+  // Definitions metrics - Check both glossaryId (runtime) and glossaryRef (initial data)
+  const fieldsWithDef = filteredFields.filter(f => f.glossaryId || f.glossaryRef).length;
   const fieldsWithoutDef = totalFields - fieldsWithDef;
   const defCoverage = totalFields > 0 ? Math.round((fieldsWithDef / totalFields) * 100) : 0;
   
@@ -5861,7 +5871,7 @@ function updateDashboardMetrics() {
   
   // Glossary metrics - Count fields that reference glossary terms
   const totalGlossaryTerms = glossaryTerms.length;
-  const linkedFields = filteredFields.filter(f => f.glossaryRef && f.glossaryRef !== '').length;
+  const linkedFields = filteredFields.filter(f => (f.glossaryId && f.glossaryId !== '') || (f.glossaryRef && f.glossaryRef !== '')).length;
   
   updateMetricValue('metricGlossaryTerms', totalGlossaryTerms);
   updateMetricValue('metricLinkedFields', linkedFields);
@@ -5917,7 +5927,8 @@ function renderDefinitionsChart() {
   const { filteredFields } = getFilteredData();
   const ctx = canvas.getContext('2d');
   
-  const withDef = filteredFields.filter(f => f.glossaryRef).length;
+  // Check both glossaryId (runtime) and glossaryRef (initial data)
+  const withDef = filteredFields.filter(f => f.glossaryId || f.glossaryRef).length;
   const withoutDef = filteredFields.length - withDef;
   
   const data = {
@@ -6283,13 +6294,15 @@ function showDetailsOverlay(type, position = null) {
       
     case 'with-definition':
       titleText = 'Fields With Definition';
-      dataToShow = filteredFields.filter(f => f.glossaryRef);
+      // Check both glossaryId (runtime) and glossaryRef (initial data)
+      dataToShow = filteredFields.filter(f => f.glossaryId || f.glossaryRef);
       content = renderFieldsDetails(dataToShow);
       break;
       
     case 'without-definition':
       titleText = 'Fields Without Definition';
-      dataToShow = filteredFields.filter(f => !f.glossaryRef);
+      // Check both glossaryId (runtime) and glossaryRef (initial data)
+      dataToShow = filteredFields.filter(f => !f.glossaryId && !f.glossaryRef);
       content = renderFieldsDetails(dataToShow);
       break;
       
@@ -6300,7 +6313,8 @@ function showDetailsOverlay(type, position = null) {
       
     case 'linked-fields':
       titleText = 'Fields with Glossary Links';
-      dataToShow = filteredFields.filter(f => f.glossaryRef && f.glossaryRef !== '');
+      // Check both glossaryId (runtime) and glossaryRef (initial data)
+      dataToShow = filteredFields.filter(f => (f.glossaryId && f.glossaryId !== '') || (f.glossaryRef && f.glossaryRef !== ''));
       content = renderFieldsDetails(dataToShow);
       break;
     
@@ -6454,12 +6468,14 @@ function renderDefinitionsDetails(fields) {
         </thead>
         <tbody>
           ${fields.map(f => {
-            const glossaryTerm = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
+            // Check both glossaryId (runtime) and glossaryRef (initial data)
+            const glossaryTermId = f.glossaryId || f.glossaryRef;
+            const glossaryTerm = glossaryTermId ? glossaryTerms.find(t => t.id === glossaryTermId) : null;
             return `
               <tr>
                 <td><strong>${escapeHtml(f.name)}</strong></td>
                 <td>${escapeHtml(f.system)}</td>
-                <td>${f.glossaryRef ? 'Yes' : 'No'}</td>
+                <td>${glossaryTermId ? 'Yes' : 'No'}</td>
                 <td>${glossaryTerm ? escapeHtml(glossaryTerm.term) : '—'}</td>
               </tr>
             `;
@@ -6605,8 +6621,10 @@ function showDashboardDetails(type) {
       title = 'Fields by Definition Status';
       headers = ['Field Name', 'System', 'Has Definition', 'Glossary Term'];
       rows = filteredFields.map(f => {
-        const term = f.glossaryRef ? glossaryTerms.find(t => t.id === f.glossaryRef) : null;
-        return [f.name, f.system, f.glossaryRef ? 'Yes' : 'No', term?.term || '-'];
+        // Check both glossaryId (runtime) and glossaryRef (initial data)
+        const glossaryTermId = f.glossaryId || f.glossaryRef;
+        const term = glossaryTermId ? glossaryTerms.find(t => t.id === glossaryTermId) : null;
+        return [f.name, f.system, glossaryTermId ? 'Yes' : 'No', term?.term || '-'];
       });
       break;
       
