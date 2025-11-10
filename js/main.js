@@ -1040,9 +1040,18 @@ function showOnly(mode) {
 
   if (dashboardEl) dashboardEl.style.display = showDashboard ? 'block' : 'none';
   if (topTabsEl) topTabsEl.style.display = showSystems ? 'flex' : 'none';
-  if (globalEl) globalEl.style.display = showSystems ? 'block' : 'none';
-  if (localEl) localEl.style.display = showSystems ? 'block' : 'none';
-  if (mappingsEl) mappingsEl.style.display = showSystems ? 'none' : 'none';
+  
+  // Hide/show system sub-tabs based on mode
+  if (showSystems) {
+    // When entering systems mode, show the active tab (or default to global)
+    // This is handled by showMainView, so we don't need to do anything here
+  } else {
+    // When leaving systems mode, hide all system sub-tabs
+    if (globalEl) globalEl.style.display = 'none';
+    if (localEl) localEl.style.display = 'none';
+    if (mappingsEl) mappingsEl.style.display = 'none';
+  }
+  
   if (mapViewEl) mapViewEl.style.display = showMap ? 'block' : 'none';
   if (glossaryEl) glossaryEl.style.display = showGlossary ? 'block' : 'none';
 
@@ -1083,17 +1092,16 @@ function setupTopTabs() {
 function showMainView(tabId) {
   const secGlobal   = document.getElementById('global');
   const secLocal    = document.getElementById('local');
-  const secMappings = document.getElementById('systems-mappings-section');
+  const secMappings = document.getElementById('mappings');
 
   // Helper
   const show = (el) => { if (!el) return; el.hidden = false; el.style.display = ''; el.classList.add('is-active'); };
   const hide = (el) => { if (!el) return; el.classList.remove('is-active'); el.style.display = 'none'; };
-  const hideHidden = (el) => { if (!el) return; el.hidden = true; el.style.display = 'none'; };
 
   // Alles aus
   hide(secGlobal);
   hide(secLocal);
-  hideHidden(secMappings); // Mappings per hidden steuern
+  hide(secMappings);
 
   // Ziel an
   switch ((tabId || '').toLowerCase()) {
@@ -1114,7 +1122,7 @@ function showMainView(tabId) {
       break;
 
     case 'mappings':
-      if (secMappings) { secMappings.hidden = false; secMappings.style.display = ''; }
+      show(secMappings);
       // Initialisierung: akzeptiere beide Varianten (IIFE oder Funktion)
       if (!window.__mappingsInit) {
         if (typeof window.setupMappingsFeature === 'function') {
@@ -5398,8 +5406,8 @@ function setupMappingsFeature() {
         const tdStatus    = document.createElement('td');
         const tdActions   = document.createElement('td');
 
-        // Klassen setzen (für Styles/Monospace/Fixed widths etc.)
-        tdLE.className        = 'col-le mono';
+        // Klassen setzen (für Styles/Fixed widths etc.)
+        tdLE.className        = 'col-le';
         tdSYS.className       = 'col-system';
         tdLocal.className     = 'col-local';
         tdGlobal.className    = 'col-global';
@@ -5754,6 +5762,17 @@ function setupMappingsFeature() {
 
 // 6) Filter-Events
 [fLE, fSYS, fDO].forEach(sel => sel && sel.addEventListener('change', renderList));
+
+// Clear Filters button
+const btnClearFilters = document.getElementById('mapResetFilters');
+if (btnClearFilters) {
+  btnClearFilters.addEventListener('click', () => {
+    if (fLE) fLE.value = '';
+    if (fSYS) fSYS.value = '';
+    if (fDO) fDO.value = '';
+    renderList();
+  });
+}
 
 // 7) „+ New Mapping“ – immer öffnen
 if (addBtn) {

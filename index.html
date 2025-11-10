@@ -284,16 +284,26 @@
           </div>
 
           <div class="panel-body">
-            <div class="filters-row">
-              <label>Legal Entity
-                <select id="mapFilterLE"></select>
-              </label>
-              <label>System
-                <select id="mapFilterSystem"></select>
-              </label>
-              <label>Data Object
-                <select id="mapFilterDO"></select>
-              </label>
+            <div class="dashboard-filters">
+              <div class="filter-group">
+                <label for="mapFilterLE">Legal Entity:</label>
+                <select id="mapFilterLE" class="filter-select">
+                  <option value="">All Legal Entities</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="mapFilterSystem">System:</label>
+                <select id="mapFilterSystem" class="filter-select">
+                  <option value="">All Systems</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="mapFilterDO">Data Object:</label>
+                <select id="mapFilterDO" class="filter-select">
+                  <option value="">All Data Objects</option>
+                </select>
+              </div>
+              <button id="mapResetFilters" class="btn btn--ghost btn--sm">Clear Filters</button>
             </div>
 
             <table id="mappingsTable" class="table table--mappings">
@@ -948,65 +958,6 @@ Option 3"></textarea>
 
   <!-- Script -->
   <script type="module" src="js/main.js"></script>
-  <!-- Optional: schnelles Tab-Switching, falls nicht bereits in main.js -->
-  <script>
-    (function setupSystemsTabs(){
-      const tabs    = document.querySelectorAll('#topTabs .tab');
-      const panels  = [
-        document.getElementById('global'),
-        document.getElementById('local'),
-        document.getElementById('mappings')
-      ];
-  
-      function show(tabId){
-        panels.forEach(p => {
-          if (!p) return;
-          p.style.display = (p.id === tabId) ? '' : 'none';
-        });
-        tabs.forEach(b => b.classList.toggle('is-active', b.dataset.tab === tabId));
-      }
-  
-      // Klick-Handler
-      tabs.forEach(btn => {
-        btn.addEventListener('click', () => show(btn.dataset.tab));
-      });
-  
-      // Initialzustand (nur "global" sichtbar)
-      show('global');
-  
-      // global zugänglich machen, falls du woanders umschalten willst
-      window.__showSystemsTab = show;
-    })();
-  </script>
-<script>
-  (function guardSystemsPanels(){
-    const IDs = ['global','local','mappings'];
-    const panels = IDs.map(id => document.getElementById(id));
-
-    function hideSystemsPanels(){
-      panels.forEach(p => { if (p) p.style.display = 'none'; });
-    }
-
-    function onMainViewChanged(){
-      // Wenn die Systems-Untertabs (TopTabs) nicht sichtbar sind -> alles verstecken
-      const topTabs = document.getElementById('topTabs');
-      const systemsTabsVisible = !!(topTabs && topTabs.offsetParent);
-      if (!systemsTabsVisible) hideSystemsPanels();
-    }
-
-    // Auf Klicks der Hauptnavigation hören
-    ['systemsNavItem','dataMapNavItem','glossaryNavItem','adminNavItem'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('click', () => setTimeout(onMainViewChanged, 0));
-    });
-
-    // Auch auf ein eigenes Event hören (siehe Schritt 2)
-    document.addEventListener('gdf:close-mapping-modal', onMainViewChanged);
-
-    // öffentlich (falls du es woanders aufrufen willst)
-    window.__hideSystemsPanels = hideSystemsPanels;
-  })();
-</script>
 
   </body>
   </html>
