@@ -5935,6 +5935,13 @@ function updateMetricValue(elementId, value) {
   }
 }
 
+// Store chart instances for proper cleanup
+const chartInstances = {
+  dataObjects: null,
+  definitions: null,
+  domains: null
+};
+
 function renderDashboardCharts() {
   renderDataObjectsChart();
   renderDefinitionsChart();
@@ -5946,7 +5953,6 @@ function renderDataObjectsChart() {
   if (!canvas) return;
   
   const { filteredFields } = getFilteredData();
-  const ctx = canvas.getContext('2d');
   
   // Count fields per data object
   const dataObjectCounts = {};
@@ -5959,7 +5965,7 @@ function renderDataObjectsChart() {
     }
   });
   
-  render3DPieChart(ctx, dataObjectCounts);
+  renderAppleDoughnutChart(canvas, dataObjectCounts, 'dataObjects');
 }
 
 function renderDefinitionsChart() {
@@ -5967,7 +5973,6 @@ function renderDefinitionsChart() {
   if (!canvas) return;
   
   const { filteredFields } = getFilteredData();
-  const ctx = canvas.getContext('2d');
   
   // Check both glossaryId (runtime) and glossaryRef (initial data)
   const withDef = filteredFields.filter(f => f.glossaryId || f.glossaryRef).length;
@@ -5978,7 +5983,7 @@ function renderDefinitionsChart() {
     'Without Definition': withoutDef
   };
   
-  render3DPieChart(ctx, data);
+  renderAppleDoughnutChart(canvas, data, 'definitions');
 }
 
 function renderDomainsChart() {
@@ -5986,7 +5991,6 @@ function renderDomainsChart() {
   if (!canvas) return;
   
   const { filteredSystems } = getFilteredData();
-  const ctx = canvas.getContext('2d');
   
   // Count systems per domain
   const domainCounts = {};
@@ -5995,7 +5999,7 @@ function renderDomainsChart() {
     domainCounts[domain] = (domainCounts[domain] || 0) + 1;
   });
   
-  render3DPieChart(ctx, domainCounts);
+  renderAppleDoughnutChart(canvas, domainCounts, 'domains');
 }
 
 function renderSimpleBarChart(ctx, data, title) {
@@ -6086,63 +6090,70 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function render3DPieChart(ctx, data) {
-  const CHART_HEIGHT = 340;
-  
-  const canvas = ctx.canvas;
-  const width = canvas.width = canvas.offsetWidth * 2;
-  const height = canvas.height = CHART_HEIGHT;
+function renderAppleDoughnutChart(canvas, data, chartKey) {
+  if (!canvas) return;
   
   const labels = Object.keys(data);
   const values = Object.values(data);
   const total = values.reduce((sum, v) => sum + v, 0);
   
-  if (total === 0) {
+  const ctx = canvas.getContext('2d');
+  
+  // Set canvas size with device pixel ratio for sharp rendering
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 280 * dpr;
+  ctx.scale(dpr, dpr);
+  
+  const width = rect.width;
+  const height = 280;
+  
+  // Handle empty data
+  if (total === 0 || labels.length === 0) {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = '#86868B';
-    ctx.font = '300 18px -apple-system, system-ui, sans-serif';
+    ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('No data', width / 2, height / 2);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No data available', width / 2, height / 2);
     return;
   }
   
   ctx.clearRect(0, 0, width, height);
   
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = Math.min(width, height) * 0.28;
-  
-  // Modern blue tones palette - Apple style
-  const baseColors = [
-    '#007AFF', // Apple Blue
-    '#5AC8FA', // Light Blue
-    '#34C759', // Green
-    '#FF9500', // Orange
-    '#FF3B30', // Red
-    '#AF52DE', // Purple
-    '#FF2D55', // Pink
-    '#FFCC00', // Yellow
-    '#5856D6', // Indigo
-    '#00C7BE', // Teal
+  // Apple-inspired color palette
+  const appleColors = [
+    '#007AFF', '#5AC8FA', '#34C759', '#FF9500', '#FF3B30',
+    '#AF52DE', '#FF2D55', '#FFCC00', '#5856D6', '#00C7BE',
+    '#0A84FF', '#30D158'
   ];
   
+  const colors = labels.map((_, i) => appleColors[i % appleColors.length]);
+  
+  // Chart layout
+  const centerX = width * 0.35;
+  const centerY = height / 2;
+  const radius = Math.min(centerX, height / 2) * 0.7;
+  const innerRadius = radius * 0.65; // Doughnut hole
+  
+  // Draw doughnut chart
   let startAngle = -Math.PI / 2;
   
-  // Draw flat 2D pie chart
   labels.forEach((label, i) => {
     const value = values[i];
     const sliceAngle = (value / total) * 2 * Math.PI;
     const endAngle = startAngle + sliceAngle;
     
-    // Draw slice with flat color
-    ctx.fillStyle = baseColors[i % baseColors.length];
+    // Draw doughnut slice
+    ctx.fillStyle = colors[i];
     ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+    ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
     ctx.closePath();
     ctx.fill();
     
-    // Add white stroke for separation
+    // White stroke for separation
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 3;
     ctx.stroke();
@@ -6150,118 +6161,90 @@ function render3DPieChart(ctx, data) {
     startAngle = endAngle;
   });
   
-  // Calculate initial label positions
-  startAngle = -Math.PI / 2;
-  const labelData = labels.map((label, i) => {
+  // Draw legend on the right side
+  const legendX = width * 0.58;
+  const legendY = height / 2 - (labels.length * 32) / 2;
+  const legendItemHeight = 32;
+  
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  
+  labels.forEach((label, i) => {
     const value = values[i];
-    const sliceAngle = (value / total) * 2 * Math.PI;
-    const midAngle = startAngle + sliceAngle / 2;
-    const percentage = Math.round((value / total) * 100);
+    const percentage = ((value / total) * 100).toFixed(1);
+    const y = legendY + i * legendItemHeight;
     
-    // Position for connection point on pie edge
-    const edgeX = centerX + Math.cos(midAngle) * radius;
-    const edgeY = centerY + Math.sin(midAngle) * radius;
+    // Draw color indicator (small circle)
+    ctx.fillStyle = colors[i];
+    ctx.beginPath();
+    ctx.arc(legendX, y, 5, 0, 2 * Math.PI);
+    ctx.fill();
     
-    // Position for label (outside the pie) - increased distance for better spacing
-    const labelDistance = radius * 1.55;
-    const labelX = centerX + Math.cos(midAngle) * labelDistance;
-    let labelY = centerY + Math.sin(midAngle) * labelDistance;
+    // Draw label text
+    ctx.fillStyle = '#1E1E1E';
+    ctx.font = '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(label, legendX + 15, y - 6);
     
-    // Determine text alignment based on which side of the chart
-    const isRightSide = Math.cos(midAngle) > 0;
-    
-    startAngle += sliceAngle;
-    
-    return {
-      label,
-      value,
-      percentage,
-      midAngle,
-      edgeX,
-      edgeY,
-      labelX,
-      labelY,
-      isRightSide,
-      sliceAngle
-    };
+    // Draw value and percentage
+    ctx.fillStyle = '#86868B';
+    ctx.font = '500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`${value} (${percentage}%)`, legendX + 15, y + 8);
   });
   
-  // Apply collision detection and adjust overlapping labels
-  const minVerticalSpacing = 45; // Minimum pixels between label centers
-  
-  // Sort labels by y-position for each side separately
-  const leftLabels = labelData.filter(d => !d.isRightSide).sort((a, b) => a.labelY - b.labelY);
-  const rightLabels = labelData.filter(d => d.isRightSide).sort((a, b) => a.labelY - b.labelY);
-  
-  // Adjust positions to prevent overlap
-  const adjustLabelPositions = (labels) => {
-    for (let i = 1; i < labels.length; i++) {
-      const current = labels[i];
-      const previous = labels[i - 1];
-      const gap = current.labelY - previous.labelY;
-      
-      if (gap < minVerticalSpacing) {
-        current.labelY = previous.labelY + minVerticalSpacing;
-      }
-    }
-    
-    // Also check from bottom to top to prevent labels from going too far down
-    for (let i = labels.length - 2; i >= 0; i--) {
-      const current = labels[i];
-      const next = labels[i + 1];
-      const gap = next.labelY - current.labelY;
-      
-      if (gap < minVerticalSpacing) {
-        current.labelY = next.labelY - minVerticalSpacing;
-      }
-    }
+  // Add hover effect storage
+  canvas.chartData = {
+    labels,
+    values,
+    colors,
+    total,
+    centerX,
+    centerY,
+    radius,
+    innerRadius
   };
   
-  adjustLabelPositions(leftLabels);
-  adjustLabelPositions(rightLabels);
+  // Add mouse move handler for hover effects
+  if (!canvas.hasMouseMoveListener) {
+    canvas.addEventListener('mousemove', handleChartHover);
+    canvas.hasMouseMoveListener = true;
+  }
+}
+
+function handleChartHover(e) {
+  const canvas = e.target;
+  const chartData = canvas.chartData;
+  if (!chartData) return;
   
-  // Draw labels with adjusted positions
-  labelData.forEach((data) => {
-    const { label, value, percentage, edgeX, edgeY, labelX, labelY, isRightSide } = data;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  
+  const { centerX, centerY, radius, innerRadius, labels, values, colors, total } = chartData;
+  
+  // Calculate distance from center
+  const dx = x - centerX;
+  const dy = y - centerY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  
+  // Check if mouse is over doughnut
+  if (distance >= innerRadius && distance <= radius) {
+    const angle = Math.atan2(dy, dx);
+    const normalizedAngle = (angle + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
     
-    ctx.textAlign = isRightSide ? 'left' : 'right';
-    
-    // Draw connection line from edge to label
-    ctx.strokeStyle = '#86868B';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(edgeX, edgeY);
-    
-    // Draw elbow line
-    const elbowX = centerX + Math.cos(data.midAngle) * (radius * 1.15);
-    const elbowY = centerY + Math.sin(data.midAngle) * (radius * 1.15);
-    ctx.lineTo(elbowX, elbowY);
-    
-    // Horizontal extension to adjusted label position
-    const extendX = isRightSide ? labelX - 15 : labelX + 15;
-    ctx.lineTo(extendX, labelY);
-    ctx.stroke();
-    
-    // Draw label text (category name) - above the numbers
-    ctx.fillStyle = '#1E1E1E';
-    ctx.font = '600 15px -apple-system, system-ui, sans-serif';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(label, labelX, labelY - 18);
-    
-    // Draw value and percentage on same line - below label
-    ctx.fillStyle = '#1E1E1E';
-    ctx.font = 'bold 17px -apple-system, system-ui, sans-serif';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`${value}`, labelX, labelY - 6);
-    
-    // Draw percentage (next to value)
-    const valueWidth = ctx.measureText(`${value}`).width;
-    ctx.font = '500 14px -apple-system, system-ui, sans-serif';
-    ctx.fillStyle = '#86868B';
-    const percentText = ` (${percentage}%)`;
-    const percentX = isRightSide ? labelX + valueWidth + 4 : labelX - valueWidth - 4 - ctx.measureText(percentText).width;
-    ctx.fillText(percentText, percentX, labelY - 4);
-  });
+    // Find which slice we're hovering over
+    let accumulatedAngle = 0;
+    for (let i = 0; i < labels.length; i++) {
+      const sliceAngle = (values[i] / total) * 2 * Math.PI;
+      if (normalizedAngle >= accumulatedAngle && normalizedAngle < accumulatedAngle + sliceAngle) {
+        canvas.style.cursor = 'pointer';
+        // Could add tooltip here in the future
+        return;
+      }
+      accumulatedAngle += sliceAngle;
+    }
+  }
+  
+  canvas.style.cursor = 'default';
 }
 
 function setupDashboardHandlers() {
