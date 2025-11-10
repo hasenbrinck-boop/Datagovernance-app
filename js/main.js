@@ -6131,10 +6131,12 @@ function renderAppleDoughnutChart(canvas, data, chartKey) {
   
   const colors = labels.map((_, i) => appleColors[i % appleColors.length]);
   
-  // Chart layout
-  const centerX = width * 0.35;
+  // Chart layout - optimized spacing
+  const padding = 15;
+  const chartAreaWidth = Math.min(width * 0.35, 120); // Smaller chart to allow more legend space
+  const centerX = padding + chartAreaWidth / 2;
   const centerY = height / 2;
-  const radius = Math.min(centerX, height / 2) * 0.7;
+  const radius = Math.min(chartAreaWidth / 2 - 5, (height / 2) - 15);
   const innerRadius = radius * 0.65; // Doughnut hole
   
   // Draw doughnut chart
@@ -6161,13 +6163,36 @@ function renderAppleDoughnutChart(canvas, data, chartKey) {
     startAngle = endAngle;
   });
   
-  // Draw legend on the right side
-  const legendX = width * 0.58;
-  const legendY = height / 2 - (labels.length * 32) / 2;
-  const legendItemHeight = 32;
+  // Draw legend on the right side with generous spacing
+  const legendX = padding + chartAreaWidth + 25; // Good gap from chart
+  const legendItemHeight = Math.max(26, Math.min(32, (height - 40) / labels.length)); // Dynamic spacing
+  const totalLegendHeight = labels.length * legendItemHeight;
+  const legendY = (height - totalLegendHeight) / 2;
+  const maxLabelWidth = width - legendX - padding - 10; // Maximum width for labels
   
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
+  
+  // Helper function to intelligently truncate text
+  function smartTruncate(text, maxWidth, font) {
+    ctx.font = font;
+    
+    // If text fits, return as-is
+    if (ctx.measureText(text).width <= maxWidth) {
+      return text;
+    }
+    
+    // Try to fit with ellipsis
+    for (let len = text.length - 1; len > 0; len--) {
+      const truncated = text.substring(0, len) + '...';
+      if (ctx.measureText(truncated).width <= maxWidth) {
+        return truncated;
+      }
+    }
+    
+    // Fallback: just show first few chars
+    return text.substring(0, Math.max(1, Math.floor(maxWidth / 8))) + '...';
+  }
   
   labels.forEach((label, i) => {
     const value = values[i];
@@ -6180,15 +6205,17 @@ function renderAppleDoughnutChart(canvas, data, chartKey) {
     ctx.arc(legendX, y, 5, 0, 2 * Math.PI);
     ctx.fill();
     
-    // Draw label text
+    // Draw label text with smart truncation
     ctx.fillStyle = '#1E1E1E';
-    ctx.font = '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(label, legendX + 15, y - 6);
+    const labelFont = '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = labelFont;
+    const displayLabel = smartTruncate(label, maxLabelWidth, labelFont);
+    ctx.fillText(displayLabel, legendX + 12, y - 5);
     
     // Draw value and percentage
     ctx.fillStyle = '#86868B';
-    ctx.font = '500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`${value} (${percentage}%)`, legendX + 15, y + 8);
+    ctx.font = '500 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`${value} (${percentage}%)`, legendX + 12, y + 8);
   });
   
   // Add hover effect storage
