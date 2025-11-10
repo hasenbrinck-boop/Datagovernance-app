@@ -513,6 +513,83 @@
   #fieldDialog .stack{ display:flex; flex-direction:column; gap:6px; align-self:start }
   @supports (-webkit-touch-callout: none){ #fieldDialog select{ padding-right:30px } }
   
+  /* Field Dialog Sections */
+  .field-section{
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.4);
+  }
+  .field-section:last-child{
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .field-section-title{
+    margin: 0 0 0.75rem 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  /* Left-aligned checkbox for Mandatory */
+  .checkbox-wrapper-left{
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .checkbox-wrapper-left input[type="checkbox"]{
+    width: 16px;
+    height: 16px;
+    margin: 0;
+  }
+  
+  /* Full-width grid for textarea */
+  .dialog-grid-full{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .dialog-grid-full > label{
+    text-align: left;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.2;
+    margin: 0;
+  }
+  .dialog-grid-full textarea{
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--divider);
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    background: #fff;
+    color: var(--text);
+  }
+  
+  /* Sticky footer for Save/Cancel buttons */
+  #fieldDialog .dialog-card{
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #fieldDialog .dialog-body{
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(85vh - 120px);
+  }
+  #fieldDialog .dialog-foot-sticky{
+    position: sticky;
+    bottom: 0;
+    background: rgba(248, 250, 255, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.04);
+  }
+  
   /* ===== Version Dialog (Minimalistic) ===== */
   #versionDialog {
     border: 0;
