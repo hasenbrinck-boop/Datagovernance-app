@@ -1040,9 +1040,7 @@ function showOnly(mode) {
 
   if (dashboardEl) dashboardEl.style.display = showDashboard ? 'block' : 'none';
   if (topTabsEl) topTabsEl.style.display = showSystems ? 'flex' : 'none';
-  if (globalEl) globalEl.style.display = showSystems ? 'block' : 'none';
-  if (localEl) localEl.style.display = showSystems ? 'block' : 'none';
-  if (mappingsEl) mappingsEl.style.display = showSystems ? 'none' : 'none';
+  // Note: individual system tabs (global/local/mappings) are managed by setupSystemsTabs in index.html
   if (mapViewEl) mapViewEl.style.display = showMap ? 'block' : 'none';
   if (glossaryEl) glossaryEl.style.display = showGlossary ? 'block' : 'none';
 
@@ -5398,8 +5396,8 @@ function setupMappingsFeature() {
         const tdStatus    = document.createElement('td');
         const tdActions   = document.createElement('td');
 
-        // Klassen setzen (für Styles/Monospace/Fixed widths etc.)
-        tdLE.className        = 'col-le mono';
+        // Klassen setzen (für Styles/Fixed widths etc.)
+        tdLE.className        = 'col-le';
         tdSYS.className       = 'col-system';
         tdLocal.className     = 'col-local';
         tdGlobal.className    = 'col-global';
@@ -5754,6 +5752,17 @@ function setupMappingsFeature() {
 
 // 6) Filter-Events
 [fLE, fSYS, fDO].forEach(sel => sel && sel.addEventListener('change', renderList));
+
+// Clear Filters button
+const btnClearFilters = document.getElementById('mapResetFilters');
+if (btnClearFilters) {
+  btnClearFilters.addEventListener('click', () => {
+    if (fLE) fLE.value = '';
+    if (fSYS) fSYS.value = '';
+    if (fDO) fDO.value = '';
+    renderList();
+  });
+}
 
 // 7) „+ New Mapping“ – immer öffnen
 if (addBtn) {

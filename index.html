@@ -284,16 +284,26 @@
           </div>
 
           <div class="panel-body">
-            <div class="filters-row">
-              <label>Legal Entity
-                <select id="mapFilterLE"></select>
-              </label>
-              <label>System
-                <select id="mapFilterSystem"></select>
-              </label>
-              <label>Data Object
-                <select id="mapFilterDO"></select>
-              </label>
+            <div class="dashboard-filters">
+              <div class="filter-group">
+                <label for="mapFilterLE">Legal Entity:</label>
+                <select id="mapFilterLE" class="filter-select">
+                  <option value="">All Legal Entities</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="mapFilterSystem">System:</label>
+                <select id="mapFilterSystem" class="filter-select">
+                  <option value="">All Systems</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="mapFilterDO">Data Object:</label>
+                <select id="mapFilterDO" class="filter-select">
+                  <option value="">All Data Objects</option>
+                </select>
+              </div>
+              <button id="mapResetFilters" class="btn btn--ghost btn--sm">Clear Filters</button>
             </div>
 
             <table id="mappingsTable" class="table table--mappings">
