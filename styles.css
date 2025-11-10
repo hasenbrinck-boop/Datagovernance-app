@@ -495,19 +495,19 @@
     transform: translateY(-4px);
   }
   .dialog-head{ padding:10px 16px; border-bottom:1px solid var(--divider); display:flex; justify-content:space-between; align-items:center }
-  .dialog-body{ padding:12px 16px 8px 16px; display:grid; gap:8px }
+  .dialog-body{ padding:10px 16px 6px 16px; display:grid; gap:6px }
   .dialog-grid{
-    display:grid; grid-template-columns: 150px 1fr; row-gap: 8px; column-gap: 12px; align-items:center;
+    display:grid; grid-template-columns: 140px 1fr; row-gap: 6px; column-gap: 12px; align-items:center;
   }
   .dialog-grid > label{
     text-align:left; font-size:12.5px; color:var(--text-dim); line-height:1.2; padding-top:2px; margin:0;
   }
   .dialog-grid input[type="text"], .dialog-grid input[type="number"], .dialog-grid select{
-    width:100%; min-height:36px; padding:6px 10px; border-radius:8px; border:1px solid var(--divider); background:#fff; color:var(--text); font-size:13px;
+    width:100%; min-height:32px; padding:5px 10px; border-radius:8px; border:1px solid var(--divider); background:#fff; color:var(--text); font-size:13px;
   }
   #fieldDialog .checkbox-inline{ display:inline-flex; align-items:center; gap:8px; color:var(--text); font-size:13px; }
   #fieldDialog .checkbox-inline input[type="checkbox"]{ width:16px; height:16px; margin:0; }
-  .dialog-foot{ display:flex; justify-content:flex-end; gap:8px; padding:10px 16px; border-top:1px solid var(--divider) }
+  .dialog-foot{ display:flex; justify-content:flex-end; gap:8px; padding:8px 16px; border-top:1px solid var(--divider) }
   #fld-legal-entity-hint{ display:none !important }
   #fieldDialog input, #fieldDialog select, #fieldDialog textarea{ font-size:12.5px; line-height:1.4 }
   #fieldDialog .stack{ display:flex; flex-direction:column; gap:6px; align-self:start }
@@ -515,8 +515,8 @@
   
   /* Field Dialog Sections */
   .field-section{
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
     border-bottom: 1px solid rgba(229, 231, 235, 0.4);
   }
   .field-section:last-child{
@@ -525,7 +525,7 @@
     padding-bottom: 0;
   }
   .field-section-title{
-    margin: 0 0 0.75rem 0;
+    margin: 0 0 0.5rem 0;
     font-size: 11.5px;
     font-weight: 600;
     color: #94a3b8;
@@ -549,7 +549,7 @@
   .dialog-grid-full{
     display: grid;
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 6px;
   }
   .dialog-grid-full > label{
     text-align: left;
@@ -560,7 +560,7 @@
   }
   .dialog-grid-full textarea{
     width: 100%;
-    padding: 8px 10px;
+    padding: 6px 10px;
     border-radius: 8px;
     border: 1px solid var(--divider);
     font-size: 13px;
@@ -572,18 +572,14 @@
   
   /* Sticky footer for Save/Cancel buttons */
   #fieldDialog .dialog-card{
-    max-height: 85vh;
+    max-width: 720px;
     display: flex;
     flex-direction: column;
   }
   #fieldDialog .dialog-body{
-    flex: 1;
-    overflow-y: auto;
-    max-height: calc(85vh - 120px);
+    overflow-y: visible;
   }
   #fieldDialog .dialog-foot-sticky{
-    position: sticky;
-    bottom: 0;
     background: rgba(248, 250, 255, 0.95);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
