@@ -2103,17 +2103,21 @@ function formatGlossaryDetail(term) {
 function getSystemsUsingGlossaryTerm(glossaryId) {
   if (!glossaryId) return [];
   
-  // Find all fields that reference this glossary term
-  // Check both glossaryId (runtime) and glossaryRef (initial data)
-  const fieldsWithGlossary = fields.filter(f => 
-    f.glossaryId === glossaryId || f.glossaryRef === glossaryId
-  );
+  // Find the glossary term
+  const glossaryTerm = glossaryTerms.find(g => g.id === glossaryId);
+  if (!glossaryTerm) return [];
   
-  // Extract unique system names
-  const systems = [...new Set(fieldsWithGlossary.map(f => f.system).filter(Boolean))];
+  // If the glossary term has a linked field (via fieldRefId or fieldRef), 
+  // return only that field's system
+  if (glossaryTerm.fieldRefId || glossaryTerm.fieldRef) {
+    const linkedField = findFieldByFieldRef(glossaryTerm.fieldRefId || glossaryTerm.fieldRef);
+    if (linkedField && linkedField.system) {
+      return [linkedField.system];
+    }
+  }
   
-  // Sort systems alphabetically
-  return systems.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  // Fallback: if no linked field is found, return empty array
+  return [];
 }
 
 function renderGlossaryTable() {
