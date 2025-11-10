@@ -31,6 +31,10 @@ import {
   saveMappings,
   loadValueMaps,
   saveValueMaps,
+  saveDomains,
+  loadDomains,
+  saveLegalEntities,
+  loadLegalEntities,
 } from './storage.js';
 
 // === Edit-Index: zentrale Helpers (einmalig am Anfang von main.js) ===
@@ -747,6 +751,7 @@ function pickGlossaryForField(fieldIndex) {
     delete fields[fieldIndex].glossaryId;
     saveFields(); // <— neu
     renderFieldsTable();
+    renderGlossaryTable();
     if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
     // Update dashboard metrics
     if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
@@ -766,6 +771,7 @@ function pickGlossaryForField(fieldIndex) {
   fields[fieldIndex].glossaryId = picked.id;
   saveFields(); // <— neu
   renderFieldsTable();
+  renderGlossaryTable();
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
   // Update dashboard metrics
   if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
@@ -1422,8 +1428,12 @@ function renderFieldsTable() {
       const gi = indexMap.get(v);
       if (confirm(`Delete field "${fields[gi].name}"?`)) {
         fields.splice(gi, 1);
+        saveFields();
         renderFieldsTable();
+        renderGlossaryTable();
         if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+        if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+        if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
       }
     });
   });
@@ -1923,10 +1933,13 @@ function renderDomainsTable() {
       const name = dataDomains[i].name;
       if (!confirm(`Delete data domain "${name}"?`)) return;
       dataDomains.splice(i, 1);
+      if (typeof saveDomains === 'function') saveDomains();
       renderDomainsTable();
       renderSystemsSidebar();
       renderSystemsTable();
       if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+      if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+      if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
       if (systemDomainSelect) {
         systemDomainSelect.innerHTML =
           `<option value="">(unassigned)</option>` +
@@ -1978,8 +1991,11 @@ function renderLegalEntities() {
       if (!confirm(`Delete legal entity "${le.name}"?`)) return;
       legalEntities.splice(i, 1);
       delete leSystemMap[le.number];
+      if (typeof saveLegalEntities === 'function') saveLegalEntities();
       saveLeSystems();
       renderLegalEntities();
+      if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+      if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
     });
   });
   $$('.leManage').forEach((btn) =>
@@ -2015,7 +2031,10 @@ legalForm?.addEventListener('submit', (e) => {
     const newId = Math.max(0, ...legalEntities.map((l) => l.id || 0)) + 1;
     legalEntities.push({ id: newId, ...data });
   }
+  if (typeof saveLegalEntities === 'function') saveLegalEntities();
   renderLegalEntities();
+  if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+  if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
   closeDialog(legalDialog);
 });
 
@@ -2851,7 +2870,10 @@ systemForm?.addEventListener('submit', (e) => {
   renderSystemsSidebar();
   renderSystemsTable();
   renderFieldsTable();
+  renderGlossaryTable();
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+  if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+  if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
   closeDialog(systemDialog);
 });
 
@@ -2904,10 +2926,13 @@ domainForm?.addEventListener('submit', (e) => {
   data.active = domainForm.elements.active.checked;
   if (editDomainIndex !== null) dataDomains[editDomainIndex] = data;
   else dataDomains.push(data);
+  if (typeof saveDomains === 'function') saveDomains();
   renderDomainsTable();
   renderSystemsSidebar();
   renderSystemsTable();
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+  if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+  if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
   if (systemDomainSelect) {
     systemDomainSelect.innerHTML =
       `<option value="">(unassigned)</option>` +
