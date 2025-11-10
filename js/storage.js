@@ -7,6 +7,8 @@ import {
   STORAGE_KEY_MAP_FILTERS,
   STORAGE_KEY_MAP_POS,
   STORAGE_KEY_SYSTEMS,
+  STORAGE_KEY_DOMAINS,
+  STORAGE_KEY_LEGAL_ENTITIES,
 } from './constants.js';
 
 /** LocalStorage shim with safe fallback */
@@ -144,6 +146,52 @@ export function loadSystems() {
   } catch (err) {
     console.error('loadSystems() failed', err);
     state.systems = state.systems || [];
+  }
+}
+
+/* ---------------------------- Data Domains ---------------------------- */
+export function saveDomains() {
+  try {
+    storage.setItem(STORAGE_KEY_DOMAINS, JSON.stringify(state.dataDomains || []));
+  } catch (err) {
+    console.error('saveDomains() failed', err);
+  }
+}
+
+export function loadDomains() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_DOMAINS);
+    if (raw) {
+      state.dataDomains = JSON.parse(raw) || [];
+    } else {
+      state.dataDomains = state.dataDomains || [];
+    }
+  } catch (err) {
+    console.error('loadDomains() failed', err);
+    state.dataDomains = state.dataDomains || [];
+  }
+}
+
+/* ---------------------------- Legal Entities ---------------------------- */
+export function saveLegalEntities() {
+  try {
+    storage.setItem(STORAGE_KEY_LEGAL_ENTITIES, JSON.stringify(state.legalEntities || []));
+  } catch (err) {
+    console.error('saveLegalEntities() failed', err);
+  }
+}
+
+export function loadLegalEntities() {
+  try {
+    const raw = storage.getItem(STORAGE_KEY_LEGAL_ENTITIES);
+    if (raw) {
+      state.legalEntities = JSON.parse(raw) || [];
+    } else {
+      state.legalEntities = state.legalEntities || [];
+    }
+  } catch (err) {
+    console.error('loadLegalEntities() failed', err);
+    state.legalEntities = state.legalEntities || [];
   }
 }
 

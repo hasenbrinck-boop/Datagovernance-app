@@ -5,6 +5,8 @@ export const STORAGE_KEY_LE_SYS = 'gdf_leSystemMap_v1';
 export const STORAGE_KEY_GLOSSARY = 'gdf_glossary_v1';
 export const STORAGE_KEY_SYSTEMS = 'gdf_systems_v1';
 export const STORAGE_KEY_FIELDS = 'gdf_fields_v2';
+export const STORAGE_KEY_DOMAINS = 'gdf_dataDomains_v1';
+export const STORAGE_KEY_LEGAL_ENTITIES = 'gdf_legalEntities_v1';
 
 export const GLOSSARY_TYPES = ['Field', 'Term', 'KPI', 'Process', 'System'];
 

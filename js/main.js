@@ -31,6 +31,10 @@ import {
   saveMappings,
   loadValueMaps,
   saveValueMaps,
+  saveDomains,
+  loadDomains,
+  saveLegalEntities,
+  loadLegalEntities,
 } from './storage.js';
 
 // === Edit-Index: zentrale Helpers (einmalig am Anfang von main.js) ===
@@ -747,6 +751,7 @@ function pickGlossaryForField(fieldIndex) {
     delete fields[fieldIndex].glossaryId;
     saveFields(); // <— neu
     renderFieldsTable();
+    renderGlossaryTable();
     if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
     // Update dashboard metrics
     if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
@@ -766,6 +771,7 @@ function pickGlossaryForField(fieldIndex) {
   fields[fieldIndex].glossaryId = picked.id;
   saveFields(); // <— neu
   renderFieldsTable();
+  renderGlossaryTable();
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
   // Update dashboard metrics
   if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
@@ -1422,8 +1428,12 @@ function renderFieldsTable() {
       const gi = indexMap.get(v);
       if (confirm(`Delete field "${fields[gi].name}"?`)) {
         fields.splice(gi, 1);
+        saveFields();
         renderFieldsTable();
+        renderGlossaryTable();
         if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+        if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+        if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
       }
     });
   });
@@ -1923,10 +1933,13 @@ function renderDomainsTable() {
       const name = dataDomains[i].name;
       if (!confirm(`Delete data domain "${name}"?`)) return;
       dataDomains.splice(i, 1);
+      if (typeof saveDomains === 'function') saveDomains();
       renderDomainsTable();
       renderSystemsSidebar();
       renderSystemsTable();
       if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+      if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+      if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
       if (systemDomainSelect) {
         systemDomainSelect.innerHTML =
           `<option value="">(unassigned)</option>` +
@@ -1978,8 +1991,11 @@ function renderLegalEntities() {
       if (!confirm(`Delete legal entity "${le.name}"?`)) return;
       legalEntities.splice(i, 1);
       delete leSystemMap[le.number];
+      if (typeof saveLegalEntities === 'function') saveLegalEntities();
       saveLeSystems();
       renderLegalEntities();
+      if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+      if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
     });
   });
   $$('.leManage').forEach((btn) =>
@@ -2015,7 +2031,10 @@ legalForm?.addEventListener('submit', (e) => {
     const newId = Math.max(0, ...legalEntities.map((l) => l.id || 0)) + 1;
     legalEntities.push({ id: newId, ...data });
   }
+  if (typeof saveLegalEntities === 'function') saveLegalEntities();
   renderLegalEntities();
+  if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+  if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
   closeDialog(legalDialog);
 });
 
@@ -2113,21 +2132,19 @@ function formatGlossaryDetail(term) {
 function getSystemsUsingGlossaryTerm(glossaryId) {
   if (!glossaryId) return [];
   
-  // Find the glossary term
-  const glossaryTerm = glossaryTerms.find(g => g.id === glossaryId);
-  if (!glossaryTerm) return [];
+  // Find all fields that have this glossary term assigned
+  const fieldsWithGlossary = fields.filter(field => field.glossaryId === glossaryId);
   
-  // If the glossary term has a linked field (via fieldRefId or fieldRef), 
-  // return only that field's system
-  if (glossaryTerm.fieldRefId || glossaryTerm.fieldRef) {
-    const linkedField = findFieldByFieldRef(glossaryTerm.fieldRefId || glossaryTerm.fieldRef);
-    if (linkedField && linkedField.system) {
-      return [linkedField.system];
+  // Extract unique system names from these fields
+  const systemsSet = new Set();
+  fieldsWithGlossary.forEach(field => {
+    if (field.system) {
+      systemsSet.add(field.system);
     }
-  }
+  });
   
-  // Fallback: if no linked field is found, return empty array
-  return [];
+  // Convert set to array and sort alphabetically
+  return Array.from(systemsSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
 function renderGlossaryTable() {
@@ -2853,7 +2870,10 @@ systemForm?.addEventListener('submit', (e) => {
   renderSystemsSidebar();
   renderSystemsTable();
   renderFieldsTable();
+  renderGlossaryTable();
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+  if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+  if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
   closeDialog(systemDialog);
 });
 
@@ -2906,10 +2926,13 @@ domainForm?.addEventListener('submit', (e) => {
   data.active = domainForm.elements.active.checked;
   if (editDomainIndex !== null) dataDomains[editDomainIndex] = data;
   else dataDomains.push(data);
+  if (typeof saveDomains === 'function') saveDomains();
   renderDomainsTable();
   renderSystemsSidebar();
   renderSystemsTable();
   if (document.body.getAttribute('data-mode') === 'map') renderDataMap();
+  if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+  if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
   if (systemDomainSelect) {
     systemDomainSelect.innerHTML =
       `<option value="">(unassigned)</option>` +
@@ -6067,8 +6090,8 @@ function render3DPieChart(ctx, data) {
   ctx.clearRect(0, 0, width, height);
   
   const centerX = width / 2;
-  const centerY = height / 2; // Centered vertically now that legend is removed
-  const radius = Math.min(width, height) * 0.28; // Adjusted for better spacing
+  const centerY = height / 2;
+  const radius = Math.min(width, height) * 0.28;
   
   // Modern blue tones palette - Apple style
   const baseColors = [
@@ -6108,9 +6131,9 @@ function render3DPieChart(ctx, data) {
     startAngle = endAngle;
   });
   
-  // Draw labels with values and percentages outside slices
+  // Calculate initial label positions
   startAngle = -Math.PI / 2;
-  labels.forEach((label, i) => {
+  const labelData = labels.map((label, i) => {
     const value = values[i];
     const sliceAngle = (value / total) * 2 * Math.PI;
     const midAngle = startAngle + sliceAngle / 2;
@@ -6123,10 +6146,65 @@ function render3DPieChart(ctx, data) {
     // Position for label (outside the pie) - increased distance for better spacing
     const labelDistance = radius * 1.55;
     const labelX = centerX + Math.cos(midAngle) * labelDistance;
-    const labelY = centerY + Math.sin(midAngle) * labelDistance;
+    let labelY = centerY + Math.sin(midAngle) * labelDistance;
     
     // Determine text alignment based on which side of the chart
     const isRightSide = Math.cos(midAngle) > 0;
+    
+    startAngle += sliceAngle;
+    
+    return {
+      label,
+      value,
+      percentage,
+      midAngle,
+      edgeX,
+      edgeY,
+      labelX,
+      labelY,
+      isRightSide,
+      sliceAngle
+    };
+  });
+  
+  // Apply collision detection and adjust overlapping labels
+  const minVerticalSpacing = 45; // Minimum pixels between label centers
+  
+  // Sort labels by y-position for each side separately
+  const leftLabels = labelData.filter(d => !d.isRightSide).sort((a, b) => a.labelY - b.labelY);
+  const rightLabels = labelData.filter(d => d.isRightSide).sort((a, b) => a.labelY - b.labelY);
+  
+  // Adjust positions to prevent overlap
+  const adjustLabelPositions = (labels) => {
+    for (let i = 1; i < labels.length; i++) {
+      const current = labels[i];
+      const previous = labels[i - 1];
+      const gap = current.labelY - previous.labelY;
+      
+      if (gap < minVerticalSpacing) {
+        current.labelY = previous.labelY + minVerticalSpacing;
+      }
+    }
+    
+    // Also check from bottom to top to prevent labels from going too far down
+    for (let i = labels.length - 2; i >= 0; i--) {
+      const current = labels[i];
+      const next = labels[i + 1];
+      const gap = next.labelY - current.labelY;
+      
+      if (gap < minVerticalSpacing) {
+        current.labelY = next.labelY - minVerticalSpacing;
+      }
+    }
+  };
+  
+  adjustLabelPositions(leftLabels);
+  adjustLabelPositions(rightLabels);
+  
+  // Draw labels with adjusted positions
+  labelData.forEach((data) => {
+    const { label, value, percentage, edgeX, edgeY, labelX, labelY, isRightSide } = data;
+    
     ctx.textAlign = isRightSide ? 'left' : 'right';
     
     // Draw connection line from edge to label
@@ -6136,11 +6214,11 @@ function render3DPieChart(ctx, data) {
     ctx.moveTo(edgeX, edgeY);
     
     // Draw elbow line
-    const elbowX = centerX + Math.cos(midAngle) * (radius * 1.15);
-    const elbowY = centerY + Math.sin(midAngle) * (radius * 1.15);
+    const elbowX = centerX + Math.cos(data.midAngle) * (radius * 1.15);
+    const elbowY = centerY + Math.sin(data.midAngle) * (radius * 1.15);
     ctx.lineTo(elbowX, elbowY);
     
-    // Horizontal extension
+    // Horizontal extension to adjusted label position
     const extendX = isRightSide ? labelX - 15 : labelX + 15;
     ctx.lineTo(extendX, labelY);
     ctx.stroke();
@@ -6164,8 +6242,6 @@ function render3DPieChart(ctx, data) {
     const percentText = ` (${percentage}%)`;
     const percentX = isRightSide ? labelX + valueWidth + 4 : labelX - valueWidth - 4 - ctx.measureText(percentText).width;
     ctx.fillText(percentText, percentX, labelY - 4);
-    
-    startAngle += sliceAngle;
   });
 }
 
