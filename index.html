@@ -545,57 +545,76 @@
 
       <form id="fieldForm">
         <div class="dialog-body">
-          <div class="dialog-grid">
-            <label for="fld-name">Field Name</label>
-            <input id="fld-name" name="name" type="text" required />
+          <!-- Basic Data Section -->
+          <div class="field-section">
+            <h4 class="field-section-title">Basic Data</h4>
+            <div class="dialog-grid">
+              <label for="fld-name">Field Name</label>
+              <input id="fld-name" name="name" type="text" required />
 
-            <label for="fld-system">System</label>
-            <select id="fld-system" name="system" required></select>
+              <label for="fld-system">System</label>
+              <select id="fld-system" name="system" required></select>
 
-            <label for="fld-mandatory">Mandatory</label>
-            <input id="fld-mandatory" name="mandatory" type="checkbox" />
+              <label for="fld-mandatory">Mandatory</label>
+              <div class="checkbox-wrapper-left">
+                <input id="fld-mandatory" name="mandatory" type="checkbox" />
+              </div>
 
-            <label for="fld-local">Local Field</label>
-            <label class="checkbox-inline">
-              <input id="fld-local" name="local" type="checkbox" />
-              <span>Visible only in local scope</span>
-            </label>
+              <label for="fld-local">Local Field</label>
+              <label class="checkbox-inline">
+                <input id="fld-local" name="local" type="checkbox" />
+                <span>Visible only in local scope</span>
+              </label>
 
-            <label for="fld-mapping">Mapping</label>
-            <input id="fld-mapping" name="mapping" type="text" />
-
-            <label for="fld-foundation">Data Object</label>
-            <select id="fld-foundation" name="foundationObject"></select>
-
-            <label for="fld-glossary">Glossary Term</label>
-            <select id="fld-glossary" name="glossaryId"></select>
-
-            <!-- Legal Entity -->
-            <label for="fld-legal-entity">Legal Entity</label>
-            <select id="fld-legal-entity" name="legalEntityNumber">
-              <option value="">(none)</option>
-            </select>
-
-            <label for="fld-source-system">Source System</label>
-            <select id="fld-source-system" name="sourceSystem"></select>
-
-            <label for="fld-source-field">Source Field</label>
-            <select id="fld-source-field" name="sourceField" disabled>
-              <option value="">Select a system first</option>
-            </select>
+              <label for="fld-mapping">Mapping</label>
+              <input id="fld-mapping" name="mapping" type="text" />
+            </div>
           </div>
 
-          <!-- === Allowed Values (ENUM) === -->
-          <div class="dialog-group" style="margin-top:1rem; border-top:1px solid var(--divider); padding-top:1rem;">
-            <label for="fld-allowed-values" style="grid-column:1/-1; text-align:left; font-size:12.5px; color:var(--text-dim); margin-bottom:0.5rem;">Allowed Values (ENUM)</label>
-            <textarea id="fld-allowed-values" rows="4" placeholder="Active
+          <!-- Data Context Section -->
+          <div class="field-section">
+            <h4 class="field-section-title">Data Context</h4>
+            <div class="dialog-grid">
+              <label for="fld-foundation">Data Object</label>
+              <select id="fld-foundation" name="foundationObject"></select>
+
+              <label for="fld-glossary">Glossary Term</label>
+              <select id="fld-glossary" name="glossaryId"></select>
+
+              <label for="fld-legal-entity">Legal Entity</label>
+              <select id="fld-legal-entity" name="legalEntityNumber">
+                <option value="">(none)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Source Information Section -->
+          <div class="field-section">
+            <h4 class="field-section-title">Source Information</h4>
+            <div class="dialog-grid">
+              <label for="fld-source-system">Source System</label>
+              <select id="fld-source-system" name="sourceSystem"></select>
+
+              <label for="fld-source-field">Source Field</label>
+              <select id="fld-source-field" name="sourceField" disabled>
+                <option value="">Select a system first</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Field Content Section -->
+          <div class="field-section">
+            <h4 class="field-section-title">Field Content</h4>
+            <div class="dialog-grid-full">
+              <label for="fld-allowed-values">Allowed Values</label>
+              <textarea id="fld-allowed-values" rows="3" placeholder="Active
 Passive
-Option 3" style="grid-column:1/-1; width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--divider); font-size:13px; font-family:inherit; resize:vertical;"></textarea>
+Option 3"></textarea>
+            </div>
           </div>
-          <!-- === /Allowed Values === -->
         </div>
 
-        <div class="dialog-foot">
+        <div class="dialog-foot dialog-foot-sticky">
           <button class="btn-cancel" type="button">Cancel</button>
           <button class="btn btn--primary" type="submit">Save</button>
         </div>
