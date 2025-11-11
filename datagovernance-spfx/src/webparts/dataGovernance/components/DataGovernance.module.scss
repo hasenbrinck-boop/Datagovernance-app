@@ -1,0 +1,23 @@
+@import '~@microsoft/sp-office-ui-fabric-core/dist/sass/SPFabricCore.scss';
+
+.dataGovernance {
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  color: "[theme:bodyText, default:#323130]";
+  
+  &.teams {
+    font-family: $ms-font-family-fallbacks;
+  }
+
+  // Import all original application styles
+  // These are now scoped to the webpart container
+  @import './styles.scss';
+}
+
+// Ensure the component takes full height when in SharePoint
+:global {
+  .ControlZone {
+    height: 100%;
+  }
+}

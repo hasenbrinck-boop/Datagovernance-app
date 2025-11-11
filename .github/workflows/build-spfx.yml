@@ -1,0 +1,74 @@
+name: Build SPFx Package
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'datagovernance-spfx/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'datagovernance-spfx/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.17.1]
+    
+    defaults:
+      run:
+        working-directory: datagovernance-spfx
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: datagovernance-spfx/package-lock.json
+    
+    - name: Install dependencies
+      run: npm ci --legacy-peer-deps
+    
+    - name: Build solution
+      run: npm run build
+    
+    - name: Bundle for production
+      run: npm run ship
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: spfx-package
+        path: |
+          datagovernance-spfx/sharepoint/solution/*.sppkg
+          datagovernance-spfx/dist/**/*
+        retention-days: 30
+    
+    - name: Create Release (on main branch)
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Data Governance SPFx v${{ github.run_number }}
+        body: |
+          Automated build of Data Governance SharePoint Framework Webpart
+          
+          **Installation:**
+          1. Download the .sppkg file from the artifacts
+          2. Upload to SharePoint App Catalog
+          3. Deploy to your sites
+          
+          **Changes in this build:**
+          ${{ github.event.head_commit.message }}
+        draft: false
+        prerelease: false

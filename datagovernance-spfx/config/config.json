@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "data-governance-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/dataGovernance/DataGovernanceWebPart.js",
+          "manifest": "./src/webparts/dataGovernance/DataGovernanceWebPart.manifest.json",
+          "outputPath": "./dist/data-governance.bundle.js"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "DataGovernanceWebPartStrings": "lib/webparts/dataGovernance/loc/{locale}.js"
+  }
+}
