@@ -1472,14 +1472,15 @@
 
 .chart-body {
   position: relative;
-  min-height: 200px;
+  min-height: 250px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 
 .chart-body canvas {
-  max-height: 240px;
+  max-height: 280px;
   max-width: 100%;
 }
 
