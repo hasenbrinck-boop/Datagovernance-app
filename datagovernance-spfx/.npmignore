@@ -1,0 +1,10 @@
+!dist
+config
+
+# exclude the patterns that
+# have been included directly
+# for e.g. node_modules with gulp
+!node_modules
+
+src/**/*.js
+temp/**/*.ts

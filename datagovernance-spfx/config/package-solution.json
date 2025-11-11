@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "Data Governance Application",
+    "id": "8f9d5e3a-2b4c-4d7e-9f3a-1c5b8e7d6a9f",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "LEONI",
+      "websiteUrl": "https://www.leoni.com",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": ""
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Data Governance Application for managing global and local data fields"
+      },
+      "longDescription": {
+        "default": "Comprehensive data governance solution for SharePoint that manages global and local data fields, mappings, glossary terms, and data domains across multiple systems and legal entities."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "Data Governance Application Feature",
+        "description": "Manages data governance across the organization",
+        "id": "7e8d4f2b-3c5a-4e6d-8f9a-2b1c7e6d5a8f",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/datagovernance-spfx.sppkg"
+  }
+}
